@@ -1,0 +1,192 @@
+{
+  // .devcontainer/devcontainer.json
+  "name": "E-commerce Platform Development",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.dev.yml"
+  ],
+  "service": "saleor",
+  "workspaceFolder": "/workspace",
+  
+  // Configure which services to start
+  "runServices": [
+    "postgres",
+    "redis",
+    "saleor",
+    "frontend",
+    "payment",
+    "shipping"
+  ],
+  
+  // VS Code specific settings
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python extensions for Django/Saleor development
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "batisteo.vscode-django",
+        
+        // JavaScript/React extensions for frontend
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "dsznajder.es7-react-js-snippets",
+        "bradlc.vscode-tailwindcss",
+        
+        // Docker and database tools
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.makefile-tools",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg",
+        
+        // Git and collaboration
+        "eamodio.gitlens",
+        "github.copilot",
+        
+        // API development
+        "graphql.vscode-graphql",
+        "graphql.vscode-graphql-syntax",
+        "prisma.prisma",
+        
+        // General productivity
+        "christian-kohler.path-intellisense",
+        "formulahendry.auto-rename-tag",
+        "formulahendry.auto-close-tag",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      
+      "settings": {
+        // Python settings
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackPath": "/usr/local/bin/black",
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+          }
+        },
+        
+        // JavaScript/TypeScript settings
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+        "[javascript]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+          "editor.formatOnSave": true
+        },
+        "[javascriptreact]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+          "editor.formatOnSave": true
+        },
+        
+        // Tailwind CSS IntelliSense
+        "tailwindCSS.includeLanguages": {
+          "javascript": "javascript",
+          "html": "HTML"
+        },
+        "tailwindCSS.experimental.classRegex": [
+          ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+        ],
+        
+        // Terminal configuration
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        
+        // File associations
+        "files.associations": {
+          "*.env*": "dotenv",
+          "Dockerfile*": "dockerfile",
+          "docker-compose*.yml": "dockercompose"
+        },
+        
+        // Editor settings
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "always"
+        },
+        "editor.rulers": [80, 120],
+        "editor.bracketPairColorization.enabled": true,
+        "editor.guides.bracketPairs": true
+      }
+    }
+  },
+  
+  // Port forwarding configuration
+  "forwardPorts": [
+    3000,  // Frontend
+    5432,  // PostgreSQL
+    6379,  // Redis
+    8000,  // Saleor API
+    9000,  // Dashboard
+    4000,  // Payment Service
+    5000   // Shipping Service
+  ],
+  
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend",
+      "onAutoForward": "openBrowser"
+    },
+    "8000": {
+      "label": "Saleor API",
+      "onAutoForward": "notify"
+    },
+    "9000": {
+      "label": "Admin Dashboard",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  
+  // Post-create command to set up the development environment
+  "postCreateCommand": "bash scripts/setup-dev-environment.sh",
+  
+  // Post-start command to ensure services are ready
+  "postStartCommand": "bash scripts/wait-for-services.sh",
+  
+  // Environment variables for development
+  "remoteEnv": {
+    "DEBUG": "true",
+    "NODE_ENV": "development",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  
+  // Mount points for better performance
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "source=node_modules-frontend,target=/workspace/services/frontend/node_modules,type=volume",
+    "source=node_modules-dashboard,target=/workspace/services/dashboard/saleordashboard/node_modules,type=volume",
+    "source=saleor-venv,target=/workspace/services/saleor/saleor/venv,type=volume"
+    ],
+  
+  // User configuration
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  
+  // Features to include in the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": true,
+      "installDockerBuildx": true
+    }
+  }
+}

@@ -1,0 +1,180 @@
+# ============================================
+# LEEMASMART BACKEND - DOCKER COMPOSE
+# ============================================
+# Production-ready configuration for Hostinger VPS
+# Usage: docker-compose -f docker-compose.yml up -d
+
+services:
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: leemasmart-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-saleor}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword123}
+      POSTGRES_DB: ${DB_NAME:-saleor}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-saleor}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Redis for Caching and Celery
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: leemasmart-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Saleor Backend API
+  # ==========================================
+  saleor:
+    build:
+      context: ./services/saleor/saleor
+      dockerfile: Dockerfile
+    container_name: leemasmart-saleor
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
+      DEBUG: ${DEBUG:-false}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      ALLOWED_CLIENT_HOSTS: ${ALLOWED_CLIENT_HOSTS:-*}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@leemasmart.com}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:9000/dashboard/}
+      STOREFRONT_URL: ${STOREFRONT_URL:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      DEFAULT_COUNTRY: ${DEFAULT_COUNTRY:-IN}
+      DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-INR}
+      DEFAULT_CHANNEL_SLUG: ${DEFAULT_CHANNEL_SLUG:-default-channel}
+      ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL: ${ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL:-false}
+      EMAIL_URL: ${EMAIL_URL:-}
+    volumes:
+      - saleor-media:/app/media
+      - saleor-static:/app/static
+    ports:
+      - "8000:8000"
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Saleor Celery Worker
+  # ==========================================
+  saleor-worker:
+    build:
+      context: ./services/saleor/saleor
+      dockerfile: Dockerfile
+    container_name: leemasmart-saleor-worker
+    restart: unless-stopped
+    depends_on:
+      - saleor
+      - redis
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@leemasmart.com}
+      EMAIL_URL: ${EMAIL_URL:-}
+    volumes:
+      - saleor-media:/app/media
+      - saleor-static:/app/static
+    command: celery -A saleor worker -l info
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Saleor Celery Beat (Scheduler)
+  # ==========================================
+  saleor-beat:
+    build:
+      context: ./services/saleor/saleor
+      dockerfile: Dockerfile
+    container_name: leemasmart-saleor-beat
+    restart: unless-stopped
+    depends_on:
+      saleor:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
+    command: celery -A saleor beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Saleor Dashboard
+  # ==========================================
+  dashboard:
+    build:
+      context: ./services/dashboard/saleor-dashboard
+      dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL:-http://localhost:8000/graphql/}
+        APP_MOUNT_URI: /dashboard/
+    container_name: leemasmart-dashboard
+    restart: unless-stopped
+    depends_on:
+      - saleor
+    environment:
+      API_URL: ${API_URL:-http://localhost:8000/graphql/}
+    ports:
+      - "9000:80"
+    networks:
+      - leemasmart-network
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  leemasmart-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  postgres-data:
+  redis-data:
+  saleor-media:
+  saleor-static:

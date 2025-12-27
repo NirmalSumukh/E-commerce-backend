@@ -1,0 +1,136 @@
+# ============================================
+# LEEMASMART BACKEND - DEV DOCKER COMPOSE
+# ============================================
+# Development overrides with hot-reload and debugging
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # ==========================================
+  # PostgreSQL - Development Configuration
+  # ==========================================
+  postgres:
+    environment:
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    command: postgres -c log_statement=all
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ==========================================
+  # Redis - Development Configuration
+  # ==========================================
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ==========================================
+  # Saleor - Development Configuration
+  # ==========================================
+  saleor:
+    container_name: leemasmart-saleor-dev
+    environment:
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+      # Development CORS - allow all localhost origins
+      CORS_ALLOWED_ORIGINS: "http://localhost:9000,http://localhost:9001,http://localhost:3000,http://localhost:3001,http://127.0.0.1:9000,http://127.0.0.1:9001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+      CSRF_TRUSTED_ORIGINS: "http://localhost:9000,http://localhost:9001,http://localhost:3000,http://localhost:3001,http://127.0.0.1:9000,http://127.0.0.1:9001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # ==========================================
+  # Saleor Worker - Development Configuration
+  # ==========================================
+  saleor-worker:
+    container_name: leemasmart-saleor-worker-dev
+    environment:
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+    command: celery -A saleor worker -l info --pool=solo
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # ==========================================
+  # Saleor Beat - Development Configuration
+  # ==========================================
+  saleor-beat:
+    container_name: leemasmart-saleor-beat-dev
+    environment:
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ==========================================
+  # Dashboard - Development Configuration
+  # ==========================================
+  dashboard:
+    build:
+      context: ./services/dashboard/saleor-dashboard
+      dockerfile: Dockerfile
+      target: builder
+      args:
+        API_URL: http://localhost:8000/graphql/
+        APP_MOUNT_URI: /dashboard/
+    container_name: leemasmart-dashboard-dev
+    environment:
+      API_URL: http://localhost:8000/graphql/
+      NODE_ENV: development
+      NODE_OPTIONS: --max-old-space-size=1536
+    volumes:
+      - dashboard-node-modules:/app/node_modules
+    ports:
+      - "9001:5173"
+    command: npm run dev -- --host 0.0.0.0
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ==========================================
+  # MailHog - Email Testing
+  # ==========================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: leemasmart-mailhog
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - leemasmart-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+# ==========================================
+# Development Volumes
+# ==========================================
+volumes:
+  dashboard-node-modules:

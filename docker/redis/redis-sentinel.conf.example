@@ -1,0 +1,19 @@
+# Redis Sentinel configuration for high availability (optional)
+# Rename to redis-sentinel.conf to enable
+
+port 26379
+dir /tmp
+
+# Monitor master
+sentinel monitor mymaster redis 6379 2
+sentinel auth-pass mymaster your_redis_password
+sentinel down-after-milliseconds mymaster 5000
+sentinel parallel-syncs mymaster 1
+sentinel failover-timeout mymaster 10000
+
+# Notification scripts (optional)
+# sentinel notification-script mymaster /path/to/notify.sh
+# sentinel client-reconfig-script mymaster /path/to/reconfig.sh
+
+# Sentinel configuration
+sentinel deny-scripts-reconfig yes

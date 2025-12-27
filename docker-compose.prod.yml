@@ -1,0 +1,158 @@
+# ============================================
+# LEEMASMART BACKEND - PRODUCTION DOCKER COMPOSE
+# ============================================
+# Production overrides with Traefik for SSL/TLS
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # ==========================================
+  # Traefik Reverse Proxy with Auto SSL
+  # ==========================================
+  traefik:
+    image: traefik:v2.10
+    container_name: leemasmart-traefik
+    restart: always
+    command:
+      # API and Dashboard
+      - "--api.insecure=false"
+      - "--api.dashboard=false"
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=leemasmart-network"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-info@leemasmart.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Logging
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    networks:
+      - leemasmart-network
+
+  # ==========================================
+  # Saleor - Production Configuration
+  # ==========================================
+  saleor:
+    container_name: leemasmart-saleor-prod
+    labels:
+      - "traefik.enable=true"
+      # Main API router
+      - "traefik.http.routers.saleor.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.saleor.entrypoints=websecure"
+      - "traefik.http.routers.saleor.tls.certresolver=letsencrypt"
+      - "traefik.http.services.saleor.loadbalancer.server.port=8000"
+      # Health check
+      - "traefik.http.routers.saleor.middlewares=saleor-headers"
+      - "traefik.http.middlewares.saleor-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+    environment:
+      DEBUG: "false"
+      ENABLE_SSL: "true"
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn saleor.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2
+      "
+    # Don't expose port directly in production - use Traefik
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # ==========================================
+  # Saleor Worker - Production Configuration
+  # ==========================================
+  saleor-worker:
+    container_name: leemasmart-saleor-worker-prod
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # ==========================================
+  # Saleor Beat - Production Configuration
+  # ==========================================
+  saleor-beat:
+    container_name: leemasmart-saleor-beat-prod
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ==========================================
+  # Dashboard - Production Configuration
+  # ==========================================
+  dashboard:
+    container_name: leemasmart-dashboard-prod
+    build:
+      args:
+        API_URL: ${API_URL:-https://saleor.leemasmart.com/graphql/}
+        APP_MOUNT_URI: /dashboard/
+    labels:
+      - "traefik.enable=true"
+      # Dashboard router with path prefix
+      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`) && PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
+    # Don't expose port directly in production - use Traefik
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ==========================================
+  # PostgreSQL - Production Configuration
+  # ==========================================
+  postgres:
+    container_name: leemasmart-postgres-prod
+    # Don't expose port in production
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # ==========================================
+  # Redis - Production Configuration
+  # ==========================================
+  redis:
+    container_name: leemasmart-redis-prod
+    # Don't expose port in production
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+# ==========================================
+# Production Volumes
+# ==========================================
+volumes:
+  traefik-certificates:

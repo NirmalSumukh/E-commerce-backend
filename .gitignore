@@ -1,0 +1,112 @@
+# ================================
+# LEEMASMART BACKEND - GITIGNORE
+# ================================
+
+# Environment files (NEVER commit these!)
+.env
+.env.local
+.env.dev
+.env.development
+.env.production
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.manifest
+*.spec
+
+# Node (for dashboard)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Docker volumes (local development)
+postgres-data/
+redis-data/
+data/
+
+# Logs
+*.log
+logs/
+log/
+
+# Media and static files (generated at runtime)
+media/
+staticfiles/
+static/collected/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+*.csr
+secret.key
+secrets/
+ssl/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+.cache/
+
+# Build artifacts
+*.tar.gz
+*.zip
