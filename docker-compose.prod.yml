@@ -9,7 +9,7 @@ services:
   # Traefik Reverse Proxy with Auto SSL
   # ==========================================
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.2
     container_name: leemasmart-traefik
     restart: always
     command:
@@ -65,8 +65,9 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn saleor.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2
       "
-    # Don't expose port directly in production - use Traefik
-    ports: []
+    # Expose port directly until Traefik/DNS is configured
+    ports:
+      - "8000:8000"
     deploy:
       resources:
         limits:
@@ -114,8 +115,9 @@ services:
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.services.dashboard.loadbalancer.server.port=80"
-    # Don't expose port directly in production - use Traefik
-    ports: []
+    # Expose port directly until Traefik/DNS is configured
+    ports:
+      - "9000:80"
     deploy:
       resources:
         limits:
