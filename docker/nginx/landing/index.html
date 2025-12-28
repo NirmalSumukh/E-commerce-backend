@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeemaSmart Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0F1115 0%, #1A1C23 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #FF6B00, #FF8533);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+        }
+        
+        .services {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 50px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+        
+        .service-card:hover {
+            background: rgba(255, 107, 0, 0.1);
+            border-color: #FF6B00;
+            transform: translateY(-5px);
+        }
+        
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .service-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .service-desc {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .status {
+            margin-top: 50px;
+            padding: 15px 30px;
+            background: rgba(0, 200, 83, 0.1);
+            border: 1px solid rgba(0, 200, 83, 0.3);
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #00C853;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .footer {
+            margin-top: 60px;
+            color: #555;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="logo">LeemaSmart</h1>
+        <p class="subtitle">E-Commerce Backend Services</p>
+        
+        <div class="services">
+            <a href="/dashboard/" class="service-card">
+                <div class="service-icon">📊</div>
+                <div class="service-title">Dashboard</div>
+                <div class="service-desc">Admin Panel</div>
+            </a>
+            
+            <a href="/graphql/" class="service-card">
+                <div class="service-icon">⚡</div>
+                <div class="service-title">GraphQL</div>
+                <div class="service-desc">API Playground</div>
+            </a>
+        </div>
+        
+        <div class="status">
+            <span class="status-dot"></span>
+            All systems operational
+        </div>
+        
+        <div class="footer">
+            Powered by Saleor Commerce Engine
+        </div>
+    </div>
+</body>
+</html>
