@@ -58,7 +58,7 @@ services:
       - "traefik.http.middlewares.saleor-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
     environment:
       DEBUG: "false"
-      ENABLE_SSL: "true"
+      ENABLE_SSL: "false"
     command: >
       sh -c "
         python manage.py migrate &&
