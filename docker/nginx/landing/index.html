@@ -1,145 +1,341 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeemaSmart Backend</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Saleor e-commerce</title>
     <style>
-        * {
+        @import url("https://rsms.me/inter/inter.css");
+
+        html,
+        body {
+            font-family: Inter;
+            font-size: 16px;
+            font-weight: 300;
+            line-height: 19px;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #0F1115 0%, #1A1C23 100%);
-            min-height: 100vh;
+            background: #ebf1f6;
+        }
+
+        a {
+            color: #056dff;
+            text-decoration: none;
+        }
+
+        h1,
+        h2 {
+            font-size: 48px;
+            line-height: 67px;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-weight: 800;
+            margin-top: 70px;
+        }
+
+        h2 {
+            font-weight: 400;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 0 0 0 rgba(40, 35, 74, 0.1);
+            cursor: pointer;
+            transition: 200ms;
+            background: #fff;
+        }
+
+        .btn:hover {
+            box-shadow: 0 0 20px 7px rgba(40, 35, 74, 0.1);
+        }
+
+        .container {
+            margin: 0 auto;
+            max-width: 1820px;
+            padding: 0 10px;
+        }
+
+        .go-to-saleor {
+            background: #056dff;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 16px;
+            height: 60px;
+            width: 244px;
+        }
+
+        .main {
+            width: 670px;
+        }
+
+        .nav {
+            align-items: center;
+            border-bottom: 1px solid rgba(40, 35, 74, 0.1);
+            display: flex;
+            justify-content: space-between;
+            height: 92px;
+        }
+
+        .logo {
+            margin-left: 24px;
+        }
+
+        .inner-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: #fff;
+            height: calc(100vh - 120px);
         }
-        
-        .container {
-            text-align: center;
-            padding: 40px;
+
+        .content-container {
+            display: grid;
+            grid-template-columns: 910px 1fr;
+            column-gap: 120px;
         }
-        
-        .logo {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #FF6B00, #FF8533);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        .splash {
+            width: 100%;
         }
-        
-        .subtitle {
-            color: #888;
-            margin-bottom: 50px;
-            font-size: 1.1rem;
-        }
-        
-        .services {
+
+        .splash__container {
+            align-items: center;
             display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
         }
-        
-        .service-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 40px 50px;
-            text-decoration: none;
-            color: #fff;
-            transition: all 0.3s ease;
-            min-width: 200px;
+
+        .tile {
+            width: 200px;
+            height: 216px;
+            padding: 16px;
         }
-        
-        .service-card:hover {
-            background: rgba(255, 107, 0, 0.1);
-            border-color: #FF6B00;
-            transform: translateY(-5px);
+
+        .tile__container {
+            margin: 28px 0 60px 0;
         }
-        
-        .service-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
+
+        .tile__container a:not(:last-child) .tile {
+            margin-right: 24px;
         }
-        
-        .service-title {
-            font-size: 1.3rem;
+
+        .tile__icon {
+            height: 128px;
+            margin-bottom: 10px;
+        }
+
+        .tile__label {
+            display: block;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 8px;
+            line-height: 170%;
+            transition: 200ms;
+            color: #28234A;
         }
-        
-        .service-desc {
-            color: #888;
-            font-size: 0.9rem;
+
+        .tile:hover .tile__label {
+            color: #056dff;
         }
-        
-        .status {
-            margin-top: 50px;
-            padding: 15px 30px;
-            background: rgba(0, 200, 83, 0.1);
-            border: 1px solid rgba(0, 200, 83, 0.3);
-            border-radius: 8px;
-            display: inline-block;
+
+        @media (max-width: 1720px) {
+
+            h1,
+            h2 {
+                font-size: 36px;
+                line-height: 50px;
+            }
+
+            .container {
+                max-width: 1320px;
+            }
+
+            .content-container {
+                grid-template-columns: repeat(2, 1fr) 50px;
+                column-gap: 80px;
+            }
         }
-        
-        .status-dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #00C853;
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 2s infinite;
+
+        @media (max-width: 1200px) {
+            .content-container {
+                grid-template-columns: 1fr;
+                column-gap: 40px;
+            }
+
+            .splash__container {
+                display: none;
+            }
+
+            .inner-container {
+                height: auto;
+                padding: 40px 0;
+            }
         }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .footer {
-            margin-top: 60px;
-            color: #555;
-            font-size: 0.85rem;
+
+        @media (max-width: 768px) {
+
+            h1,
+            h2 {
+                font-size: 28px;
+                line-height: 38px;
+            }
+
+            .main {
+                width: 100%;
+                padding: 0 20px;
+            }
+
+            .tile__container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .tile__container a:not(:last-child) .tile {
+                margin-right: 0;
+            }
+
+            .tile {
+                width: calc(50% - 8px);
+                height: auto;
+                padding: 20px;
+            }
+
+            .tile__icon {
+                height: 80px;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1 class="logo">LeemaSmart</h1>
-        <p class="subtitle">E-Commerce Backend Services</p>
-        
-        <div class="services">
-            <a href="/dashboard/" class="service-card">
-                <div class="service-icon">📊</div>
-                <div class="service-title">Dashboard</div>
-                <div class="service-desc">Admin Panel</div>
-            </a>
-            
-            <a href="/graphql/" class="service-card">
-                <div class="service-icon">⚡</div>
-                <div class="service-title">GraphQL</div>
-                <div class="service-desc">API Playground</div>
-            </a>
-        </div>
-        
-        <div class="status">
-            <span class="status-dot"></span>
-            All systems operational
-        </div>
-        
-        <div class="footer">
-            Powered by Saleor Commerce Engine
+        <nav class="nav">
+            <svg class="logo" width="93" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <mask id="a" maskUnits="userSpaceOnUse" x="0" y="1" width="93" height="31">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M0 1.162h92.918V32H0V1.162z" fill="#fff" />
+                </mask>
+                <g mask="url(#a)" fill-rule="evenodd" clip-rule="evenodd" fill="#28234A">
+                    <path
+                        d="M15.47 31.97c5.707 0 7.142-2.305 7.142-5.462 0-3.883-3.489-4.608-6.391-5.082-2.218-.379-3.229-.568-3.229-1.926 0-1.01.88-1.389 2.316-1.389 1.76 0 2.25.506 2.413 1.99l4.63-.695c-.391-3.188-2.184-4.798-6.913-4.798-5.185 0-7.01 2.083-7.01 5.397-.033 4.294 4.01 4.736 7.01 5.24 1.859.348 2.577.663 2.577 1.895 0 1.01-.62 1.452-2.479 1.452-2.054 0-2.674-.348-2.935-2.02l-4.5.662c.424 3.378 2.413 4.735 7.37 4.735zM30.395 28.498c-2.185 0-2.967-.474-2.967-2.052 0-1.42.782-1.989 3.13-1.989h2.348V26.1c0 1.578-.783 2.399-2.51 2.399zm-2.016 3.47c2.544 0 3.685-.82 4.5-2.02v1.8h4.598V20.32c0-3.82-1.467-5.745-6.554-5.745-4.924 0-6.653 1.39-7.337 4.799l4.565.694c.293-1.452.717-1.894 2.609-1.894 1.826 0 2.12.757 2.12 2.02v1.168h-2.153c-5.837 0-7.826 1.768-7.826 5.367 0 3.535 1.793 5.24 5.478 5.24zM38.647 31.75h4.696V7.393l-4.696 4.656v19.7zM49.09 21.46v-.853c0-1.483.685-2.494 2.739-2.494 1.989 0 2.641.853 2.641 2.494v.853h-5.38zm2.733 10.542c5.413 0 6.848-2.525 7.174-5.05l-4.467-.663c-.196 1.515-.49 2.304-2.707 2.304-2.25 0-2.74-1.105-2.74-2.557v-1.389h9.914v-3.03c0-4.23-1.663-7.04-7.174-7.04-5.446 0-7.304 2.842-7.304 6.44v4.546c0 3.504 1.89 6.44 7.304 6.44zM67.703 32.002c5.38 0 7.598-2.746 7.598-6.44v-4.545c0-3.756-2.217-6.44-7.598-6.44-5.38 0-7.533 2.684-7.533 6.44v4.546c0 3.693 2.12 6.44 7.533 6.44zm-.002-3.661c-1.891 0-2.836-.979-2.836-2.557v-4.861c0-1.61.945-2.589 2.837-2.589 1.89 0 2.902.979 2.902 2.588v4.862c0 1.578-1.011 2.557-2.903 2.557zM83.688 19.395H81.17v12.256h-4.696V19.395l4.588-4.655h7.212l-4.587 4.655z" />
+                </g>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M21.217 0l-6.18 6.44h15.267L36.484 0H21.218z"
+                    fill="#13BEBB" />
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M8.018 2.24a.602.602 0 01.425-.176h20.08a.601.601 0 01.425 1.028l-5.79 5.773a.602.602 0 01-.425.176H2.653a.602.602 0 01-.425-1.028l5.79-5.773zm.674 1.027l-4.584 4.57h18.376l4.583-4.57H8.692z"
+                    fill="#28234A" />
+            </svg>
+            <span> <a href="https://docs.saleor.io/" target="_blank">View documentation</a></span>
+        </nav>
+        <div class="inner-container">
+            <div class="content-container">
+                <div class="splash__container">
+                    <svg class="splash" viewBox="0 0 910 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="100" y="100" width="710" height="400" rx="20" fill="#fff" stroke="#28234A"
+                            stroke-width="2" />
+                        <rect x="130" y="140" width="300" height="200" rx="10" fill="#EBF1F6" stroke="#28234A" />
+                        <rect x="130" y="360" width="300" height="100" rx="10" fill="#EBF1F6" stroke="#28234A" />
+                        <rect x="460" y="140" width="320" height="320" rx="10" fill="#EBF1F6" stroke="#28234A" />
+                        <circle cx="280" cy="240" r="50" fill="#13BEBB" opacity="0.3" />
+                        <circle cx="620" cy="300" r="80" fill="#056DFF" opacity="0.2" />
+                        <path d="M200 200 L360 200 L360 280 L200 280 Z" fill="#056DFF" opacity="0.1" />
+                        <text x="455" y="80" font-family="Inter" font-size="24" font-weight="600" fill="#28234A"
+                            text-anchor="middle">LeemaSmart Backend</text>
+                    </svg>
+                </div>
+                <main class="main">
+                    <h1>Congratulations.</h1>
+                    <h2>Your Saleor instance is ready to work</h2>
+
+                    <p>
+                        Now you can start setting up your e-commerce. Below are some useful
+                        links you can use to start up:
+                    </p>
+
+                    <div class="tile__container">
+                        <a href="/dashboard/">
+                            <button class="btn tile">
+                                <svg class="tile__icon" width="134" height="128" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M109.207 47.57c-3.298-8.044-2.006-16.192 2.886-18.198 4.892-2.006 11.532 2.89 14.831 10.935 3.298 8.045 2.006 16.192-2.886 18.198-4.892 2.006-11.532-2.89-14.831-10.934z"
+                                        fill="#EBF1F6" stroke="#32335A" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M118.088 30.046v13.892l-7.639-13.674c1.95-1.494 4.649-1.704 7.639-.218z"
+                                        fill="#fff" stroke="#32335A" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path
+                                        d="M123.467 69.902l-8.104-4.047M112.665 64.515l-5.406-2.699M117.831 71.157l-10.803-5.388"
+                                        stroke="#32335A" stroke-miterlimit="10" />
+                                    <path
+                                        d="M82.197 35.296c-3.299-8.045-2.007-16.193 2.885-18.2 4.893-2.005 11.533 2.89 14.831 10.936 3.299 8.045 2.007 16.193-2.885 18.199-4.893 2.005-11.532-2.89-14.831-10.935z"
+                                        fill="#EBF1F6" stroke="#32335A" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M83.502 17.867c1.994-1.558 4.739-1.771 7.77-.26V31.74l-7.77 6.12a24.453 24.453 0 01-3.218-11.6c0-3.913 1.234-6.825 3.218-8.392z"
+                                        fill="#fff" stroke="#32335A" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M99.154 57.778l-16.198-8.086M99.154 61.251l-8.103-4.038" stroke="#32335A"
+                                        stroke-miterlimit="10" />
+                                    <path d="M6.337 77.848l98.161 49.068V50.152L6.337 1.084v76.764z" fill="#EBF1F6"
+                                        stroke="#32335A" stroke-width="1.34" />
+                                    <path
+                                        d="M51.895 88.719l-37.31-18.656V22.72l37.31 18.656v47.343zM96.623 111.041l-37.31-18.656V45.042l37.31 18.655v47.344z"
+                                        stroke="#32335A" stroke-opacity=".4" stroke-width=".5" stroke-miterlimit="10"
+                                        stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 3" />
+                                    <path d="M84.664 71.622l-5.092 2.546L42.308 55.56l5.092-2.546 37.264 18.608z"
+                                        fill="#fff" stroke="#32335A" stroke-width=".75" stroke-miterlimit="10"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M84.665 119.053l-5.04 2.52V74.131l5.04-2.52v47.442z" fill="#fff"
+                                        stroke="#32335A" stroke-width=".7" stroke-miterlimit="10" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M79.626 121.574l-37.311-18.656V55.575l37.31 18.655v47.344z" fill="#fff"
+                                        stroke="#32335A" stroke-width=".75" stroke-miterlimit="10"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M99.04 50.251L1 1.231v4.105L99.04 54.33V50.25z" fill="#EBF1F6"
+                                        stroke="#32335A" stroke-width=".59" stroke-miterlimit="10" />
+                                    <path
+                                        d="M7.956 7.484c-.308-.385-.359-.846-.128-1.026.23-.18.667-.026.95.36.307.384.358.846.127 1.025-.23.205-.667.026-.949-.359zM5.212 6.099c-.308-.385-.36-.847-.128-1.026.23-.18.667-.026.949.359.308.385.359.847.128 1.026-.23.18-.667.026-.949-.359zM2.468 4.688c-.308-.385-.36-.846-.129-1.026.231-.18.667-.026.95.36.307.384.359.846.128 1.025-.231.205-.667.026-.95-.359z"
+                                        fill="#fff" stroke="#28234A" stroke-width=".59" stroke-miterlimit="10"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span class="tile__label">Dashboard</span>
+                            </button>
+                        </a>
+
+                        <a href="/graphql/">
+                            <button class="btn tile">
+                                <svg class="tile__icon" fill="none" viewBox="0 0 106 128"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6.337 77.848l98.16 49.068V50.152L6.338 1.084v76.764z" fill="#EBF1F6"
+                                        stroke="#28234A" stroke-width="1.34" />
+                                    <path d="M52.302 89.124L14.991 70.469V23.126l37.311 18.655v47.343z" fill="#fff"
+                                        opacity=".8" stroke="#32335A" stroke-linejoin="round" stroke-miterlimit="10"
+                                        stroke-width=".75" />
+                                    <path d="M85.26 111.83L47.949 93.174V45.831L85.26 64.486v47.343z" fill="#fff"
+                                        stroke="#28234A" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-miterlimit="10" stroke-width=".75" />
+                                    <path d="M99.039 50.251L1 1.231v4.104L99.039 54.33v-4.078z" fill="#fff"
+                                        stroke="#28234A" stroke-miterlimit="10" stroke-width=".59" />
+                                    <path
+                                        d="M7.956 7.484c-.308-.385-.359-.847-.128-1.026.23-.18.667-.026.949.36.308.384.36.846.128 1.025-.23.205-.667.026-.949-.359zM5.212 6.099c-.308-.385-.36-.847-.128-1.026.23-.18.667-.026.949.36.308.384.359.846.128 1.025s-.667.026-.949-.359zM2.468 4.688c-.308-.385-.36-.846-.129-1.026s.667-.026.95.36c.307.384.359.846.128 1.025-.231.205-.667.026-.95-.359z"
+                                        fill="#fff" stroke="#33345A" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-miterlimit="10" stroke-width=".59" />
+                                </svg>
+                                <span class="tile__label">GraphQL Playground</span>
+                            </button>
+                        </a>
+                    </div>
+                </main>
+            </div>
         </div>
     </div>
 </body>
+
 </html>
