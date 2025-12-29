@@ -30,29 +30,29 @@ echo -e "${YELLOW}📥 Pulling latest changes from Git...${NC}"
 git pull origin main
 
 echo -e "${YELLOW}🔨 Building Docker images...${NC}"
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
 
 echo -e "${YELLOW}🛑 Stopping existing containers...${NC}"
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 echo -e "${YELLOW}🚀 Starting containers...${NC}"
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 echo -e "${YELLOW}⏳ Waiting for services to be ready...${NC}"
 sleep 10
 
 echo -e "${YELLOW}📊 Running database migrations...${NC}"
-docker-compose exec -T saleor python manage.py migrate --noinput
+docker compose exec -T saleor python manage.py migrate --noinput
 
 echo -e "${YELLOW}📁 Collecting static files...${NC}"
-docker-compose exec -T saleor python manage.py collectstatic --noinput
+docker compose exec -T saleor python manage.py collectstatic --noinput
 
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
-echo "📊 Check status:  docker-compose ps"
-echo "📋 View logs:     docker-compose logs -f"
+echo "📊 Check status:  docker compose ps"
+echo "📋 View logs:     docker compose logs -f"
 echo "🌐 API URL:       https://${DOMAIN}/graphql/"
 echo "📊 Dashboard:     https://${DOMAIN}/dashboard/"
 echo ""
