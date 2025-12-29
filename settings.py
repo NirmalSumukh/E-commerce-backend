@@ -1,18 +1,16 @@
-import ast
+import datetime
+import importlib.metadata
 import logging
 import os
 import os.path
 import warnings
-from datetime import timedelta
-from typing import Optional
+from typing import cast
 from urllib.parse import urlparse
 
 import dj_database_url
 import dj_email_url
 import django_cache_url
 import django_stubs_ext
-import jaeger_client.config
-import pkg_resources
 import sentry_sdk
 import sentry_sdk.utils
 from celery.schedules import crontab
@@ -26,6 +24,7 @@ from pytimeparse import parse
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import ignore_logger
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, DEFAULT_PII_DENYLIST, EventScrubber
 
 from . import PatchedSubscriberExecutionContext, __version__
 from .account.i18n_rules_override import i18n_rules_override
@@ -33,20 +32,15 @@ from .core.db.patch import patch_db
 from .core.languages import LANGUAGES as CORE_LANGUAGES
 from .core.rlimit import validate_and_set_rlimit
 from .core.schedules import initiated_promotion_webhook_schedule
-from .graphql.graphql_core import (
-    patch_execution_context,
-    patch_execution_result,
-    patch_executor,
-)
+from .graphql.executor import patch_executor
 from .graphql.promise import patch_promise
 from .patch_local import patch_local
-from .plugins.openid_connect.patch import patch_authlib
 
 django_stubs_ext.monkeypatch()
 
 
 def get_list(text):
-    return [item.strip() for item in text.split(",")]
+    return [item.strip() for item in text.split(",") if item]
 
 
 def get_bool_from_env(name, default_value):
@@ -60,7 +54,7 @@ def get_bool_from_env(name, default_value):
     return value.lower() in ("true", "1")
 
 
-def get_url_from_env(name, *, schemes=None) -> Optional[str]:
+def get_url_from_env(name, *, schemes=None) -> str | None:
     if name in os.environ:
         value = os.environ[name]
         message = f"{value} is an invalid value for {name}"
@@ -83,8 +77,6 @@ SITE_ID = 1
 PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 
 ROOT_URLCONF = "saleor.urls"
-
-WSGI_APPLICATION = "saleor.wsgi.application"
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -121,12 +113,21 @@ DATABASE_CONNECTION_DEFAULT_NAME = "default"
 # This variable should be set to `replica`
 DATABASE_CONNECTION_REPLICA_NAME = "replica"
 
+if "DATABASE_URL_REPLICA" in os.environ:
+    DATABASE_URL_REPLICA_ENV_NAME = "DATABASE_URL_REPLICA"
+else:
+    # If replica env is not set, then always try to use the
+    # default env first.
+    DATABASE_URL_REPLICA_ENV_NAME = dj_database_url.DEFAULT_ENV
+
 DATABASES = {
     DATABASE_CONNECTION_DEFAULT_NAME: dj_database_url.config(
+        env=dj_database_url.DEFAULT_ENV,
         default="postgres://saleor:saleor@localhost:5432/saleor",
         conn_max_age=DB_CONN_MAX_AGE,
     ),
     DATABASE_CONNECTION_REPLICA_NAME: dj_database_url.config(
+        env=DATABASE_URL_REPLICA_ENV_NAME,
         default="postgres://saleor:saleor@localhost:5432/saleor",
         # TODO: We need to add read only user to saleor platform,
         # and we need to update docs.
@@ -142,7 +143,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 TIME_ZONE = "UTC"
 LANGUAGE_CODE = "en"
-LANGUAGES = CORE_LANGUAGES
+LANGUAGES: list[tuple[str, str]] = CORE_LANGUAGES
 LOCALE_PATHS = [os.path.join(PROJECT_ROOT, "locale")]
 USE_I18N = True
 USE_TZ = True
@@ -185,10 +186,13 @@ ENABLE_SSL: bool = get_bool_from_env("ENABLE_SSL", False)
 
 # URL on which Saleor is hosted (e.g., https://api.example.com/). This has precedence
 # over ENABLE_SSL and Shop.domain when generating URLs pointing to itself.
-PUBLIC_URL: Optional[str] = get_url_from_env("PUBLIC_URL", schemes=["http", "https"])
+PUBLIC_URL: str | None = get_url_from_env("PUBLIC_URL", schemes=["http", "https"])
 if PUBLIC_URL:
     if os.environ.get("ENABLE_SSL") is not None:
-        warnings.warn("ENABLE_SSL is ignored on URL generation if PUBLIC_URL is set.")
+        warnings.warn(
+            "ENABLE_SSL is ignored on URL generation if PUBLIC_URL is set.",
+            stacklevel=1,
+        )
     ENABLE_SSL = urlparse(PUBLIC_URL).scheme.lower() == "https"
 
 if ENABLE_SSL:
@@ -250,7 +254,9 @@ PASSWORD_HASHERS = [
 ]
 
 if not SECRET_KEY and DEBUG:
-    warnings.warn("SECRET_KEY not configured, using a random temporary key.")
+    warnings.warn(
+        "SECRET_KEY not configured, using a random temporary key.", stacklevel=1
+    )
     SECRET_KEY = get_random_secret_key()
 
 RSA_PRIVATE_KEY = os.environ.get("RSA_PRIVATE_KEY", None)
@@ -260,7 +266,9 @@ JWT_MANAGER_PATH = os.environ.get(
 )
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.common.CommonMiddleware",
     "saleor.core.middleware.jwt_refresh_token_middleware",
 ]
@@ -271,9 +279,13 @@ ENABLE_RESTRICT_WRITER_MIDDLEWARE = get_bool_from_env(
 if ENABLE_RESTRICT_WRITER_MIDDLEWARE:
     MIDDLEWARE = ["saleor.core.db.connection.log_writer_usage_middleware"] + MIDDLEWARE
 
+# Restrict inexplicit writer DB usage in Celery tasks
+CELERY_RESTRICT_WRITER_METHOD = "saleor.core.db.connection.log_writer_usage"
+
 INSTALLED_APPS = [
     # External apps that need to go before django's
     "storages",
+    "corsheaders",
     # Django modules
     "django.contrib.contenttypes",
     "django.contrib.sites",
@@ -310,7 +322,6 @@ INSTALLED_APPS = [
     "saleor.schedulers",
     # External apps
     "django_measurement",
-    "django_prices",
     "mptt",
     "django_countries",
     "django_filters",
@@ -322,31 +333,6 @@ if ENABLE_DJANGO_EXTENSIONS:
     INSTALLED_APPS += [
         "django_extensions",
     ]
-
-ENABLE_DEBUG_TOOLBAR = get_bool_from_env("ENABLE_DEBUG_TOOLBAR", False)
-if ENABLE_DEBUG_TOOLBAR:
-    # Ensure the graphiql debug toolbar is actually installed before adding it
-    try:
-        __import__("graphiql_debug_toolbar")
-    except ImportError as exc:
-        msg = (
-            f"{exc} -- Install the missing dependencies by "
-            f"running `poetry install --no-root`"
-        )
-        warnings.warn(msg)
-    else:
-        INSTALLED_APPS += ["django.forms", "debug_toolbar", "graphiql_debug_toolbar"]
-        MIDDLEWARE.append("saleor.graphql.middleware.DebugToolbarMiddleware")
-
-        DEBUG_TOOLBAR_PANELS = [
-            "ddt_request_history.panels.request_history.RequestHistoryPanel",
-            "debug_toolbar.panels.timer.TimerPanel",
-            "debug_toolbar.panels.headers.HeadersPanel",
-            "debug_toolbar.panels.request.RequestPanel",
-            "debug_toolbar.panels.sql.SQLPanel",
-            "debug_toolbar.panels.profiling.ProfilingPanel",
-        ]
-        DEBUG_TOOLBAR_CONFIG = {"RESULTS_CACHE_SIZE": 100}
 
 # Make the `logging` Python module capture `warnings.warn()` calls
 # This is needed in order to log them as JSON when DEBUG=False
@@ -375,6 +361,7 @@ LOGGING = {
             "datefmt": "%Y-%m-%dT%H:%M:%SZ",
             "format": (
                 "%(asctime)s %(levelname)s %(celeryTaskId)s %(celeryTaskName)s "
+                "%(message)s "
             ),
         },
         "celery_task_json": {
@@ -388,6 +375,15 @@ LOGGING = {
         "verbose": {
             "format": (
                 "%(asctime)s %(levelname)s %(name)s %(message)s "
+                "[PID:%(process)d:%(threadName)s]"
+            )
+        },
+        "verbose_breaker": {
+            "format": (
+                "%(asctime)s %(levelname)s %(name)s %(message)s "
+                "App name: %(app_name)s, total webhooks %(webhooks_total_count)s, "
+                "errors count %(webhooks_errors_count)s, "
+                "Cooldown is %(webhooks_cooldown_seconds)s seconds. "
                 "[PID:%(process)d:%(threadName)s]"
             )
         },
@@ -413,11 +409,21 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose" if DEBUG else "celery_task_json",
         },
+        "breaker_board": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose_breaker" if DEBUG else "json",
+        },
         "null": {
             "class": "logging.NullHandler",
         },
     },
     "loggers": {
+        "django.request": {
+            "handlers": ["default"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "django": {"level": "INFO", "propagate": True},
         "django.server": {
             "handlers": ["django.server"],
@@ -425,6 +431,11 @@ LOGGING = {
             "propagate": False,
         },
         "celery.app.trace": {
+            "handlers": ["celery_app"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "celery.worker": {
             "handlers": ["celery_app"],
             "level": "INFO",
             "propagate": False,
@@ -440,10 +451,16 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "breaker_board": {
+            "handlers": ["breaker_board"],
+            "level": "INFO",
+            "propagate": False,
+        },
         "graphql.execution.utils": {"propagate": False, "handlers": ["null"]},
         "graphql.execution.executor": {"propagate": False, "handlers": ["null"]},
     },
 }
+
 
 AUTH_USER_MODEL = "account.User"
 
@@ -454,7 +471,7 @@ AUTH_PASSWORD_VALIDATORS = [
     }
 ]
 
-DEFAULT_COUNTRY = os.environ.get("DEFAULT_COUNTRY", "US")
+DEFAULT_COUNTRY: str = os.environ.get("DEFAULT_COUNTRY", "US")
 DEFAULT_DECIMAL_PLACES = 3
 DEFAULT_MAX_DIGITS = 20
 DEFAULT_CURRENCY_CODE_LENGTH = 3
@@ -501,6 +518,7 @@ AWS_QUERYSTRING_EXPIRE = get_bool_from_env("AWS_QUERYSTRING_EXPIRE", 3600)
 AWS_S3_CUSTOM_DOMAIN = os.environ.get("AWS_STATIC_CUSTOM_DOMAIN")
 AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", None)
 AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", None)
+AWS_S3_URL_PROTOCOL = os.environ.get("AWS_S3_URL_PROTOCOL", "https:")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
 AWS_DEFAULT_ACL = os.environ.get("AWS_DEFAULT_ACL", None)
@@ -510,16 +528,17 @@ AWS_S3_FILE_OVERWRITE = get_bool_from_env("AWS_S3_FILE_OVERWRITE", True)
 # See https://django-storages.readthedocs.io/en/latest/backends/gcloud.html
 GS_PROJECT_ID = os.environ.get("GS_PROJECT_ID")
 GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
-GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
 GS_LOCATION = os.environ.get("GS_LOCATION", "")
 GS_CUSTOM_ENDPOINT = os.environ.get("GS_CUSTOM_ENDPOINT")
 GS_MEDIA_BUCKET_NAME = os.environ.get("GS_MEDIA_BUCKET_NAME")
-GS_MEDIA_PRIVATE_BUCKET_NAME = os.environ.get("GS_MEDIA_BUCKET_NAME")
+GS_MEDIA_PRIVATE_BUCKET_NAME = os.environ.get("GS_MEDIA_PRIVATE_BUCKET_NAME")
 GS_AUTO_CREATE_BUCKET = get_bool_from_env("GS_AUTO_CREATE_BUCKET", False)
 GS_QUERYSTRING_AUTH = get_bool_from_env("GS_QUERYSTRING_AUTH", False)
 GS_DEFAULT_ACL = os.environ.get("GS_DEFAULT_ACL", None)
 GS_MEDIA_CUSTOM_ENDPOINT = os.environ.get("GS_MEDIA_CUSTOM_ENDPOINT", None)
-GS_EXPIRATION = timedelta(seconds=parse(os.environ.get("GS_EXPIRATION", "1 day")))
+GS_EXPIRATION = datetime.timedelta(
+    seconds=parse(os.environ.get("GS_EXPIRATION", "1 day"))
+)
 GS_FILE_OVERWRITE = get_bool_from_env("GS_FILE_OVERWRITE", True)
 
 # If GOOGLE_APPLICATION_CREDENTIALS is set there is no need to load OAuth token
@@ -535,17 +554,23 @@ AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
 AZURE_CONTAINER_PRIVATE = os.environ.get("AZURE_CONTAINER_PRIVATE")
 AZURE_SSL = os.environ.get("AZURE_SSL")
 
+# Replicate behavior of creating default values
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 if AWS_STORAGE_BUCKET_NAME:
-    STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    STORAGES["staticfiles"] = {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"}
 elif GS_BUCKET_NAME:
-    STATICFILES_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+    STORAGES["staticfiles"] = {"BACKEND": "storages.backends.gcloud.GoogleCloudStorage"}
 
 if AWS_MEDIA_BUCKET_NAME:
-    DEFAULT_FILE_STORAGE = "saleor.core.storages.S3MediaStorage"
+    STORAGES["default"] = {"BACKEND": "saleor.core.storages.S3MediaStorage"}
 elif GS_MEDIA_BUCKET_NAME:
-    DEFAULT_FILE_STORAGE = "saleor.core.storages.GCSMediaStorage"
+    STORAGES["default"] = {"BACKEND": "saleor.core.storages.GCSMediaStorage"}
 elif AZURE_CONTAINER:
-    DEFAULT_FILE_STORAGE = "saleor.core.storages.AzureMediaStorage"
+    STORAGES["default"] = {"BACKEND": "saleor.core.storages.AzureMediaStorage"}
 
 PRIVATE_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 if AWS_MEDIA_PRIVATE_BUCKET_NAME:
@@ -573,18 +598,18 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Expired checkouts settings - defines after what time checkouts will be deleted
-ANONYMOUS_CHECKOUTS_TIMEDELTA = timedelta(
+ANONYMOUS_CHECKOUTS_TIMEDELTA = datetime.timedelta(
     seconds=parse(os.environ.get("ANONYMOUS_CHECKOUTS_TIMEDELTA", "30 days"))
 )
-USER_CHECKOUTS_TIMEDELTA = timedelta(
+USER_CHECKOUTS_TIMEDELTA = datetime.timedelta(
     seconds=parse(os.environ.get("USER_CHECKOUTS_TIMEDELTA", "90 days"))
 )
-EMPTY_CHECKOUTS_TIMEDELTA = timedelta(
+EMPTY_CHECKOUTS_TIMEDELTA = datetime.timedelta(
     seconds=parse(os.environ.get("EMPTY_CHECKOUTS_TIMEDELTA", "6 hours"))
 )
 
 # Exports settings - defines after what time exported files will be deleted
-EXPORT_FILES_TIMEDELTA = timedelta(
+EXPORT_FILES_TIMEDELTA = datetime.timedelta(
     seconds=parse(os.environ.get("EXPORT_FILES_TIMEDELTA", "30 days"))
 )
 
@@ -603,7 +628,7 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = int(
 )
 
 # Expire orders task setting
-BEAT_EXPIRE_ORDERS_AFTER_TIMEDELTA = timedelta(
+BEAT_EXPIRE_ORDERS_AFTER_TIMEDELTA = datetime.timedelta(
     seconds=parse(os.environ.get("BEAT_EXPIRE_ORDERS_AFTER_TIMEDELTA", "5 minutes"))
 )
 
@@ -628,15 +653,15 @@ BEAT_PRICE_RECALCULATION_SCHEDULE_EXPIRE_AFTER_SEC = BEAT_PRICE_RECALCULATION_SC
 CELERY_BEAT_SCHEDULE = {
     "delete-empty-allocations": {
         "task": "saleor.warehouse.tasks.delete_empty_allocations_task",
-        "schedule": timedelta(days=1),
+        "schedule": datetime.timedelta(days=1),
     },
     "deactivate-preorder-for-variants": {
         "task": "saleor.product.tasks.deactivate_preorder_for_variants_task",
-        "schedule": timedelta(hours=1),
+        "schedule": datetime.timedelta(hours=1),
     },
     "delete-expired-reservations": {
         "task": "saleor.warehouse.tasks.delete_expired_reservations_task",
-        "schedule": timedelta(days=1),
+        "schedule": datetime.timedelta(days=1),
     },
     "delete-expired-checkouts": {
         "task": "saleor.checkout.tasks.delete_expired_checkouts",
@@ -648,7 +673,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "delete-outdated-event-data": {
         "task": "saleor.core.tasks.delete_event_payloads_task",
-        "schedule": timedelta(days=1),
+        "schedule": datetime.timedelta(days=1),
     },
     "deactivate-expired-gift-cards": {
         "task": "saleor.giftcard.tasks.deactivate_expired_cards_task",
@@ -668,12 +693,17 @@ CELERY_BEAT_SCHEDULE = {
     },
     "update-products-search-vectors": {
         "task": "saleor.product.tasks.update_products_search_vector_task",
-        "schedule": timedelta(seconds=BEAT_UPDATE_SEARCH_SEC),
+        "schedule": datetime.timedelta(seconds=BEAT_UPDATE_SEARCH_SEC),
         "options": {"expires": BEAT_UPDATE_SEARCH_EXPIRE_AFTER_SEC},
     },
     "update-gift-cards-search-vectors": {
         "task": "saleor.giftcard.tasks.update_gift_cards_search_vector_task",
-        "schedule": timedelta(seconds=BEAT_UPDATE_SEARCH_SEC),
+        "schedule": datetime.timedelta(seconds=BEAT_UPDATE_SEARCH_SEC),
+        "options": {"expires": BEAT_UPDATE_SEARCH_EXPIRE_AFTER_SEC},
+    },
+    "update-pages-search-vectors": {
+        "task": "saleor.page.tasks.update_pages_search_vector_task",
+        "schedule": datetime.timedelta(seconds=BEAT_UPDATE_SEARCH_SEC),
         "options": {"expires": BEAT_UPDATE_SEARCH_EXPIRE_AFTER_SEC},
     },
     "expire-orders": {
@@ -686,19 +716,19 @@ CELERY_BEAT_SCHEDULE = {
     },
     "release-funds-for-abandoned-checkouts": {
         "task": "saleor.payment.tasks.transaction_release_funds_for_checkout_task",
-        "schedule": timedelta(minutes=10),
+        "schedule": datetime.timedelta(minutes=10),
     },
     "recalculate-promotion-rules": {
         "task": (
             "saleor.product.tasks"
             ".update_variant_relations_for_active_promotion_rules_task"
         ),
-        "schedule": timedelta(seconds=BEAT_PRICE_RECALCULATION_SCHEDULE),
+        "schedule": datetime.timedelta(seconds=BEAT_PRICE_RECALCULATION_SCHEDULE),
         "options": {"expires": BEAT_PRICE_RECALCULATION_SCHEDULE_EXPIRE_AFTER_SEC},
     },
     "recalculate-discounted-price-for-products": {
         "task": "saleor.product.tasks.recalculate_discounted_price_for_products_task",
-        "schedule": timedelta(seconds=BEAT_PRICE_RECALCULATION_SCHEDULE),
+        "schedule": datetime.timedelta(seconds=BEAT_PRICE_RECALCULATION_SCHEDULE),
         "options": {"expires": BEAT_PRICE_RECALCULATION_SCHEDULE_EXPIRE_AFTER_SEC},
     },
 }
@@ -708,10 +738,10 @@ CELERY_BEAT_SCHEDULE = {
 # is_due() calls
 CELERY_BEAT_MAX_LOOP_INTERVAL = 300  # 5 minutes
 
-EVENT_PAYLOAD_DELETE_PERIOD = timedelta(
+EVENT_PAYLOAD_DELETE_PERIOD = datetime.timedelta(
     seconds=parse(os.environ.get("EVENT_PAYLOAD_DELETE_PERIOD", "14 days"))
 )
-EVENT_PAYLOAD_DELETE_TASK_TIME_LIMIT = timedelta(
+EVENT_PAYLOAD_DELETE_TASK_TIME_LIMIT = datetime.timedelta(
     seconds=parse(os.environ.get("EVENT_PAYLOAD_DELETE_TASK_TIME_LIMIT", "1 hour"))
 )
 EVENT_DELIVERY_ATTEMPT_RESPONSE_SIZE_LIMIT = int(
@@ -721,7 +751,9 @@ EVENT_DELIVERY_ATTEMPT_RESPONSE_SIZE_LIMIT = int(
 # App is not visible for the user after removing, but it still exists in the database.
 # Saleor needs time to process sending `APP_DELETED` webhook and possible retrying,
 # so we need to wait for some time before removing the App from the database.
-DELETE_APP_TTL = timedelta(seconds=parse(os.environ.get("DELETE_APP_TTL", "1 day")))
+DELETE_APP_TTL = datetime.timedelta(
+    seconds=parse(os.environ.get("DELETE_APP_TTL", "1 day"))
+)
 
 
 # Observability settings
@@ -739,22 +771,23 @@ OBSERVABILITY_BUFFER_SIZE_LIMIT = int(
 OBSERVABILITY_BUFFER_BATCH_SIZE = int(
     os.environ.get("OBSERVABILITY_BUFFER_BATCH_SIZE", 100)
 )
-OBSERVABILITY_REPORT_PERIOD = timedelta(
+OBSERVABILITY_REPORT_PERIOD = datetime.timedelta(
     seconds=parse(os.environ.get("OBSERVABILITY_REPORT_PERIOD", "20 seconds"))
 )
-OBSERVABILITY_BUFFER_TIMEOUT = timedelta(
+OBSERVABILITY_BUFFER_TIMEOUT = datetime.timedelta(
     seconds=parse(os.environ.get("OBSERVABILITY_BUFFER_TIMEOUT", "5 minutes"))
 )
 if OBSERVABILITY_ACTIVE:
     CELERY_BEAT_SCHEDULE["observability-reporter"] = {
-        "task": "saleor.webhook.transport.asynchronous.transport.observability_reporter_task",  # noqa
+        "task": "saleor.webhook.transport.asynchronous.transport.observability_reporter_task",
         "schedule": OBSERVABILITY_REPORT_PERIOD,
         "options": {"expires": OBSERVABILITY_REPORT_PERIOD.total_seconds()},
     }
     if OBSERVABILITY_BUFFER_TIMEOUT < OBSERVABILITY_REPORT_PERIOD * 2:
         warnings.warn(
             "OBSERVABILITY_REPORT_PERIOD is too big compared to "
-            "OBSERVABILITY_BUFFER_TIMEOUT. That can lead to a loss of events."
+            "OBSERVABILITY_BUFFER_TIMEOUT. That can lead to a loss of events.",
+            stacklevel=1,
         )
 
 # Change this value if your application is running behind a proxy,
@@ -785,7 +818,28 @@ def SENTRY_INIT(dsn: str, sentry_opts: dict):
     Will only be called if SENTRY_DSN is not None, during core start, can be
     overriden in separate settings file.
     """
-    sentry_sdk.init(dsn, release=__version__, **sentry_opts)
+
+    SALEOR_DENYLIST = DEFAULT_DENYLIST + ["private_metadata"]
+    SALEOR_PII_DENYLIST = DEFAULT_PII_DENYLIST + [
+        "first_name",
+        "last_name",
+        "email",
+        "company_name",
+        "street_address",
+        "street_address_1",
+        "street_address_2",
+        "user_email",
+    ]
+
+    sentry_sdk.init(
+        dsn,
+        release=__version__,
+        send_default_pii=False,
+        event_scrubber=EventScrubber(
+            denylist=SALEOR_DENYLIST, pii_denylist=SALEOR_PII_DENYLIST
+        ),
+        **sentry_opts,
+    )
     ignore_logger("graphql.execution.utils")
     ignore_logger("graphql.execution.executor")
 
@@ -805,35 +859,33 @@ GRAPHQL_QUERY_MAX_COMPLEXITY = int(
 FEDERATED_QUERY_MAX_ENTITIES = int(os.environ.get("FEDERATED_QUERY_MAX_ENTITIES", 100))
 
 BUILTIN_PLUGINS = [
-    "saleor.plugins.avatax.plugin.AvataxPlugin",
+    "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin",
     "saleor.plugins.webhook.plugin.WebhookPlugin",
-    "saleor.payment.gateways.dummy.plugin.DummyGatewayPlugin",
-    "saleor.payment.gateways.dummy_credit_card.plugin.DummyCreditCardGatewayPlugin",
-    "saleor.payment.gateways.stripe.deprecated.plugin.DeprecatedStripeGatewayPlugin",
+    "saleor.payment.gateways.dummy.plugin.DeprecatedDummyGatewayPlugin",
+    "saleor.payment.gateways.dummy_credit_card.plugin.DeprecatedDummyCreditCardGatewayPlugin",
     "saleor.payment.gateways.stripe.plugin.StripeGatewayPlugin",
-    "saleor.payment.gateways.braintree.plugin.BraintreeGatewayPlugin",
-    "saleor.payment.gateways.razorpay.plugin.RazorpayGatewayPlugin",
+    "saleor.payment.gateways.braintree.plugin.DeprecatedBraintreeGatewayPlugin",
+    "saleor.payment.gateways.razorpay.plugin.DeprecatedRazorpayGatewayPlugin",
     "saleor.payment.gateways.adyen.plugin.AdyenGatewayPlugin",
     "saleor.payment.gateways.authorize_net.plugin.AuthorizeNetGatewayPlugin",
     "saleor.payment.gateways.np_atobarai.plugin.NPAtobaraiGatewayPlugin",
-    "saleor.plugins.invoicing.plugin.InvoicingPlugin",
     "saleor.plugins.user_email.plugin.UserEmailPlugin",
     "saleor.plugins.admin_email.plugin.AdminEmailPlugin",
-    "saleor.plugins.sendgrid.plugin.SendgridEmailPlugin",
+    "saleor.plugins.sendgrid.plugin.DeprecatedSendgridEmailPlugin",
     "saleor.plugins.openid_connect.plugin.OpenIDConnectPlugin",
 ]
 
 # Plugin discovery
 EXTERNAL_PLUGINS = []
-installed_plugins = pkg_resources.iter_entry_points("saleor.plugins")
+installed_plugins = importlib.metadata.entry_points(group="saleor.plugins")
 for entry_point in installed_plugins:
-    plugin_path = f"{entry_point.module_name}.{entry_point.attrs[0]}"
+    plugin_path = f"{entry_point.module}.{entry_point.attr}"
     if plugin_path not in BUILTIN_PLUGINS and plugin_path not in EXTERNAL_PLUGINS:
         if entry_point.name not in INSTALLED_APPS:
             INSTALLED_APPS.append(entry_point.name)
         EXTERNAL_PLUGINS.append(plugin_path)
 
-PLUGINS = BUILTIN_PLUGINS + EXTERNAL_PLUGINS
+PLUGINS: list[str] = BUILTIN_PLUGINS + EXTERNAL_PLUGINS
 
 # When `True`, HTTP requests made from arbitrary URLs will be rejected (e.g., webhooks).
 # if they try to access private IP address ranges, and loopback ranges (unless
@@ -851,55 +903,38 @@ HTTP_IP_FILTER_ALLOW_LOOPBACK_IPS: bool = get_bool_from_env(
 # time of the reservation in seconds.
 RESERVE_DURATION = 45
 
-# Initialize a simple and basic Jaeger Tracing integration
-# for open-tracing if enabled.
-#
-# Refer to our guide on https://docs.saleor.io/docs/next/guides/opentracing-jaeger/.
-#
-# If running locally, set:
-#   JAEGER_AGENT_HOST=localhost
-JAEGER_HOST = os.environ.get("JAEGER_AGENT_HOST")
-if JAEGER_HOST:
-    jaeger_client.Config(
-        config={
-            "sampler": {"type": "const", "param": 1},
-            "local_agent": {
-                "reporting_port": os.environ.get(
-                    "JAEGER_AGENT_PORT", jaeger_client.config.DEFAULT_REPORTING_PORT
-                ),
-                "reporting_host": JAEGER_HOST,
-            },
-            "logging": get_bool_from_env("JAEGER_LOGGING", False),
-        },
-        service_name="saleor",
-        validate=True,
-    ).initialize_tracer()
-
 
 # Some cloud providers (Heroku) export REDIS_URL variable instead of CACHE_URL
 REDIS_URL = os.environ.get("REDIS_URL")
-if REDIS_URL:
-    CACHE_URL = os.environ.setdefault("CACHE_URL", REDIS_URL)
+CACHE_URL = (
+    os.environ.setdefault("CACHE_URL", REDIS_URL)
+    if REDIS_URL
+    else os.environ.get("CACHE_URL")
+)
 CACHES = {"default": django_cache_url.config()}
 CACHES["default"]["TIMEOUT"] = parse(os.environ.get("CACHE_TIMEOUT", "7 days"))
 
 JWT_EXPIRE = True
-JWT_TTL_ACCESS = timedelta(seconds=parse(os.environ.get("JWT_TTL_ACCESS", "5 minutes")))
-JWT_TTL_APP_ACCESS = timedelta(
+JWT_TTL_ACCESS = datetime.timedelta(
+    seconds=parse(os.environ.get("JWT_TTL_ACCESS", "5 minutes"))
+)
+JWT_TTL_APP_ACCESS = datetime.timedelta(
     seconds=parse(os.environ.get("JWT_TTL_APP_ACCESS", "5 minutes"))
 )
-JWT_TTL_REFRESH = timedelta(seconds=parse(os.environ.get("JWT_TTL_REFRESH", "30 days")))
+JWT_TTL_REFRESH = datetime.timedelta(
+    seconds=parse(os.environ.get("JWT_TTL_REFRESH", "30 days"))
+)
 
 
-JWT_TTL_REQUEST_EMAIL_CHANGE = timedelta(
+JWT_TTL_REQUEST_EMAIL_CHANGE = datetime.timedelta(
     seconds=parse(os.environ.get("JWT_TTL_REQUEST_EMAIL_CHANGE", "1 hour")),
 )
 
-CHECKOUT_PRICES_TTL = timedelta(
+CHECKOUT_PRICES_TTL = datetime.timedelta(
     seconds=parse(os.environ.get("CHECKOUT_PRICES_TTL", "1 hour"))
 )
 
-CHECKOUT_TTL_BEFORE_RELEASING_FUNDS = timedelta(
+CHECKOUT_TTL_BEFORE_RELEASING_FUNDS = datetime.timedelta(
     seconds=parse(os.environ.get("CHECKOUT_TTL_BEFORE_RELEASING_FUNDS", "6 hours"))
 )
 TRANSACTION_BATCH_FOR_RELEASING_FUNDS = os.environ.get(
@@ -916,17 +951,22 @@ SEARCH_ORDERS_MAX_INDEXED_TRANSACTIONS = 20
 SEARCH_ORDERS_MAX_INDEXED_PAYMENTS = 20
 SEARCH_ORDERS_MAX_INDEXED_DISCOUNTS = 20
 SEARCH_ORDERS_MAX_INDEXED_LINES = 100
+SEARCH_ORDERS_MAX_INDEXED_INVOICES = 20
+SEARCH_ORDERS_MAX_INDEXED_EVENTS = 50
 
 # Maximum related objects that can be indexed in a product
 PRODUCT_MAX_INDEXED_ATTRIBUTES = 1000
 PRODUCT_MAX_INDEXED_ATTRIBUTE_VALUES = 100
 PRODUCT_MAX_INDEXED_VARIANTS = 1000
 
+# Maximum related objects that can be indexed in a page
+PAGE_MAX_INDEXED_ATTRIBUTES = 1000
+PAGE_MAX_INDEXED_ATTRIBUTE_VALUES = 100
 
 # Patch SubscriberExecutionContext class from `graphql-core-legacy` package
 # to fix bug causing not returning errors for subscription queries.
 
-executor.SubscriberExecutionContext = PatchedSubscriberExecutionContext  # type: ignore
+executor.SubscriberExecutionContext = PatchedSubscriberExecutionContext  # type: ignore[assignment,misc]
 
 patch_executor()
 
@@ -987,8 +1027,8 @@ TOKEN_UPDATE_LAST_LOGIN_THRESHOLD = parse(
 
 # Max lock time for checkout processing.
 # It prevents locking checkout when unhandled issue appears.
-CHECKOUT_COMPLETION_LOCK_TIME = parse(
-    os.environ.get("CHECKOUT_COMPLETION_LOCK_TIME", "3 minutes")
+CHECKOUT_COMPLETION_LOCK_TIME: int = cast(
+    int, parse(os.environ.get("CHECKOUT_COMPLETION_LOCK_TIME", "3 minutes"))
 )
 
 # Default timeout (sec) for establishing a connection when performing external requests.
@@ -1022,14 +1062,6 @@ ENABLE_LIMITING_WEBHOOKS_FOR_IDENTICAL_PAYLOADS = get_bool_from_env(
 TRANSACTION_ITEMS_LIMIT = 100
 
 
-# The manager.perform_mutation method is deprecated and will be removed in Saleor 3.21.
-# It is enabled by default, but can be disabled by setting the environment variable to
-# False.
-ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION = get_bool_from_env(
-    "ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION", True
-)
-
-
 TOKEN_GENERATOR_CLASS = "django.contrib.auth.tokens.PasswordResetTokenGenerator"
 
 # Disable Django warnings regarding too long cache keys being incompatible with
@@ -1037,59 +1069,65 @@ TOKEN_GENERATOR_CLASS = "django.contrib.auth.tokens.PasswordResetTokenGenerator"
 warnings.filterwarnings("ignore", category=CacheKeyWarning)
 
 
+# Breaker board configuration
+BREAKER_BOARD_ENABLED = get_bool_from_env("BREAKER_BOARD_ENABLED", False)
+# Storage class string for the breaker board, for example:
+# "saleor.webhook.circuit_breaker.storage.RedisStorage"
+BREAKER_BOARD_STORAGE_CLASS = "saleor.webhook.circuit_breaker.storage.RedisStorage"
+if BREAKER_BOARD_ENABLED and (CACHE_URL is None or not CACHE_URL.startswith("redis")):
+    raise ImproperlyConfigured(
+        "Redis storage cannot be used when Redis cache is not configured."
+    )
+# List of lowercase sync webhook events that should be monitored by the breaker board, for ex:
+# "checkout_calculate_taxes, shipping_list_methods_for_checkout".
+BREAKER_BOARD_SYNC_EVENTS = get_list(os.environ.get("BREAKER_BOARD_SYNC_EVENTS", ""))
+
+# Subset of BREAKER_BOARD_SYNC_EVENTS that should be monitored by the breaker board,
+# but should not be disabled in case of exceeding failure thresholds
+BREAKER_BOARD_DRY_RUN_SYNC_EVENTS = get_list(
+    os.environ.get("BREAKER_BOARD_DRY_RUN_SYNC_EVENTS", "")
+)
+
+TELEMETRY_TRACER_CLASS = "saleor.core.telemetry.trace.Tracer"
+TELEMETRY_METER_CLASS = "saleor.core.telemetry.metric.Meter"
+# Whether to raise or log exceptions for telemetry unit conversion errors
+# Disabled by default to prevent disruptions caused by unexpected unit conversion issues
+TELEMETRY_RAISE_UNIT_CONVERSION_ERRORS = False
+
+# Additional hash suffix, allowing to invalidate cached schema. In production usually we want this to be empty.
+# For development envs, where schema may change often, it may be convenient to set it to e.g. commit hash value.
+GRAPHQL_CACHE_SUFFIX = os.environ.get("GRAPHQL_CACHE_SUFFIX", "")
+
 # Library `google-i18n-address` use `AddressValidationMetadata` form Google to provide address validation rules.
 # Patch `i18n` module to allows to override the default address rules.
 i18n_rules_override()
 
-
 # Patch Promise to remove all references that could result in reference cycles, allowing memory to be freed
 # immediately, without the need of a deep garbage collection cycle.
 patch_promise()
-
-# Patch `OAuth2Session` and `TokenAuth` to remove all references that could result in reference cycles,
-# allowing memory to be freed immediately, without the need of a deep garbage collection cycle.
-patch_authlib()
-
-# Patch `Local` to remove all references that could result in reference cycles,
-# allowing memory to be freed immediately, without the need of a deep garbage collection cycle.
-patch_local()
 
 # Patch `DatabaseClient`, `DatabaseCreation`, `DatabaseFeatures`, `DatabaseIntrospection`, `DatabaseOperations`,
 # `BaseDatabaseValidation` and `DatabaseErrorWrapper` to remove all references that could result in reference cycles,
 # allowing memory to be freed immediately, without the need of a deep garbage collection cycle.
 patch_db()
 
-
-# Patch `ExecutionContext` to remove all references that could result in reference cycles,
+# Patch `Local` to remove all references that could result in reference cycles,
 # allowing memory to be freed immediately, without the need of a deep garbage collection cycle.
-patch_execution_context()
+patch_local()
 
-# Patch `ExecutionResult` to remove all references that could result in reference cycles,
-# allowing memory to be freed immediately, without the need of a deep garbage collection cycle.
-patch_execution_result()
+# CORS Configuration for Development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:9000",
+    "http://localhost:9001",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:9000",
+    "http://127.0.0.1:9001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
 
-
-# ============================================
-# CORS Configuration (Custom)
-# ============================================
-# Read CORS origins from environment variable, with fallback defaults for development
-_cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "")
-if _cors_origins_env:
-    CORS_ALLOWED_ORIGINS = get_list(_cors_origins_env)
-else:
-    # Default for development
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:9000",
-        "http://localhost:9001",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:9000",
-        "http://127.0.0.1:9001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ]
-
-CORS_ALLOW_CREDENTIALS = get_bool_from_env("CORS_ALLOW_CREDENTIALS", True)
+CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -1114,33 +1152,27 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-# ============================================
-# CSRF Configuration (Custom)
-# ============================================
-_csrf_origins_env = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
-if _csrf_origins_env:
-    CSRF_TRUSTED_ORIGINS = get_list(_csrf_origins_env)
-else:
-    # Default for development
-    CSRF_TRUSTED_ORIGINS = [
-        "http://localhost:9000",
-        "http://localhost:9001",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:9000",
-        "http://127.0.0.1:9001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ]
+# NEW: Trust these origins for CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:9000",
+    "http://localhost:9001",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:9000",
+    "http://127.0.0.1:9001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+]
 
-# Exempt GraphQL from CSRF for API access
+# NEW: Exempt GraphQL from CSRF for development
 CSRF_EXEMPT_PATHS = [
     '/graphql/',
 ]
 
-# CSRF exemption settings for GraphQL
+# NEW: Allow CSRF exemption for GraphQL (Saleor specific)
 GRAPHQL_MIDDLEWARE_EXEMPT = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 CSRF_VALIDATION_REQUIRED = False
 GRAPHQL_CSRF_EXEMPT = True
+
