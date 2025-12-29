@@ -9,7 +9,7 @@ services:
   # Traefik Reverse Proxy with Auto SSL
   # ==========================================
   traefik:
-    image: traefik:v3.2
+    image: traefik:v2.11
     container_name: leemasmart-traefik
     restart: always
     command:
