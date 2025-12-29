@@ -5,16 +5,17 @@ import { commonMessages } from "@dashboard/intl";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getWarehouseErrorMessage from "@dashboard/utils/errors/warehouse";
 import { TextField } from "@material-ui/core";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface WarehouseInfoProps {
+export interface WarehouseInfoProps {
   data: Record<"name", string>;
   disabled: boolean;
   errors: WarehouseErrorFragment[];
   onChange: FormChange;
 }
 
-const WarehouseInfo = ({ data, disabled, errors, onChange }: WarehouseInfoProps) => {
+const WarehouseInfo: React.FC<WarehouseInfoProps> = ({ data, disabled, errors, onChange }) => {
   const intl = useIntl();
   const formErrors = getFormErrors(["name"], errors);
 

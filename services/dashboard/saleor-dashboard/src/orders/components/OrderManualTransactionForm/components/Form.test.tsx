@@ -1,5 +1,6 @@
 // @ts-strict-ignore
 import { fireEvent, render } from "@testing-library/react";
+import React from "react";
 
 import { OrderManualTransactionFormProps } from "..";
 import { OrderManualTransactionForm } from "../OrderManualTransactionForm";

@@ -6,7 +6,8 @@ taxes (Money instead of TaxedMoney). If you don't need pre-taxed prices use func
 from calculations.py.
 """
 
-from typing import TYPE_CHECKING
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Optional
 
 from prices import Money
 
@@ -87,7 +88,7 @@ def calculate_undiscounted_base_line_unit_price(
 
 def base_checkout_delivery_price(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"] | None = None,
+    lines: Optional[Iterable["CheckoutLineInfo"]] = None,
     include_voucher: bool = True,
 ) -> Money:
     """Calculate base (untaxed) price for any kind of delivery method."""
@@ -113,12 +114,12 @@ def base_checkout_delivery_price(
 
 def base_checkout_undiscounted_delivery_price(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"] | None = None,
+    lines: Optional[Iterable["CheckoutLineInfo"]] = None,
 ) -> Money:
     """Calculate base (untaxed) undiscounted price for any kind of delivery method."""
     from .fetch import ShippingMethodInfo
 
-    delivery_method_info = checkout_info.get_delivery_method_info()
+    delivery_method_info = checkout_info.delivery_method_info
     currency = checkout_info.checkout.currency
 
     if not isinstance(delivery_method_info, ShippingMethodInfo):
@@ -132,7 +133,7 @@ def base_checkout_undiscounted_delivery_price(
 def calculate_base_price_for_shipping_method(
     checkout_info: "CheckoutInfo",
     shipping_method_info: "ShippingMethodInfo",
-    lines: list["CheckoutLineInfo"] | None = None,
+    lines: Optional[Iterable["CheckoutLineInfo"]] = None,
 ) -> Money:
     """Return checkout shipping price."""
     from .fetch import CheckoutLineInfo
@@ -157,7 +158,7 @@ def calculate_base_price_for_shipping_method(
 
 def base_checkout_total(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
 ) -> Money:
     """Return the total cost of the checkout.
 
@@ -173,7 +174,7 @@ def base_checkout_total(
 
 
 def base_checkout_subtotal(
-    checkout_lines: list["CheckoutLineInfo"],
+    checkout_lines: Iterable["CheckoutLineInfo"],
     channel: "Channel",
     currency: str,
     include_voucher: bool = True,
@@ -197,7 +198,7 @@ def base_checkout_subtotal(
 
 def checkout_total(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
 ) -> Money:
     """Return the total cost of the checkout including discounts and vouchers.
 
@@ -225,7 +226,7 @@ def checkout_total(
 
 def get_line_total_price_with_propagated_checkout_discount(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
     checkout_line_info: "CheckoutLineInfo",
 ) -> Money:
     """Calculate the checkout line price with discounts.
@@ -261,7 +262,7 @@ def get_line_total_price_with_propagated_checkout_discount(
 
 
 def _propagate_checkout_discount_on_checkout_lines_prices(
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
     total_discount: Money,
     currency: str,
 ):

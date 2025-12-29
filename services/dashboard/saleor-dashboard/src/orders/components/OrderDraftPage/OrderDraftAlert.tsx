@@ -3,6 +3,7 @@ import { shippingZonesListPath } from "@dashboard/shipping/urls";
 import { Alert, AlertProps } from "@saleor/macaw-ui";
 import { sprinkles } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { FormattedMessage, MessageDescriptor, useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
@@ -43,7 +44,7 @@ export type OrderDraftAlertProps = Omit<AlertProps, "variant" | "close"> & {
   channelUsabilityData?: ChannelUsabilityDataQuery;
 };
 
-const OrderDraftAlert = (props: OrderDraftAlertProps) => {
+const OrderDraftAlert: React.FC<OrderDraftAlertProps> = props => {
   const { order, channelUsabilityData, ...alertProps } = props;
   const classes = useAlertStyles();
   const intl = useIntl();

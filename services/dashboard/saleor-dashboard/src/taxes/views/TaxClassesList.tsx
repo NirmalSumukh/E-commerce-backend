@@ -18,7 +18,7 @@ import createMetadataCreateHandler, {
 } from "@dashboard/utils/handlers/metadataCreateHandler";
 import createMetadataUpdateHandler from "@dashboard/utils/handlers/metadataUpdateHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
-import { useMemo } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { taxesMessages } from "../messages";
@@ -33,14 +33,14 @@ interface TaxClassesListProps {
   id: string | undefined;
 }
 
-const TaxClassesList = ({ id }: TaxClassesListProps) => {
+export const TaxClassesList: React.FC<TaxClassesListProps> = ({ id }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
   const handleTabChange = (tab: TaxTab) => {
     navigate(taxTabPath(tab));
   };
-  const newTaxClass: TaxClassFragment = useMemo(
+  const newTaxClass: TaxClassFragment = React.useMemo(
     () => ({
       __typename: "TaxClass" as const,
       id: "new",
@@ -133,7 +133,7 @@ const TaxClassesList = ({ id }: TaxClassesListProps) => {
     variables: { first: 100 },
   });
   const { data: countryRatesData } = useTaxCountriesListQuery();
-  const taxClasses = useMemo(() => {
+  const taxClasses = React.useMemo(() => {
     if (
       data?.taxClasses === undefined ||
       countryRatesData?.taxCountryConfigurations === undefined
@@ -150,7 +150,7 @@ const TaxClassesList = ({ id }: TaxClassesListProps) => {
 
     return taxClasses;
   }, [countryRatesData?.taxCountryConfigurations, data?.taxClasses, isNewTaxClass, newTaxClass]);
-  const selectedTaxClass = useMemo(() => {
+  const selectedTaxClass = React.useMemo(() => {
     if (isNewTaxClass) {
       return newTaxClass;
     }

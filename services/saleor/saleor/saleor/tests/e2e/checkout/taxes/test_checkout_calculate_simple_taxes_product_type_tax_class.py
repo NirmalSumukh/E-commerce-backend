@@ -158,6 +158,8 @@ def test_checkout_calculate_simple_tax_based_on_product_type_tax_class_CORE_2003
         lines,
         channel_slug,
         email="testEmail@example.com",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
 

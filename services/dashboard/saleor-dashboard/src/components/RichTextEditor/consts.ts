@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { StrikethroughIcon } from "@dashboard/icons/StrikethroughIcon";
+import strikethroughIcon from "@dashboard/icons/StrikethroughIcon";
 import { ToolConstructable, ToolSettings } from "@editorjs/editorjs";
 import Embed from "@editorjs/embed";
 import Header from "@editorjs/header";
@@ -29,16 +29,15 @@ export const tools: Record<string, ToolConstructable | ToolSettings> = {
     inlineToolbar,
   },
   paragraph: {
-    // @ts-expect-error Type mismatch between editorjs libraries (@editorjs/list and @editorjs/editorjs)
     class: Paragraph,
     inlineToolbar,
-  },
+  } as unknown as ToolConstructable,
   strikethrough: createGenericInlineTool({
     sanitize: {
       s: {},
     },
     shortcut: "CMD+S",
     tagName: "s",
-    toolboxIcon: StrikethroughIcon,
+    toolboxIcon: strikethroughIcon,
   }),
 };

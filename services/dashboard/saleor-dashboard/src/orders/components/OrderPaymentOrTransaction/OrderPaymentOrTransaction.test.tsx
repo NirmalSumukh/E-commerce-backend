@@ -2,12 +2,20 @@
 import { MarkAsPaidStrategyEnum } from "@dashboard/graphql";
 import { order as orderFixture, payments, shop } from "@dashboard/orders/fixtures";
 import { render, screen } from "@testing-library/react";
+import React from "react";
 
 import {
   OrderPaymentOrTransaction,
   OrderPaymentOrTransactionProps,
 } from "./OrderPaymentOrTransaction";
 
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn((x: any) => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: jest.fn(({ defaultMessage }) => defaultMessage),
+}));
 jest.mock("@saleor/macaw-ui", () => ({
   useTheme: jest.fn(() => () => ({})),
   useStyles: jest.fn(() => () => ({})),

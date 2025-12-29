@@ -1,58 +1,17 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.db.models import Exists, F, OuterRef
+from django.db.models import Exists, OuterRef
 
-from ..app.models import App
 from ..checkout import AddressType
-from ..core.tracing import traced_atomic_transaction
 from ..core.utils.events import call_event
 from ..permission.models import Permission
 from ..plugins.manager import get_plugins_manager
-from .lock_objects import user_qs_select_for_update
 from .models import Group, User
 
 if TYPE_CHECKING:
     from ..plugins.manager import PluginsManager
     from .models import Address
-
-
-@dataclass
-class RequestorAwareContext:
-    allow_replica: bool
-    user: User | None = None
-    app: App | None = None
-
-    @property
-    def META(self):
-        return {}
-
-    @staticmethod
-    def _get_or_none(model, pk_value):
-        return (
-            model.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
-            .filter(pk=pk_value)
-            .first()
-            if pk_value
-            else None
-        )
-
-    @classmethod
-    def from_context_data(cls, context_data):
-        return cls(
-            allow_replica=context_data["allow_replica"],
-            user=cls._get_or_none(User, context_data["user_pk"]),
-            app=cls._get_or_none(App, context_data["app_pk"]),
-        )
-
-    @staticmethod
-    def create_context_data(context):
-        return {
-            "allow_replica": context.allow_replica,
-            "user_pk": context.user.pk if context.user else None,
-            "app_pk": context.app.pk if context.app else None,
-        }
 
 
 def store_user_address(
@@ -69,6 +28,7 @@ def store_user_address(
     if is_user_address_limit_reached(user):
         return
 
+    address = manager.change_user_address(address, address_type, user)
     address_data = address.as_data()
 
     address = user.addresses.filter(**address_data).first()
@@ -119,6 +79,7 @@ def set_user_default_shipping_address(user, address):
 def change_user_default_address(
     user: User, address: "Address", address_type: str, manager: "PluginsManager"
 ):
+    address = manager.change_user_address(address, address_type, user)
     if address_type == AddressType.BILLING:
         if user.default_billing_address:
             user.addresses.add(user.default_billing_address)
@@ -196,20 +157,3 @@ def send_user_event(user: User, created: bool, updated: bool):
         event = manager.staff_updated if user.is_staff else manager.customer_updated
     if event:
         call_event(event, user)
-
-
-def update_user_orders_count(user_orders_count: dict[int, int]):
-    user_ids = [user_id for user_id, count in user_orders_count.items() if count > 0]
-    users_to_update = []
-    with traced_atomic_transaction():
-        users = user_qs_select_for_update().filter(id__in=user_ids)
-        users_in_bulk = users.in_bulk()
-        for user_id, count in user_orders_count.items():
-            if count > 0:
-                user = users_in_bulk.get(user_id)
-                if user:
-                    user.number_of_orders = F("number_of_orders") + count
-                    users_to_update.append(user)
-
-        if users_to_update:
-            User.objects.bulk_update(users_to_update, ["number_of_orders"])

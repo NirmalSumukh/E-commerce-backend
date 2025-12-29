@@ -1,14 +1,22 @@
 import { DashboardCard } from "@dashboard/components/Card";
-import { SimpleRadioGroupField } from "@dashboard/components/SimpleRadioGroupField";
-import { ChangeEvent } from "@dashboard/hooks/useForm";
+import RadioGroupField from "@dashboard/components/RadioGroupField";
+import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { OrderRefundFormData, OrderRefundType } from "../OrderRefundPage/form";
 
+const useStyles = makeStyles(
+  {
+    cartContent: { paddingBottom: 0 },
+  },
+  { name: "OrderRefund" },
+);
+
 interface OrderRefundProps {
   data: OrderRefundFormData;
   disabled: boolean;
-  onChange: (event: ChangeEvent) => void;
+  onChange: (event: React.ChangeEvent<any>) => void;
 }
 
 const messages = defineMessages({
@@ -23,8 +31,9 @@ const messages = defineMessages({
     description: "refund type",
   },
 });
-const OrderRefund = (props: OrderRefundProps) => {
+const OrderRefund: React.FC<OrderRefundProps> = props => {
   const { data, disabled, onChange } = props;
+  const classes = useStyles(props);
   const intl = useIntl();
 
   return (
@@ -38,8 +47,8 @@ const OrderRefund = (props: OrderRefundProps) => {
           })}
         </DashboardCard.Title>
       </DashboardCard.Header>
-      <DashboardCard.Content paddingBottom={0}>
-        <SimpleRadioGroupField
+      <DashboardCard.Content className={classes.cartContent}>
+        <RadioGroupField
           choices={[
             {
               label: intl.formatMessage(messages.refundProducts),
@@ -54,6 +63,7 @@ const OrderRefund = (props: OrderRefundProps) => {
           name={"type" as keyof FormData}
           value={data.type}
           onChange={onChange}
+          variant="inline"
         />
       </DashboardCard.Content>
     </DashboardCard>

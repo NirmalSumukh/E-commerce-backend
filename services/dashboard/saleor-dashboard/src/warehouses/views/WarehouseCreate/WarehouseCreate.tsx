@@ -9,9 +9,10 @@ import WarehouseCreatePage, {
   WarehouseCreatePageFormData,
 } from "@dashboard/warehouses/components/WarehouseCreatePage";
 import { warehouseUrl } from "@dashboard/warehouses/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
-const WarehouseCreate = () => {
+const WarehouseCreate: React.FC = () => {
   const intl = useIntl();
   const navigate = useNavigator();
   const notify = useNotifier();

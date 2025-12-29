@@ -1,7 +1,6 @@
 // @ts-strict-ignore
 import { GiftCardDetailsQuery, useGiftCardDetailsQuery } from "@dashboard/graphql";
-import { createContext } from "react";
-import * as React from "react";
+import React, { createContext } from "react";
 
 import { useGiftCardPermissions } from "../../../hooks/useGiftCardPermissions";
 import { ExtendedGiftCard } from "./types";
@@ -19,7 +18,7 @@ export interface GiftCardDetailsConsumerProps {
 
 export const GiftCardDetailsContext = createContext<GiftCardDetailsConsumerProps>(null);
 
-const GiftCardDetailsProvider = ({ children, id }: GiftCardDetailsProviderProps) => {
+const GiftCardDetailsProvider: React.FC<GiftCardDetailsProviderProps> = ({ children, id }) => {
   const { canSeeApp, canSeeUser } = useGiftCardPermissions();
   const { data, loading } = useGiftCardDetailsQuery({
     displayLoader: true,

@@ -13,11 +13,12 @@ import { ChannelProps } from "@dashboard/types";
 import { TableBody, TableCell, TableHead } from "@material-ui/core";
 import { ICONBUTTON_SIZE, makeStyles } from "@saleor/macaw-ui";
 import { Button, EditIcon, Skeleton, TrashBinIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { maybe, renderCollection } from "../../../misc";
 
-interface ShippingZoneRatesProps extends ChannelProps {
+export interface ShippingZoneRatesProps extends ChannelProps {
   disabled: boolean;
   rates: ShippingZoneDetailsFragment["shippingMethods"];
   variant: "price" | "weight";
@@ -49,7 +50,7 @@ const useStyles = makeStyles(
   }),
   { name: "ShippingZoneRates" },
 );
-const ShippingZoneRates = (props: ShippingZoneRatesProps) => {
+const ShippingZoneRates: React.FC<ShippingZoneRatesProps> = props => {
   const {
     disabled,
     onRateAdd,

@@ -89,20 +89,18 @@ class CheckoutLinesProblemsByCheckoutIdLoader(
                         COUNTRY_CODE,
                     ],
                     Iterable[Stock],
-                ] = dict(zip(variant_data_list, variant_stocks, strict=False))
+                ] = dict(zip(variant_data_list, variant_stocks))
                 product_channel_listings_map: dict[
                     tuple[
                         PRODUCT_ID,
                         CHANNEL_SLUG,
                     ],
                     ProductChannelListing,
-                ] = dict(zip(product_data_set, product_channel_listings, strict=False))
+                ] = dict(zip(product_data_set, product_channel_listings))
 
                 problems = {}
 
-                for checkout_info, lines in zip(
-                    checkout_infos, checkout_lines, strict=False
-                ):
+                for checkout_info, lines in zip(checkout_infos, checkout_lines):
                     checkout_id = checkout_info.checkout.pk
                     problems[checkout_id] = get_checkout_lines_problems(
                         checkout_info,
@@ -121,7 +119,15 @@ class CheckoutLinesProblemsByCheckoutIdLoader(
             product_channel_listings = (
                 ProductChannelListingByProductIdAndChannelSlugLoader(
                     self.context
-                ).load_many(product_data_list)
+                ).load_many(
+                    [
+                        (
+                            product_id,
+                            channel_slug,
+                        )
+                        for product_id, channel_slug in product_data_list
+                    ]
+                )
             )
 
             return Promise.all([variant_stocks, product_channel_listings]).then(
@@ -146,7 +152,7 @@ class CheckoutProblemsByCheckoutIdDataloader(
         ):
             checkout_problems = defaultdict(list)
             for checkout_pk, checkout_lines_problems in zip(
-                keys, checkouts_lines_problems, strict=False
+                keys, checkouts_lines_problems
             ):
                 checkout_problems[checkout_pk] = get_checkout_problems(
                     checkout_lines_problems

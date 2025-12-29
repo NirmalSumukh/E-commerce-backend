@@ -1,10 +1,19 @@
 import { useFileUploadMutation } from "@dashboard/graphql";
 import { act, renderHook } from "@testing-library/react-hooks";
+import React from "react";
 
 import { useFileProcessing } from "./useFileProcessing";
 
 jest.mock("@dashboard/graphql", () => ({
   useFileUploadMutation: jest.fn(),
+}));
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: (x: unknown) => x,
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
 }));
 
 jest.mock("@dashboard/intl", () => ({

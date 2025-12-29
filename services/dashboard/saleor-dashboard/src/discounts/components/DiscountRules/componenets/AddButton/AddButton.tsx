@@ -1,4 +1,5 @@
 import { Button, PlusIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { useDiscountRulesContext } from "../../context";

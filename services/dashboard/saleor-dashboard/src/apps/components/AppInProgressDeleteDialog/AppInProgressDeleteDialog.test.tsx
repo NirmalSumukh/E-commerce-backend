@@ -1,7 +1,8 @@
 import Wrapper from "@test/wrapper";
 import { render, screen } from "@testing-library/react";
+import React from "react";
 
-import { AppInProgressDeleteDialog } from "./AppInProgressDeleteDialog";
+import AppInProgressDeleteDialog from "./AppInProgressDeleteDialog";
 import msgs from "./messages";
 
 describe("Apps AppInProgressDeleteDialog", () => {
@@ -23,7 +24,7 @@ describe("Apps AppInProgressDeleteDialog", () => {
 
     const dialogContent = screen.getByTestId("dialog-content");
     // Assert
-    const expectedText = msgs.deleteNamedApp.defaultMessage;
+    const expectedText = msgs.deleteNamedApp.defaultMessage.replace("{name}", name);
 
     expect(dialogContent).toHaveTextContent(expectedText);
   });

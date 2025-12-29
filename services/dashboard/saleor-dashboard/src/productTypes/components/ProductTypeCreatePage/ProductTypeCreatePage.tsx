@@ -17,6 +17,7 @@ import {
 import { productTypeListUrl } from "@dashboard/productTypes/urls";
 import { FetchMoreProps, UserError } from "@dashboard/types";
 import useMetadataChangeTrigger from "@dashboard/utils/metadata/useMetadataChangeTrigger";
+import React from "react";
 
 import ProductTypeDetails from "../ProductTypeDetails/ProductTypeDetails";
 import ProductTypeShipping from "../ProductTypeShipping/ProductTypeShipping";
@@ -30,7 +31,7 @@ export interface ProductTypeForm extends MetadataFormData {
   weight: number;
 }
 
-interface ProductTypeCreatePageProps {
+export interface ProductTypeCreatePageProps {
   errors: UserError[];
   defaultWeightUnit: WeightUnitsEnum;
   disabled: boolean;
@@ -52,7 +53,7 @@ const formInitialData: ProductTypeForm = {
   taxClassId: "",
   weight: 0,
 };
-const ProductTypeCreatePage = ({
+const ProductTypeCreatePage: React.FC<ProductTypeCreatePageProps> = ({
   defaultWeightUnit,
   disabled,
   errors,

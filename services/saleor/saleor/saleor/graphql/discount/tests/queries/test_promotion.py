@@ -161,7 +161,7 @@ def test_query_promotion_with_complex_rule_2(
         description=dummy_editorjs("Test description for percentage promotion rule."),
         catalogue_predicate=catalogue_predicate,
         reward_value_type=RewardValueType.PERCENTAGE,
-        reward_value=Decimal(10),
+        reward_value=Decimal("10"),
     )
 
     variables = {"id": graphene.Node.to_global_id("Promotion", promotion.id)}
@@ -207,10 +207,12 @@ def test_query_order_promotion_with_gift_rule(
     content = get_graphql_content(response)
     rule = content["data"]["promotion"]["rules"][0]
     rule_db = promotion.rules.first()
-    assert set(rule["giftIds"]) == {
-        graphene.Node.to_global_id("ProductVariant", gift.pk)
-        for gift in rule_db.gifts.all()
-    }
+    assert set(rule["giftIds"]) == set(
+        [
+            graphene.Node.to_global_id("ProductVariant", gift.pk)
+            for gift in rule_db.gifts.all()
+        ]
+    )
     assert rule["giftsLimit"] == 1
     assert rule["rewardType"] == RewardType.GIFT.upper()
 

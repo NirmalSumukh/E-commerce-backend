@@ -27,17 +27,17 @@ import {
   WarehouseListUrlDialog,
   WarehouseListUrlQueryParams,
 } from "@dashboard/warehouses/urls";
-import { useMemo } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { getFilterVariables, storageUtils } from "./filters";
 import { getSortQueryVariables } from "./sort";
 
-interface WarehouseListProps {
+export interface WarehouseListProps {
   params: WarehouseListUrlQueryParams;
 }
 
-const WarehouseList = ({ params }: WarehouseListProps) => {
+const WarehouseList: React.FC<WarehouseListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const { updateListSettings, settings } = useListSettings(ListViews.SALES_LIST);
@@ -46,7 +46,7 @@ const WarehouseList = ({ params }: WarehouseListProps) => {
   usePaginationReset(warehouseListUrl, params, settings.rowNumber);
 
   const paginationState = createPaginationState(settings.rowNumber, params);
-  const queryVariables = useMemo(
+  const queryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: getFilterVariables(params),

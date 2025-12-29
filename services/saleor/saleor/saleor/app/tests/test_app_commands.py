@@ -21,7 +21,6 @@ def test_creates_app_from_manifest():
 
     tokens = app.tokens.all()
     assert len(tokens) == 1
-    assert app.is_installed
     assert not app.is_active
     assert app.uuid is not None
 
@@ -35,7 +34,6 @@ def test_creates_app_from_manifest_activate_app():
 
     tokens = app.tokens.all()
     assert len(tokens) == 1
-    assert app.is_installed
     assert app.is_active
 
 
@@ -85,9 +83,9 @@ def test_creates_app_from_manifest_sends_token(monkeypatch, app_manifest):
         headers={
             "Content-Type": "application/json",
             # X- headers will be deprecated in Saleor 4.0, proper headers are without X-
-            "X-Saleor-Domain": "example.com",
-            "Saleor-Domain": "example.com",
-            "Saleor-Api-Url": "https://example.com/graphql/",
+            "X-Saleor-Domain": "mirumee.com",
+            "Saleor-Domain": "mirumee.com",
+            "Saleor-Api-Url": "http://mirumee.com/graphql/",
             "Saleor-Schema-Version": schema_version,
         },
         json={"auth_token": ANY},
@@ -153,9 +151,9 @@ def test_sends_data_to_target_url(monkeypatch):
         target_url,
         headers={
             # X- headers will be deprecated in Saleor 4.0, proper headers are without X-
-            "X-Saleor-Domain": "example.com",
-            "Saleor-Domain": "example.com",
-            "Saleor-Api-Url": "https://example.com/graphql/",
+            "X-Saleor-Domain": "mirumee.com",
+            "Saleor-Domain": "mirumee.com",
+            "Saleor-Api-Url": "http://mirumee.com/graphql/",
             "Saleor-Schema-Version": schema_version,
         },
         json={"auth_token": ANY},

@@ -5,9 +5,7 @@ import {
   Props as ReactEditorJSProps,
   ReactEditorJS as BaseReactEditorJS,
 } from "@react-editor-js/core";
-import { useCallback } from "react";
-
-import { convertEditorJSListBlocks } from "./utils";
+import React from "react";
 
 // Source of @react-editor-js
 class ClientEditorCore implements EditorCore {
@@ -36,7 +34,7 @@ class ClientEditorCore implements EditorCore {
   public async save() {
     await this._editorJS.isReady;
 
-    return convertEditorJSListBlocks(await this._editorJS.save());
+    return this._editorJS.save();
   }
 
   public async destroy() {
@@ -57,22 +55,12 @@ class ClientEditorCore implements EditorCore {
   public async render(data: OutputData) {
     await this._editorJS.render(data);
   }
-
-  /**
-   * This property is required by the EditorCore interface to optionally expose
-   * the underlying Editor.js instance for advanced use cases. In this implementation,
-   * we intentionally do not expose the low-level instance to maintain encapsulation
-   * and prevent unsafe direct access. Therefore, this always returns null.
-   */
-  public get dangerouslyLowLevelInstance(): any | null {
-    return null;
-  }
 }
 
-type Props = Omit<ReactEditorJSProps, "factory">;
+export type Props = Omit<ReactEditorJSProps, "factory">;
 
 function ReactEditorJSClient(props: Props) {
-  const factory = useCallback((config: EditorConfig) => new ClientEditorCore(config), []);
+  const factory = React.useCallback((config: EditorConfig) => new ClientEditorCore(config), []);
 
   return <BaseReactEditorJS factory={factory} {...props} />;
 }

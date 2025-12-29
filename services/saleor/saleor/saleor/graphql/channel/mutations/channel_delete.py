@@ -1,3 +1,5 @@
+from typing import Optional
+
 import graphene
 from django.core.exceptions import ValidationError
 
@@ -21,10 +23,7 @@ from ..utils import delete_invalid_warehouse_to_shipping_zone_relations
 class ChannelDeleteInput(BaseInputObjectType):
     channel_id = graphene.ID(
         required=True,
-        description=(
-            "ID of a channel to migrate orders from the origin channel. "
-            "Target channel has to have the same currency as the origin."
-        ),
+        description="ID of channel to migrate orders from origin channel.",
     )
 
     class Meta:
@@ -38,7 +37,7 @@ class ChannelDelete(ModelDeleteMutation):
 
     class Meta:
         description = (
-            "Deletes a channel. Orders associated with the deleted "
+            "Delete a channel. Orders associated with the deleted "
             "channel will be moved to the target channel. "
             "Checkouts, product availability, and pricing will be removed."
         )
@@ -122,7 +121,7 @@ class ChannelDelete(ModelDeleteMutation):
 
     @classmethod
     def perform_mutation(  # type: ignore[override]
-        cls, root, info: ResolveInfo, /, *, id: str, input: dict | None = None
+        cls, root, info: ResolveInfo, /, *, id: str, input: Optional[dict] = None
     ):
         origin_channel = cls.get_node_or_error(info, id, only_type=Channel)
         target_channel_global_id = input.get("channel_id") if input else None

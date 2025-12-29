@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import graphene
 import pytest
@@ -307,6 +307,7 @@ def test_draft_order_delete_do_not_trigger_sync_webhooks(
     wrapped_call_order_event,
     setup_order_webhooks,
     settings,
+    django_capture_on_commit_callbacks,
     staff_api_client,
     permission_group_manage_orders,
     draft_order,
@@ -338,12 +339,11 @@ def test_draft_order_delete_do_not_trigger_sync_webhooks(
     )
 
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": draft_order_deleted_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": draft_order_deleted_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
     assert not mocked_send_webhook_request_sync.called
     assert wrapped_call_order_event.called

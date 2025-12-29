@@ -93,7 +93,7 @@ function usePaginator({ queryString, paginationState, pageInfo }: UsePaginatorAr
 
 export default usePaginator;
 
-type PaginatorContextValuesCommon = Partial<PageInfo>;
+export type PaginatorContextValuesCommon = Partial<PageInfo>;
 
 export type PaginatorContextValues = PaginatorContextValuesCommon &
   (

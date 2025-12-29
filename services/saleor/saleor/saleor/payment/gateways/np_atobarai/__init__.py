@@ -88,9 +88,8 @@ def tracking_number_updated(fulfillment: Fulfillment, config: ApiConfig) -> None
         elif errors:
             error = ", ".join(errors)
             logger.warning(
-                "Could not capture payment with id %s in NP Atobarai: %s",
-                payment_graphql_id,
-                error,
+                f"Could not capture payment with id {payment_graphql_id} "
+                f"in NP Atobarai: {error}"
             )
             msg = (
                 f"Error: Cannot capture payment with id {payment_graphql_id} ({error})"

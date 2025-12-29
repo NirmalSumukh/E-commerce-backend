@@ -1,6 +1,3 @@
 types/
 schema.graphql
 *.generated.*
-.changeset/
-.featureFlags/
-locale/

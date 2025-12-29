@@ -4,7 +4,7 @@ import { Option } from "@saleor/macaw-ui-next";
 
 import { GiftCardExpiryType } from "../GiftCardCreateDialog/types";
 
-type GiftCardErrorKey =
+export type GiftCardErrorKey =
   | "tags"
   | "expiryDate"
   | "currency"

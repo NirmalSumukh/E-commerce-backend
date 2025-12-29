@@ -60,9 +60,7 @@ def test_query_staff_members_with_sort(
         ]
     )
     Order.objects.create(
-        user=User.objects.get(email="zordon01@example.com"),
-        channel=channel_USD,
-        lines_count=0,
+        user=User.objects.get(email="zordon01@example.com"), channel=channel_USD
     )
     variables = {"sort_by": customer_sort}
     staff_api_client.user.user_permissions.add(permission_manage_staff)

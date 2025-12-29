@@ -1,4 +1,5 @@
 // @ts-strict-ignore
+
 import TableCellAvatar from "@dashboard/components/TableCellAvatar";
 import TableRowLink from "@dashboard/components/TableRowLink";
 import { OrderFulfillLineFragment } from "@dashboard/graphql";
@@ -13,6 +14,7 @@ import { TableCell, TextField } from "@material-ui/core";
 import { ChevronIcon, IconButton, WarningIcon } from "@saleor/macaw-ui";
 import { Box, Skeleton, Text, Tooltip } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { messages } from "./messages";
@@ -26,7 +28,7 @@ interface OrderFulfillLineProps {
   onWarehouseChange: () => void;
 }
 
-const OrderFulfillLine = (props: OrderFulfillLineProps) => {
+export const OrderFulfillLine: React.FC<OrderFulfillLineProps> = props => {
   const { line, lineIndex, formsetData, formsetChange, onWarehouseChange } = props;
   const classes = useStyles();
   const intl = useIntl();
@@ -153,7 +155,7 @@ const OrderFulfillLine = (props: OrderFulfillLineProps) => {
               <Text className={classes.warehouseButtonContentText}>
                 {lineFormWarehouse?.name ?? intl.formatMessage(messages.selectWarehouse)}
               </Text>
-              <ChevronIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+              <ChevronIcon />
             </div>
           </IconButton>
         )}
@@ -161,6 +163,5 @@ const OrderFulfillLine = (props: OrderFulfillLineProps) => {
     </TableRowLink>
   );
 };
-
 OrderFulfillLine.displayName = "OrderFulfillLine";
 export default OrderFulfillLine;

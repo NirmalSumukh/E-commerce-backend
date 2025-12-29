@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-type Status = "success" | "error" | "info" | "warning";
+export type Status = "success" | "error" | "info" | "warning";
 export interface IMessage {
   actionBtn?: {
     label: string;
@@ -30,6 +30,12 @@ export interface ITimer {
   timeoutId: number;
 }
 
+export const types = {
+  ERROR: "error",
+  INFO: "info",
+  SUCCESS: "success",
+  WARNING: "warning",
+};
 export interface INotificationContext {
   show: (message: IMessage, timeout?: number | null) => void;
   remove: (notificationId: number) => void;

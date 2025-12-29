@@ -3,7 +3,7 @@ import { alpha } from "@material-ui/core/styles";
 import { ImageIcon, makeStyles } from "@saleor/macaw-ui";
 import { Text, vars } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import Dropzone from "../Dropzone";
@@ -53,7 +53,7 @@ const useStyles = makeStyles(
   { name: "ImageUpload" },
 );
 
-const ImageUpload = (props: ImageUploadProps) => {
+export const ImageUpload: React.FC<ImageUploadProps> = props => {
   const {
     children,
     className,
@@ -101,6 +101,5 @@ const ImageUpload = (props: ImageUploadProps) => {
     </Dropzone>
   );
 };
-
 ImageUpload.displayName = "ImageUpload";
 export default ImageUpload;

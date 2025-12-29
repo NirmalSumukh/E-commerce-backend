@@ -2,7 +2,7 @@ import { AttributeListUrlSortField } from "@dashboard/attributes/urls";
 import { AttributeSortField } from "@dashboard/graphql";
 import { createGetSortQueryVariables } from "@dashboard/utils/sort";
 
-function getSortQueryField(sort: AttributeListUrlSortField): AttributeSortField {
+export function getSortQueryField(sort: AttributeListUrlSortField): AttributeSortField {
   switch (sort) {
     case AttributeListUrlSortField.name:
       return AttributeSortField.NAME;

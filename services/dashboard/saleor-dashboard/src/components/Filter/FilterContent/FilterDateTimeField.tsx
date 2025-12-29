@@ -1,9 +1,9 @@
 // @ts-strict-ignore
-
+import { FieldType, FilterFieldBaseProps } from "@dashboard/components/Filter";
 import Arrow from "@dashboard/components/Filter/Arrow";
-import { FieldType, FilterFieldBaseProps } from "@dashboard/components/Filter/types";
 import { splitDateTime } from "@dashboard/misc";
 import { TextField } from "@material-ui/core";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import {
@@ -15,10 +15,10 @@ import {
 
 type FilterDateTimeFieldProps = FilterFieldBaseProps<string, FieldType.dateTime | FieldType.date>;
 
-export const FilterDateTimeField = ({
+export const FilterDateTimeField: React.FC<FilterDateTimeFieldProps> = ({
   filter,
   onFilterPropertyChange,
-}: FilterDateTimeFieldProps) => {
+}) => {
   const classes = useCommonStyles({});
   const isDateTime = filter.type === FieldType.dateTime;
   const isMultiple = filter.multiple;

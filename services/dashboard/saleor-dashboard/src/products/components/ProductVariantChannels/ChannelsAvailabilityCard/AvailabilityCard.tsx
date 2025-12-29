@@ -4,7 +4,7 @@ import {
 } from "@dashboard/channels/utils";
 import { Divider } from "@dashboard/components/Divider";
 import { FormsetData } from "@dashboard/hooks/useFormset";
-import { PropsWithChildren } from "react";
+import React from "react";
 
 import { ProductChannelListing } from "./../types";
 import { ChannelsListItem } from "./ChannelsListItem";
@@ -16,11 +16,11 @@ interface AvailabilityCardProps {
   productChannelListings: ProductChannelListing | undefined;
 }
 
-export const AvailabilityCard = ({
+export const AvailabilityCard: React.FC<AvailabilityCardProps> = ({
   allAvailableListings,
   productChannelListings,
   children,
-}: PropsWithChildren<AvailabilityCardProps>) => {
+}) => {
   const filteredListings = useFilteredChannelListing({
     allAvailableListings,
     channelListing: productChannelListings,

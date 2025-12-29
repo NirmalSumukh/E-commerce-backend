@@ -10,7 +10,6 @@ from django.utils import timezone
 from graphene import InputField
 from micawber import ProviderException, ProviderRegistry
 
-from ....core.exceptions import UnsupportedMediaProviderException
 from ....core.utils.validators import get_oembed_data
 from ....product import ProductMediaTypes
 from ....product.models import Product, ProductChannelListing
@@ -20,8 +19,8 @@ from ...utils import requestor_is_superuser
 from ...utils.filters import filter_range_field, reporting_period_to_date
 from ..enums import ReportingPeriod
 from ..filters import EnumFilter
-from ..filters.filter_input import FilterInputObjectType
 from ..mutations import BaseMutation, ModelWithExtRefMutation
+from ..types import FilterInputObjectType
 from ..utils import (
     add_hash_to_file_name,
     ext_ref_to_global_id_or_error,
@@ -131,7 +130,7 @@ def test_filter_input():
         def created_filter(self, queryset, _, value):
             if CreatedEnum.WEEK == value:
                 return queryset
-            if CreatedEnum.YEAR == value:
+            elif CreatedEnum.YEAR == value:
                 return queryset
             return queryset
 
@@ -270,7 +269,7 @@ def test_requestor_is_superuser_for_app(app):
     ],
 )
 def test_get_oembed_data(url, expected_media_type):
-    oembed_data, media_type = get_oembed_data(url)
+    oembed_data, media_type = get_oembed_data(url, "media_url")
 
     assert oembed_data != {}
     assert media_type == expected_media_type
@@ -290,10 +289,9 @@ def test_get_oembed_data(url, expected_media_type):
 def test_get_oembed_data_unsupported_media_provider(mocked_provider, url):
     mocked_provider.side_effect = ProviderException()
     with pytest.raises(
-        UnsupportedMediaProviderException,
-        match="Unsupported media provider or incorrect URL.",
+        ValidationError, match="Unsupported media provider or incorrect URL."
     ):
-        get_oembed_data(url)
+        get_oembed_data(url, "media_url")
 
 
 def test_add_hash_to_file_name(image, media_root):

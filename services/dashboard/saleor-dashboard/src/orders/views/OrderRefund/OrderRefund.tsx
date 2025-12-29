@@ -14,6 +14,7 @@ import {
   OrderRefundType,
 } from "@dashboard/orders/components/OrderRefundPage/form";
 import { orderUrl } from "@dashboard/orders/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 const getAutomaticallyCalculatedProductsRefundInput = (formData: OrderRefundSubmitData) => ({
@@ -52,7 +53,7 @@ interface OrderRefundProps {
   orderId: string;
 }
 
-const OrderRefund = ({ orderId }: OrderRefundProps) => {
+const OrderRefund: React.FC<OrderRefundProps> = ({ orderId }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -126,7 +127,7 @@ const OrderRefund = ({ orderId }: OrderRefundProps) => {
   return (
     <OrderRefundPage
       order={data?.order}
-      loading={loading || refundOrderOpts.loading || refundOrderFulfillmentProductsOpts.loading}
+      disabled={loading || refundOrderOpts.loading || refundOrderFulfillmentProductsOpts.loading}
       errors={[
         ...(refundOrderOpts.data?.orderRefund.errors || []),
         ...(refundOrderFulfillmentProductsOpts.data?.orderFulfillmentRefundProducts.errors || []),

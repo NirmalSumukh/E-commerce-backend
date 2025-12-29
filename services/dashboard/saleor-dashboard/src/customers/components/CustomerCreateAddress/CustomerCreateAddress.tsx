@@ -5,7 +5,7 @@ import { FormSpacer } from "@dashboard/components/FormSpacer";
 import { AccountErrorFragment } from "@dashboard/graphql";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, Option, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { AddressTypeInput } from "../../types";
@@ -19,7 +19,7 @@ const useStyles = makeStyles(
   { name: "CustomerCreateAddress" },
 );
 
-interface CustomerCreateAddressProps {
+export interface CustomerCreateAddressProps {
   countries: Option[];
   countryDisplayName: string;
   data: AddressTypeInput;
@@ -29,7 +29,7 @@ interface CustomerCreateAddressProps {
   onCountryChange: (event: React.ChangeEvent<any>) => any;
 }
 
-const CustomerCreateAddress = (props: CustomerCreateAddressProps) => {
+const CustomerCreateAddress: React.FC<CustomerCreateAddressProps> = props => {
   const { countries, countryDisplayName, data, disabled, errors, onChange, onCountryChange } =
     props;
   const classes = useStyles(props);

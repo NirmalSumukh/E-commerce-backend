@@ -6,6 +6,7 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid";
+import React from "react";
 
 import { usePriceField } from "../../../PriceField/usePriceField";
 import { hasDiscountValue } from "./utils";
@@ -39,7 +40,7 @@ const MoneyCellEdit: ReturnType<ProvideEditorCallback<MoneyCell>> = ({
       type="number"
       onChange={onChange}
       onKeyDown={onKeyDown}
-      value={Array.isArray(cell.data.value) ? "" : (cell.data.value ?? "")}
+      value={Array.isArray(cell.data.value) ? "" : cell.data.value ?? ""}
       min={minValue}
       step={step}
       autoFocus

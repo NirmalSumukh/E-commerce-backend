@@ -18,7 +18,7 @@ class AppDeleteFailedInstallation(ModelDeleteMutation):
         )
 
     class Meta:
-        description = "Deletes failed installation."
+        description = "Delete failed installation."
         model = models.AppInstallation
         object_type = AppInstallation
         permissions = (AppPermission.MANAGE_APPS,)

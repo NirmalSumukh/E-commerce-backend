@@ -4,7 +4,7 @@ import { TypographyProps } from "@material-ui/core/Typography";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 const useStyles = makeStyles(
@@ -33,14 +33,11 @@ const useStyles = makeStyles(
   { name: "Link" },
 );
 
-interface LinkState {
+export interface LinkState {
   from?: string;
 }
 
-// Note: we need to skip the `dangerouslySetInnerHTML` prop from the `React.AnchorHTMLAttributes`
-// in order to match react-router-dom Link props
-interface LinkProps
-  extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "dangerouslySetInnerHTML"> {
+interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href?: string;
   color?: "primary" | "secondary";
   inline?: boolean;
@@ -51,7 +48,7 @@ interface LinkProps
   state?: LinkState;
 }
 
-const Link = (props: LinkProps) => {
+const Link: React.FC<LinkProps> = props => {
   const {
     className,
     children,
@@ -88,7 +85,7 @@ const Link = (props: LinkProps) => {
       onClick(event);
     },
     target,
-    rel: (rel ?? (opensNewTab && isExternalURL(href))) ? "noopener noreferer" : "",
+    rel: rel ?? (opensNewTab && isExternalURL(href)) ? "noopener noreferer" : "",
     ...linkProps,
   };
   const urlObject = new URL(href, window.location.origin);
@@ -112,7 +109,6 @@ const Link = (props: LinkProps) => {
           {children}
         </RouterLink>
       ) : (
-        // @ts-expect-error - wrong types
         <Text as="a" href={disabled ? undefined : href} display="block" {...commonLinkProps}>
           {children}
         </Text>

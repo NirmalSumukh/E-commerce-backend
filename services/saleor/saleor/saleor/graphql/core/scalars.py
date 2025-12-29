@@ -1,7 +1,8 @@
-import datetime
 import decimal
+from datetime import MAXYEAR, MINYEAR, datetime
 
 import graphene
+import pytz
 from graphene.types.generic import GenericScalar
 from graphql.language import ast
 from measurement.measures import Weight
@@ -79,7 +80,7 @@ class JSON(GenericScalar):
                 field.name.value: GenericScalar.parse_literal(field.value)
                 for field in node.fields
             }
-        if isinstance(node, ast.ListValue):
+        elif isinstance(node, ast.ListValue):
             return [GenericScalar.parse_literal(value) for value in node.values]
         return None
 
@@ -144,19 +145,19 @@ class WeightScalar(graphene.Scalar):
 class UUID(graphene.UUID):
     @staticmethod
     def serialize(uuid):
-        return graphene.UUID.serialize(uuid)
+        return super(UUID, UUID).serialize(uuid)
 
     @staticmethod
     def parse_literal(node):
         try:
-            return graphene.UUID.parse_literal(node)
+            return super(UUID, UUID).parse_literal(node)
         except ValueError:
             return None
 
     @staticmethod
     def parse_value(value):
         try:
-            return graphene.UUID.parse_value(value)
+            return super(UUID, UUID).parse_value(value)
         except ValueError:
             return None
 
@@ -172,11 +173,11 @@ class DateTime(graphene.DateTime):
 
     @staticmethod
     def parse_value(value):
-        parsed_value = graphene.DateTime.parse_value(value)
-        if parsed_value is not None and isinstance(parsed_value, datetime.datetime):
-            if parsed_value.year in [datetime.MINYEAR, datetime.MAXYEAR]:
+        parsed_value = super(DateTime, DateTime).parse_value(value)
+        if parsed_value is not None and isinstance(parsed_value, datetime):
+            if parsed_value.year in [MINYEAR, MAXYEAR]:
                 try:
-                    parsed_value.astimezone(tz=datetime.UTC)
+                    parsed_value.astimezone(tz=pytz.UTC)
                 except OverflowError:
                     return None
         return parsed_value
@@ -196,7 +197,7 @@ class Date(graphene.Date):
         # The current graphene version returning unhandled `IndexError`.
         if isinstance(value, str) and not value:
             return None
-        return graphene.Date.parse_value(value)
+        return super(Date, Date).parse_value(value)
 
 
 class Minute(graphene.Int):
@@ -209,28 +210,3 @@ class Hour(graphene.Int):
 
 class Day(graphene.Int):
     """The `Day` scalar type represents number of days by integer value."""
-
-
-class PositiveInt(graphene.Int):
-    """Positive Integer scalar implementation.
-
-    Should be used in places where value must be positive (greater than 0).
-    """
-
-    @staticmethod
-    def parse_value(value) -> int | None:
-        parsed_value = graphene.Int.parse_value(value)
-
-        if (parsed_value is not None) and parsed_value > 0:
-            return parsed_value
-
-        return None
-
-    @staticmethod
-    def parse_literal(node) -> int | None:
-        parsed_value = graphene.Int.parse_literal(node)
-
-        if (parsed_value is not None) and parsed_value > 0:
-            return parsed_value
-
-        return None

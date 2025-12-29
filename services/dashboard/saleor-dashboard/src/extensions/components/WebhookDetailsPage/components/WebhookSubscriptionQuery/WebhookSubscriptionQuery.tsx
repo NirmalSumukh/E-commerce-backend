@@ -7,7 +7,7 @@ import { WebhookErrorFragment } from "@dashboard/graphql";
 import { getFormErrors } from "@dashboard/utils/errors";
 import { useExplorerPlugin } from "@graphiql/plugin-explorer";
 import { createGraphiQLFetcher } from "@graphiql/toolkit";
-import * as React from "react";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { WebhookFormData } from "../../WebhookDetailsPage";
@@ -31,13 +31,12 @@ interface WebhookSubscriptionQueryProps {
 const fetcher = createGraphiQLFetcher({
   url: process.env.API_URL,
 });
-
-export const WebhookSubscriptionQuery = ({
+const WebhookSubscriptionQuery: React.FC<WebhookSubscriptionQueryProps> = ({
   errors,
   query,
   setQuery,
   data,
-}: WebhookSubscriptionQueryProps) => {
+}) => {
   const intl = useIntl();
   const explorerPlugin = useExplorerPlugin({
     query,
@@ -74,3 +73,4 @@ export const WebhookSubscriptionQuery = ({
 };
 
 WebhookSubscriptionQuery.displayName = "WebhookSubscriptionQuery";
+export default WebhookSubscriptionQuery;

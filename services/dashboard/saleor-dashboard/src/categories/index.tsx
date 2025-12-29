@@ -2,6 +2,7 @@ import { Route } from "@dashboard/components/Router";
 import { sectionNames } from "@dashboard/intl";
 import { asSortParams } from "@dashboard/utils/sort";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -22,7 +23,10 @@ interface CategoryDetailsRouteParams {
   id: string;
 }
 
-const CategoryDetails = ({ location, match }: RouteComponentProps<CategoryDetailsRouteParams>) => {
+const CategoryDetails: React.FC<RouteComponentProps<CategoryDetailsRouteParams>> = ({
+  location,
+  match,
+}) => {
   const qs = parseQs(location.search.substr(1));
   const params: CategoryUrlQueryParams = qs;
 
@@ -33,13 +37,12 @@ interface CategoryCreateRouteParams {
   id: string;
 }
 
-const CategoryCreate = ({ match }: RouteComponentProps<CategoryCreateRouteParams>) => (
+const CategoryCreate: React.FC<RouteComponentProps<CategoryCreateRouteParams>> = ({ match }) => (
   <CategoryCreateView
     parentId={match.params.id ? decodeURIComponent(match.params.id) : undefined}
   />
 );
-
-const CategoryList = ({ location }: RouteComponentProps<{}>) => {
+const CategoryList: React.FC<RouteComponentProps<{}>> = ({ location }) => {
   const qs = parseQs(location.search.substr(1)) as any;
   const params: CategoryListUrlQueryParams = {
     ...asSortParams(qs, CategoryListUrlSortField),
@@ -47,7 +50,6 @@ const CategoryList = ({ location }: RouteComponentProps<{}>) => {
 
   return <CategoryListComponent params={params} />;
 };
-
 const Component = () => {
   const intl = useIntl();
 

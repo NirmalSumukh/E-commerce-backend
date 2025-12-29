@@ -1,4 +1,4 @@
-import { IFilter } from "@dashboard/components/Filter/types";
+import { IFilter } from "@dashboard/components/Filter";
 import { UseNavigatorResult } from "@dashboard/hooks/useNavigator";
 import { ActiveTab, Pagination, Search, Sort } from "@dashboard/types";
 

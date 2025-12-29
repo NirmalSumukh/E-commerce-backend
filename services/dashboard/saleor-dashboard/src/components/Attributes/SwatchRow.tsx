@@ -3,7 +3,7 @@ import { BasicAttributeRow } from "@dashboard/components/Attributes/BasicAttribu
 import { getErrorMessage, getSingleDisplayValue } from "@dashboard/components/Attributes/utils";
 import { getBySlug } from "@dashboard/misc";
 import { Box } from "@saleor/macaw-ui-next";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
 import { Combobox } from "../Combobox";
@@ -20,7 +20,7 @@ type SwatchRowProps = Pick<
   | "fetchMoreAttributeValues"
 >;
 
-export const SwatchRow = ({
+export const SwatchRow: React.FC<SwatchRowProps> = ({
   attributeValues,
   fetchAttributeValues,
   fetchMoreAttributeValues,
@@ -28,7 +28,7 @@ export const SwatchRow = ({
   disabled,
   error,
   onChange,
-}: SwatchRowProps) => {
+}) => {
   const intl = useIntl();
   const value = attribute.data.values.find(getBySlug(attribute.value[0]));
   const options = useMemo(

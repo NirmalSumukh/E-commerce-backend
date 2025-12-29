@@ -1,13 +1,11 @@
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import Mock, patch
 
 import graphene
 import pytest
+import pytz
 from django.test import override_settings
-from django.utils import timezone
-from freezegun import freeze_time
 from prices import Money
 
 from .....account.models import Address
@@ -21,7 +19,7 @@ from .....order import OrderStatus
 from .....order import events as order_events
 from .....order.actions import call_order_event
 from .....order.error_codes import OrderErrorCode
-from .....order.models import Order, OrderEvent, OrderLine
+from .....order.models import Order, OrderEvent
 from .....payment.model_helpers import get_subtotal
 from .....product.models import ProductVariant
 from .....tax import TaxCalculationStrategy
@@ -44,23 +42,12 @@ DRAFT_ORDER_CREATE_MUTATION = """
                     addressType
                 }
                 order {
-                    metadata {
-                      key
-                      value
-                    }
-                    privateMetadata {
-                      key
-                      value
-                    }
                     id
                     discount {
                         amount
                     }
                     discountName
                     discounts {
-                        total {
-                            amount
-                        }
                         amount {
                             amount
                         }
@@ -141,17 +128,6 @@ DRAFT_ORDER_CREATE_MUTATION = """
                         unitDiscountValue
                         isGift
                         isPriceOverridden
-                        discounts{
-                            valueType
-                            value
-                            reason
-                            unit{
-                                amount
-                            }
-                            total{
-                                amount
-                            }
-                        }
                     }
                 }
             }
@@ -189,6 +165,7 @@ def test_draft_order_create_with_voucher_entire_order(
     channel_listing_1 = variant_1.channel_listings.get(channel=channel_USD)
 
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": variant_0_qty},
@@ -209,6 +186,7 @@ def test_draft_order_create_with_voucher_entire_order(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -276,7 +254,6 @@ def test_draft_order_create_with_voucher_entire_order(
     ).get_total()
     assert order.base_shipping_price == shipping_total
     assert order.undiscounted_base_shipping_price == shipping_total
-    assert order.lines_count == len(variant_list)
 
     # Ensure the correct event was created
     created_draft_event = OrderEvent.objects.get(
@@ -346,6 +323,7 @@ def test_draft_order_create_with_voucher_and_voucher_code(
     variant_1.save()
 
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": variant_0_qty},
@@ -361,6 +339,7 @@ def test_draft_order_create_with_voucher_and_voucher_code(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -417,6 +396,7 @@ def test_draft_order_create_with_voucher_code_in_voucher_input(
     variant_1.save()
 
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": variant_0_qty},
@@ -434,6 +414,7 @@ def test_draft_order_create_with_voucher_code_in_voucher_input(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -491,6 +472,7 @@ def test_draft_order_create_with_voucher_code(
     channel_listing_1 = variant_1.channel_listings.get(channel=channel_USD)
 
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": variant_0_qty},
@@ -508,6 +490,7 @@ def test_draft_order_create_with_voucher_code(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -571,7 +554,6 @@ def test_draft_order_create_with_voucher_code(
     assert order.external_reference == external_reference
     assert order.base_shipping_price == shipping_total
     assert order.undiscounted_base_shipping_price == shipping_total
-    assert order.lines_count == len(variant_list)
 
     # Ensure the correct event was created
     created_draft_event = OrderEvent.objects.get(
@@ -823,7 +805,6 @@ def test_draft_order_create_with_voucher_specific_product(
     ).get_total()
     assert order.base_shipping_price == shipping_total
     assert order.undiscounted_base_shipping_price == shipping_total
-    assert order.lines_count == len(variant_list)
 
     lines_data = data["lines"]
     discounted_line_data, line_1_data = lines_data
@@ -837,23 +818,12 @@ def test_draft_order_create_with_voucher_specific_product(
         discounted_line_data["totalPrice"]["gross"]["amount"]
         == discounted_variant_total
     )
-
-    expected_discount_amount = discount_amount / variant_0_qty
-    assert discounted_line_data["unitDiscount"]["amount"] == expected_discount_amount
     assert (
-        discounted_line_data["unitDiscountType"] == voucher.discount_value_type.upper()
+        discounted_line_data["unitDiscount"]["amount"]
+        == discount_amount / variant_0_qty
     )
-    expected_discount_reason = f"Voucher code: {code}"
-    assert discounted_line_data["unitDiscountReason"] == expected_discount_reason
-
-    assigned_discount_objects = discounted_line_data["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_discount_reason
-    assert assigned_discount["valueType"] == voucher.discount_value_type.upper()
-    assert assigned_discount["unit"]["amount"] == expected_discount_amount
-    assert assigned_discount["total"]["amount"] == discount_amount
-    assert assigned_discount["value"] == voucher.channel_listings.get().discount_value
+    assert discounted_line_data["unitDiscountType"] == DiscountValueType.FIXED.upper()
+    assert discounted_line_data["unitDiscountReason"] == f"Voucher code: {code}"
 
     assert line_1_data["productVariantId"] == variant_1_id
     assert line_1_data["quantity"] == variant_1_qty
@@ -864,7 +834,6 @@ def test_draft_order_create_with_voucher_specific_product(
     assert line_1_data["unitDiscount"]["amount"] == 0
     assert line_1_data["unitDiscountType"] is None
     assert line_1_data["unitDiscountReason"] is None
-    assert len(line_1_data["discounts"]) == 0
 
     assert order.discounts.count() == 0
 
@@ -873,8 +842,8 @@ def test_draft_order_create_with_voucher_specific_product(
     order_line_discount = discounted_line.discounts.first()
     assert order_line_discount.voucher == voucher
     assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.value_type == voucher.discount_value_type
-    assert order_line_discount.value == discount_value
+    assert order_line_discount.value_type == DiscountValueType.FIXED
+    assert order_line_discount.value == discount_amount
     assert order_line_discount.amount_value == discount_amount
 
 
@@ -978,7 +947,6 @@ def test_draft_order_create_with_voucher_apply_once_per_order(
     ).get_total()
     assert order.base_shipping_price == shipping_total
     assert order.undiscounted_base_shipping_price == shipping_total
-    assert order.lines_count == len(variant_list)
 
     lines_data = data["lines"]
     discounted_line_data, line_1_data = lines_data
@@ -992,25 +960,12 @@ def test_draft_order_create_with_voucher_apply_once_per_order(
         discounted_line_data["totalPrice"]["gross"]["amount"]
         == discounted_variant_total
     )
-
     assert (
         discounted_line_data["unitDiscount"]["amount"]
         == discount_amount / variant_0_qty
     )
-    assert (
-        discounted_line_data["unitDiscountType"] == voucher.discount_value_type.upper()
-    )
-    expected_discount_reason = f"Voucher code: {code}"
-    assert discounted_line_data["unitDiscountReason"] == expected_discount_reason
-
-    assigned_discount_objects = discounted_line_data["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_discount_reason
-    assert assigned_discount["valueType"] == voucher.discount_value_type.upper()
-    assert assigned_discount["total"]["amount"] == discount_amount
-    assert assigned_discount["unit"]["amount"] == discount_amount / variant_0_qty
-    assert assigned_discount["value"] == voucher.channel_listings.get().discount_value
+    assert discounted_line_data["unitDiscountType"] == DiscountValueType.FIXED.upper()
+    assert discounted_line_data["unitDiscountReason"] == f"Voucher code: {code}"
 
     assert line_1_data["productVariantId"] == variant_1_id
     assert line_1_data["quantity"] == variant_1_qty
@@ -1021,7 +976,6 @@ def test_draft_order_create_with_voucher_apply_once_per_order(
     assert line_1_data["unitDiscount"]["amount"] == 0
     assert line_1_data["unitDiscountType"] is None
     assert line_1_data["unitDiscountReason"] is None
-    assert len(line_1_data["discounts"]) == 0
 
     assert order.discounts.count() == 0
 
@@ -1030,8 +984,8 @@ def test_draft_order_create_with_voucher_apply_once_per_order(
     order_line_discount = discounted_line.discounts.first()
     assert order_line_discount.voucher == voucher
     assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.value_type == voucher.discount_value_type
-    assert order_line_discount.value == discount_value
+    assert order_line_discount.value_type == DiscountValueType.FIXED
+    assert order_line_discount.value == discount_amount
     assert order_line_discount.amount_value == discount_amount
 
 
@@ -1521,6 +1475,7 @@ def test_draft_order_create_with_same_variant_and_force_new_line(
     user_id = graphene.Node.to_global_id("User", customer_user.id)
     variant_id = graphene.Node.to_global_id("ProductVariant", variant_0.id)
 
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_id, "quantity": 2},
@@ -1535,6 +1490,7 @@ def test_draft_order_create_with_same_variant_and_force_new_line(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -1573,7 +1529,6 @@ def test_draft_order_create_with_same_variant_and_force_new_line(
     ).get_total()
     assert order.base_shipping_price == shipping_total
     assert order.undiscounted_base_shipping_price == shipping_total
-    assert order.lines_count == len(variant_list)
 
     # Ensure the correct event was created
     created_draft_event = OrderEvent.objects.get(
@@ -1629,6 +1584,7 @@ def test_draft_order_create_with_inactive_channel(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -1641,6 +1597,7 @@ def test_draft_order_create_with_inactive_channel(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "shippingAddress": shipping_address,
             "shippingMethod": shipping_id,
@@ -1704,6 +1661,7 @@ def test_draft_order_create_without_sku(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -1718,6 +1676,7 @@ def test_draft_order_create_without_sku(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": shipping_address,
             "shippingAddress": shipping_address,
@@ -1750,8 +1709,6 @@ def test_draft_order_create_without_sku(
     assert order.shipping_method == shipping_method
     assert order.billing_address
     assert order.shipping_address
-    assert order.draft_save_billing_address is False
-    assert order.draft_save_shipping_address is False
     shipping_total = shipping_method.channel_listings.get(
         channel_id=order.channel_id
     ).get_total()
@@ -1867,6 +1824,7 @@ def test_draft_order_create_tax_error(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -1878,6 +1836,7 @@ def test_draft_order_create_tax_error(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "shippingAddress": shipping_address,
             "shippingMethod": shipping_id,
@@ -1916,6 +1875,7 @@ def test_draft_order_create_with_voucher_not_assigned_to_order_channel(
     channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
     user_id = graphene.Node.to_global_id("User", customer_user.id)
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_id, "quantity": 2},
@@ -1928,6 +1888,7 @@ def test_draft_order_create_with_voucher_not_assigned_to_order_channel(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "shippingAddress": shipping_address,
             "shippingMethod": shipping_id,
@@ -1956,6 +1917,7 @@ def test_draft_order_create_with_product_and_variant_not_assigned_to_order_chann
     permission_group_manage_orders.user_set.add(staff_api_client.user)
     user_id = graphene.Node.to_global_id("User", customer_user.id)
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_id, "quantity": 2},
@@ -1968,6 +1930,7 @@ def test_draft_order_create_with_product_and_variant_not_assigned_to_order_chann
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "shippingAddress": shipping_address,
             "shippingMethod": shipping_id,
@@ -1997,6 +1960,7 @@ def test_draft_order_create_with_variant_not_assigned_to_order_channel(
 
     user_id = graphene.Node.to_global_id("User", customer_user.id)
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_id, "quantity": 2},
@@ -2008,6 +1972,7 @@ def test_draft_order_create_with_variant_not_assigned_to_order_channel(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "shippingAddress": shipping_address,
             "shippingMethod": shipping_id,
@@ -2132,6 +2097,7 @@ def test_draft_order_create_with_channel_with_unpublished_product(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -2144,6 +2110,7 @@ def test_draft_order_create_with_channel_with_unpublished_product(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "channelId": channel_id,
             "lines": variant_list,
             "shippingAddress": shipping_address,
@@ -2180,7 +2147,7 @@ def test_draft_order_create_with_channel_with_unpublished_product_by_date(
 
     # Ensure no events were created yet
     assert not OrderEvent.objects.exists()
-    next_day = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=1)
+    next_day = datetime.now(pytz.UTC) + timedelta(days=1)
     user_id = graphene.Node.to_global_id("User", customer_user.id)
     variant_0_id = graphene.Node.to_global_id("ProductVariant", variant_0.id)
     variant_1 = product_without_shipping.variants.first()
@@ -2191,6 +2158,7 @@ def test_draft_order_create_with_channel_with_unpublished_product_by_date(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -2203,6 +2171,7 @@ def test_draft_order_create_with_channel_with_unpublished_product_by_date(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "channelId": channel_id,
             "lines": variant_list,
             "shippingAddress": shipping_address,
@@ -2247,6 +2216,7 @@ def test_draft_order_create_with_channel(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -2259,6 +2229,7 @@ def test_draft_order_create_with_channel(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "channelId": channel_id,
             "lines": variant_list,
             "shippingAddress": shipping_address,
@@ -2320,6 +2291,7 @@ def test_draft_order_create_product_without_shipping(
     variant.quantity = 2
     variant.save()
     variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_id, "quantity": 1},
@@ -2331,6 +2303,7 @@ def test_draft_order_create_product_without_shipping(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "channelId": channel_id,
             "lines": variant_list,
             "shippingAddress": shipping_address,
@@ -2394,6 +2367,7 @@ def test_draft_order_create_invalid_billing_address(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -2409,6 +2383,7 @@ def test_draft_order_create_invalid_billing_address(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": billing_address,
             "shippingAddress": graphql_address_data,
@@ -2453,6 +2428,7 @@ def test_draft_order_create_invalid_shipping_address(
     variant_1.quantity = 2
     variant_1.save()
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
+    discount = "10"
     customer_note = "Test note"
     variant_list = [
         {"variantId": variant_0_id, "quantity": 2},
@@ -2468,6 +2444,7 @@ def test_draft_order_create_invalid_shipping_address(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": variant_list,
             "billingAddress": graphql_address_data,
             "shippingAddress": shipping_address,
@@ -2562,6 +2539,7 @@ def test_draft_order_create_price_recalculation(
     mock_fetch_order_prices_if_expired.side_effect = fetch_prices_response
     query = DRAFT_ORDER_CREATE_MUTATION
     user_id = graphene.Node.to_global_id("User", customer_user.id)
+    discount = "10"
     variant_1 = product_available_in_many_channels.variants.first()
     variant_2 = product_variant_list[2]
     variant_1_id = graphene.Node.to_global_id("ProductVariant", variant_1.id)
@@ -2584,6 +2562,7 @@ def test_draft_order_create_price_recalculation(
     variables = {
         "input": {
             "user": user_id,
+            "discount": discount,
             "lines": lines,
             "billingAddress": address,
             "shippingAddress": address,
@@ -2808,7 +2787,6 @@ def test_draft_order_create_with_custom_price_and_catalogue_promotion(
 
     line_1_unit_discount = custom_price * reward_value / 100
     promotion_id = graphene.Node.to_global_id("Promotion", promotion_rule.promotion_id)
-    expected_discount_reason = f"Promotion: {promotion_id}"
     line_data_1 = {
         "productVariantId": variant_id,
         "quantity": quantity,
@@ -2830,23 +2808,13 @@ def test_draft_order_create_with_custom_price_and_catalogue_promotion(
                 "amount": float((custom_price - line_1_unit_discount) * quantity),
             },
         },
-        "unitDiscountReason": expected_discount_reason,
+        "unitDiscountReason": f"Promotion: {promotion_id}",
         "unitDiscountType": RewardValueType.PERCENTAGE.upper(),
         "unitDiscountValue": reward_value,
         "isPriceOverridden": True,
         "isGift": False,
-        "discounts": [
-            {
-                "total": {"amount": Decimal(line_1_unit_discount * quantity)},
-                "unit": {"amount": Decimal(line_1_unit_discount)},
-                "reason": expected_discount_reason,
-                "value": reward_value,
-                "valueType": RewardValueType.PERCENTAGE.upper(),
-            }
-        ],
     }
     assert line_data_1 in data["lines"]
-
     line_2_unit_discount = variant_price * reward_value / 100
     line_data_2 = {
         "productVariantId": variant_id,
@@ -2869,20 +2837,11 @@ def test_draft_order_create_with_custom_price_and_catalogue_promotion(
                 "amount": float((variant_price - line_2_unit_discount) * quantity),
             },
         },
-        "unitDiscountReason": expected_discount_reason,
+        "unitDiscountReason": f"Promotion: {promotion_id}",
         "unitDiscountType": RewardValueType.PERCENTAGE.upper(),
         "unitDiscountValue": reward_value,
         "isPriceOverridden": False,
         "isGift": False,
-        "discounts": [
-            {
-                "total": {"amount": Decimal(line_2_unit_discount * quantity)},
-                "unit": {"amount": Decimal(line_2_unit_discount)},
-                "reason": expected_discount_reason,
-                "value": reward_value,
-                "valueType": RewardValueType.PERCENTAGE.upper(),
-            }
-        ],
     }
     assert line_data_2 in data["lines"]
 
@@ -2911,9 +2870,6 @@ def test_draft_order_create_product_catalogue_promotion(
 
     reward_value = Decimal("1.0")
     rule = promotion.rules.first()
-    rule.reward_value = reward_value
-    rule.save(update_fields=["reward_value"])
-
     variant_channel_listing = variant.channel_listings.get(channel=channel_USD)
 
     variant_channel_listing.discounted_price_amount = (
@@ -2969,11 +2925,9 @@ def test_draft_order_create_product_catalogue_promotion(
 
     assert order.search_vector
 
-    expected_unit_discount = reward_value
-
     assert len(data["lines"]) == 1
     line_data = data["lines"][0]
-    assert line_data["unitDiscount"]["amount"] == expected_unit_discount
+    assert line_data["unitDiscount"]["amount"] == reward_value
     assert (
         line_data["unitPrice"]["gross"]["amount"]
         == variant_channel_listing.discounted_price_amount
@@ -2982,25 +2936,14 @@ def test_draft_order_create_product_catalogue_promotion(
         line_data["undiscountedUnitPrice"]["gross"]["amount"]
         == variant_channel_listing.price_amount
     )
-    promotion_id = graphene.Node.to_global_id("Promotion", promotion.id)
-    expected_discount_reason = f"Promotion: {promotion_id}"
-
     line_total = variant_channel_listing.discounted_price_amount * quantity
     assert line_data["totalPrice"]["gross"]["amount"] == line_total
-    assert line_data["unitDiscountReason"] == expected_discount_reason
-    assert line_data["unitDiscountType"] == rule.reward_value_type.upper()
+    assert line_data["unitDiscountReason"]
+    assert line_data["unitDiscountType"]
+
     line = order.lines.first()
     assert line.discounts.count() == 1
     assert line.sale_id
-
-    assigned_discount_objects = line_data["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_discount_reason
-    assert assigned_discount["valueType"] == rule.reward_value_type.upper()
-    assert assigned_discount["unit"]["amount"] == expected_unit_discount
-    assert assigned_discount["total"]["amount"] == expected_unit_discount * quantity
-    assert assigned_discount["value"] == rule.reward_value
 
     assert data["total"]["gross"]["amount"] == shipping_total + line_total
     assert (
@@ -3058,8 +3001,6 @@ def test_draft_order_create_product_catalogue_promotion_flat_taxes(
 
     reward_value = Decimal("1.0")
     rule = promotion.rules.first()
-    rule.reward_value = reward_value
-    rule.save(update_fields=["reward_value"])
     variant_channel_listing = variant.channel_listings.get(channel=channel_USD)
 
     variant_channel_listing.discounted_price_amount = (
@@ -3115,11 +3056,9 @@ def test_draft_order_create_product_catalogue_promotion_flat_taxes(
 
     assert order.search_vector
 
-    expected_unit_discount = reward_value
-
     assert len(data["lines"]) == 1
     line_data = data["lines"][0]
-    assert line_data["unitDiscount"]["amount"] == expected_unit_discount
+    assert line_data["unitDiscount"]["amount"] == reward_value
     assert (
         line_data["unitPrice"]["gross"]["amount"]
         == variant_channel_listing.discounted_price_amount
@@ -3128,27 +3067,14 @@ def test_draft_order_create_product_catalogue_promotion_flat_taxes(
         line_data["undiscountedUnitPrice"]["gross"]["amount"]
         == variant_channel_listing.price_amount
     )
-
-    promotion_id = graphene.Node.to_global_id("Promotion", promotion.id)
-    expected_discount_reason = f"Promotion: {promotion_id}"
-
     line_total = variant_channel_listing.discounted_price_amount * quantity
     assert line_data["totalPrice"]["gross"]["amount"] == line_total
-    assert line_data["unitDiscountReason"] == expected_discount_reason
+    assert line_data["unitDiscountReason"]
     assert line_data["unitDiscountType"]
 
     line = order.lines.first()
     assert line.discounts.count() == 1
     assert line.sale_id
-
-    assigned_discount_objects = line_data["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_discount_reason
-    assert assigned_discount["valueType"] == rule.reward_value_type.upper()
-    assert assigned_discount["unit"]["amount"] == expected_unit_discount
-    assert assigned_discount["total"]["amount"] == expected_unit_discount * quantity
-    assert assigned_discount["value"] == rule.reward_value
 
     assert data["total"]["gross"]["amount"] == shipping_total + line_total
     assert (
@@ -3203,7 +3129,7 @@ def test_draft_order_create_order_promotion_flat_rates(
     promotion_id = graphene.Node.to_global_id("Promotion", rule.promotion_id)
     assert rule.reward_value_type == RewardValueType.PERCENTAGE
     reward_value = rule.reward_value
-    assert rule.reward_value == Decimal(25)
+    assert rule.reward_value == Decimal("25")
 
     variant = variant_with_many_stocks
     user_id = graphene.Node.to_global_id("User", customer_user.id)
@@ -3260,7 +3186,6 @@ def test_draft_order_create_order_promotion_flat_rates(
     assert order["shippingPrice"]["gross"]["amount"] == float(shipping_price_gross)
 
     assert len(order["discounts"]) == 1
-    assert order["discounts"][0]["total"]["amount"] == discount_amount
     assert order["discounts"][0]["amount"]["amount"] == discount_amount
     assert order["discounts"][0]["reason"] == f"Promotion: {promotion_id}"
     assert order["discounts"][0]["type"] == DiscountType.ORDER_PROMOTION.upper()
@@ -3724,6 +3649,7 @@ def test_draft_order_create_triggers_webhooks(
     channel_PLN,
     graphql_address_data,
     settings,
+    django_capture_on_commit_callbacks,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -3762,9 +3688,10 @@ def test_draft_order_create_triggers_webhooks(
     }
 
     # when
-    response = app_api_client.post_graphql(
-        query, variables, permissions=(permission_manage_orders,)
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        response = app_api_client.post_graphql(
+            query, variables, permissions=(permission_manage_orders,)
+        )
 
     # then
     content = get_graphql_content(response)
@@ -3775,12 +3702,11 @@ def test_draft_order_create_triggers_webhooks(
         webhook_id=draft_order_created_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": draft_order_created_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": draft_order_created_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery
@@ -3804,352 +3730,3 @@ def test_draft_order_create_triggers_webhooks(
     )
 
     assert wrapped_call_order_event.called
-
-
-def test_draft_order_create_with_metadata(
-    staff_api_client,
-    permission_group_manage_orders,
-    channel_USD,
-):
-    # given
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-    query = DRAFT_ORDER_CREATE_MUTATION
-
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    public_metadata_key = "public metadata key"
-    public_metadata_value = "public metadata value"
-    private_metadata_key = "private metadata key"
-    private_metadata_value = "private metadata value"
-
-    variables = {
-        "input": {
-            "metadata": [
-                {
-                    "key": public_metadata_key,
-                    "value": public_metadata_value,
-                }
-            ],
-            "privateMetadata": [
-                {
-                    "key": private_metadata_key,
-                    "value": private_metadata_value,
-                }
-            ],
-            "channelId": channel_id,
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(query, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    assert not content["data"]["draftOrderCreate"]["errors"]
-
-    metadata_result_list: list[dict[str, str]] = content["data"]["draftOrderCreate"][
-        "order"
-    ]["metadata"]
-    private_metadata_result_list: list[dict[str, str]] = content["data"][
-        "draftOrderCreate"
-    ]["order"]["privateMetadata"]
-
-    assert len(metadata_result_list) == 1
-    assert len(private_metadata_result_list) == 1
-
-    assert metadata_result_list[0]["key"] == public_metadata_key
-    assert metadata_result_list[0]["value"] == public_metadata_value
-
-    assert private_metadata_result_list[0]["key"] == private_metadata_key
-    assert private_metadata_result_list[0]["value"] == private_metadata_value
-
-
-@pytest.mark.parametrize(
-    ("save_shipping_address", "save_billing_address"),
-    [(True, True), (True, False), (False, True), (False, False)],
-)
-def test_draft_order_create_with_save_address_option_provided(
-    save_shipping_address,
-    save_billing_address,
-    staff_api_client,
-    permission_group_manage_orders,
-    customer_user,
-    shipping_method,
-    variant,
-    channel_USD,
-    graphql_address_data,
-):
-    # given input with provided shipping, billing addresses with save settings
-    query = DRAFT_ORDER_CREATE_MUTATION
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    user_id = graphene.Node.to_global_id("User", customer_user.id)
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
-    variant_list = [
-        {"variantId": variant_id, "quantity": 2},
-    ]
-    shipping_address = graphql_address_data
-    shipping_id = graphene.Node.to_global_id("ShippingMethod", shipping_method.id)
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    variables = {
-        "input": {
-            "user": user_id,
-            "lines": variant_list,
-            "billingAddress": shipping_address,
-            "shippingAddress": shipping_address,
-            "saveShippingAddress": save_shipping_address,
-            "saveBillingAddress": save_billing_address,
-            "shippingMethod": shipping_id,
-            "channelId": channel_id,
-        }
-    }
-
-    # when draft order is created
-    response = staff_api_client.post_graphql(query, variables)
-
-    # then the addresses with save settings are set
-    content = get_graphql_content(response)
-    assert not content["data"]["draftOrderCreate"]["errors"]
-    data = content["data"]["draftOrderCreate"]["order"]
-    assert data["status"] == OrderStatus.DRAFT.upper()
-    assert (
-        data["billingAddress"]["streetAddress1"]
-        == graphql_address_data["streetAddress1"]
-    )
-    assert (
-        data["shippingAddress"]["streetAddress1"]
-        == graphql_address_data["streetAddress1"]
-    )
-
-    order = Order.objects.first()
-    assert order.user == customer_user
-    assert order.shipping_method == shipping_method
-    assert order.billing_address
-    assert order.shipping_address
-    assert order.draft_save_billing_address == save_billing_address
-    assert order.draft_save_shipping_address == save_shipping_address
-
-
-@pytest.mark.parametrize("save_shipping_address", [True, False])
-def test_draft_order_create_no_shipping_address_provided_save_address_raising_error(
-    save_shipping_address,
-    staff_api_client,
-    permission_group_manage_orders,
-    customer_user,
-    shipping_method,
-    variant,
-    channel_USD,
-    graphql_address_data,
-):
-    # given input with save shipping address and shipping method not provided
-    query = DRAFT_ORDER_CREATE_MUTATION
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    user_id = graphene.Node.to_global_id("User", customer_user.id)
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
-    variant_list = [
-        {"variantId": variant_id, "quantity": 2},
-    ]
-    billing_address = graphql_address_data
-    shipping_id = graphene.Node.to_global_id("ShippingMethod", shipping_method.id)
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    variables = {
-        "input": {
-            "user": user_id,
-            "lines": variant_list,
-            "billingAddress": billing_address,
-            "saveShippingAddress": save_shipping_address,
-            "shippingMethod": shipping_id,
-            "channelId": channel_id,
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(query, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["draftOrderCreate"]
-    assert not data["order"]
-    assert len(data["errors"]) == 1
-
-    error = data["errors"][0]
-    assert error["field"] == "saveShippingAddress"
-    assert error["code"] == OrderErrorCode.MISSING_ADDRESS_DATA.name
-
-
-@pytest.mark.parametrize("save_billing_address", [True, False])
-def test_draft_order_create_no_billing_address_provided_save_address_raising_error(
-    save_billing_address,
-    staff_api_client,
-    permission_group_manage_orders,
-    customer_user,
-    shipping_method,
-    variant,
-    channel_USD,
-    graphql_address_data,
-):
-    # given input with save shipping address and shipping method not provided
-    query = DRAFT_ORDER_CREATE_MUTATION
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    user_id = graphene.Node.to_global_id("User", customer_user.id)
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
-    variant_list = [
-        {"variantId": variant_id, "quantity": 2},
-    ]
-    shipping_address = graphql_address_data
-    shipping_id = graphene.Node.to_global_id("ShippingMethod", shipping_method.id)
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    variables = {
-        "input": {
-            "user": user_id,
-            "lines": variant_list,
-            "shippingAddress": shipping_address,
-            "saveBillingAddress": save_billing_address,
-            "shippingMethod": shipping_id,
-            "channelId": channel_id,
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(query, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["draftOrderCreate"]
-    assert not data["order"]
-    assert len(data["errors"]) == 1
-
-    error = data["errors"][0]
-    assert error["field"] == "saveBillingAddress"
-    assert error["code"] == OrderErrorCode.MISSING_ADDRESS_DATA.name
-
-
-@freeze_time("2020-03-18 12:00:00")
-def test_draft_order_create_set_order_line_price_expiration_time(
-    staff_api_client,
-    permission_group_manage_orders,
-    customer_user,
-    shipping_method,
-    variant,
-    graphql_address_data,
-    channel_USD,
-):
-    # given
-    query = DRAFT_ORDER_CREATE_MUTATION
-    user_id = graphene.Node.to_global_id("User", customer_user.id)
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
-    shipping_address = graphql_address_data
-    shipping_id = graphene.Node.to_global_id("ShippingMethod", shipping_method.id)
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    variables = {
-        "input": {
-            "user": user_id,
-            "channelId": channel_id,
-            "lines": [{"variantId": variant_id, "quantity": 2}],
-            "shippingAddress": shipping_address,
-            "shippingMethod": shipping_id,
-        }
-    }
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    expire_period = channel_USD.draft_order_line_price_freeze_period
-    assert expire_period is not None
-    assert expire_period > 0
-    expected_expire_time = timezone.now() + timedelta(hours=expire_period)
-
-    # when
-    staff_api_client.post_graphql(query, variables)
-
-    # then
-    new_line = OrderLine.objects.get()
-    assert new_line.draft_base_price_expire_at == expected_expire_time
-
-
-def test_draft_order_create_create_with_language_code(
-    staff_api_client,
-    permission_group_manage_orders,
-    variant,
-    channel_USD,
-    graphql_address_data,
-):
-    # given
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    variant_0 = variant
-    query = DRAFT_ORDER_CREATE_MUTATION
-
-    variant_0_id = graphene.Node.to_global_id("ProductVariant", variant_0.id)
-    variant_list = [{"variantId": variant_0_id, "quantity": 2}]
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-
-    variables = {
-        "input": {
-            "lines": variant_list,
-            "billingAddress": graphql_address_data,
-            "shippingAddress": graphql_address_data,
-            "channelId": channel_id,
-            "languageCode": "PL",
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(query, variables)
-
-    # then
-    content = get_graphql_content(response)
-    assert not content["data"]["draftOrderCreate"]["errors"]
-    order_id = content["data"]["draftOrderCreate"]["order"]["id"]
-    _, order_pk = graphene.Node.from_global_id(order_id)
-
-    order = Order.objects.get(id=order_pk)
-
-    assert order.language_code == "pl"
-
-
-def test_draft_order_create_sets_product_type_id_for_order_line(
-    app_api_client,
-    permission_manage_orders,
-    customer_user,
-    product_available_in_many_channels,
-    channel_PLN,
-):
-    # given
-    variant = product_available_in_many_channels.variants.first()
-    query = DRAFT_ORDER_CREATE_MUTATION
-
-    user_id = graphene.Node.to_global_id("User", customer_user.id)
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
-
-    expected_product_type_id = variant.product.product_type_id
-
-    variant_list = [
-        {"variantId": variant_id, "quantity": 2},
-    ]
-    channel_id = graphene.Node.to_global_id("Channel", channel_PLN.id)
-
-    variables = {
-        "input": {
-            "user": user_id,
-            "lines": variant_list,
-            "channelId": channel_id,
-        }
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        query, variables, permissions=(permission_manage_orders,)
-    )
-
-    # then
-    content = get_graphql_content(response)
-    assert not content["data"]["draftOrderCreate"]["errors"]
-
-    order_line = OrderLine.objects.first()
-    assert order_line.product_type_id == expected_product_type_id

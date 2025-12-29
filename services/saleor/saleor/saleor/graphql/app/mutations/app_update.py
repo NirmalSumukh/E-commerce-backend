@@ -7,7 +7,7 @@ from ....permission.enums import AppPermission, get_permissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...account.utils import can_manage_app
 from ...core import ResolveInfo
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import AppError
 from ...core.utils import WebhookEventInfo
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -17,7 +17,7 @@ from ..utils import ensure_can_manage_permissions
 from .app_create import AppInput
 
 
-class AppUpdate(DeprecatedModelMutation):
+class AppUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(description="ID of an app to update.", required=True)
         input = AppInput(
@@ -46,7 +46,7 @@ class AppUpdate(DeprecatedModelMutation):
         return instance
 
     @classmethod
-    def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+    def clean_input(cls, info, instance, data, **kwargs):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
         requestor = get_user_or_app_from_context(info.context)
         if not requestor_is_superuser(requestor) and not can_manage_app(

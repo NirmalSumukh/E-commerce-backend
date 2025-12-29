@@ -8,11 +8,12 @@ import { TableBody, TableCell } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Skeleton, vars } from "@saleor/macaw-ui-next";
 import { clsx } from "clsx";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { maybe, renderCollection } from "../../../misc";
 
-interface TranslationsLanguageListProps {
+export interface TranslationsLanguageListProps {
   languages: LanguageFragment[];
 }
 
@@ -35,7 +36,7 @@ const useStyles = makeStyles(
   },
   { name: "TranslationsLanguageList" },
 );
-const TranslationsLanguageList = (props: TranslationsLanguageListProps) => {
+const TranslationsLanguageList: React.FC<TranslationsLanguageListProps> = props => {
   const { languages } = props;
   const classes = useStyles(props);
 

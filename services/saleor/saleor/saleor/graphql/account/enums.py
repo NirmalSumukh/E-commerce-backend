@@ -36,6 +36,6 @@ class StaffMemberStatus(BaseEnum):
     def description(self):
         if self == StaffMemberStatus.ACTIVE:
             return "User account has been activated."
-        if self == StaffMemberStatus.DEACTIVATED:
+        elif self == StaffMemberStatus.DEACTIVATED:
             return "User account has not been activated yet."
         return None

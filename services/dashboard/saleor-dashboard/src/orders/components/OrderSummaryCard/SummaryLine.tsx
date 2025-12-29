@@ -2,7 +2,7 @@ import Money from "@dashboard/components/Money";
 import { IMoney } from "@dashboard/utils/intl";
 import { Skeleton } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { orderSummaryMessages } from "./messages";
@@ -19,7 +19,7 @@ interface SummaryLineProps {
   className?: string;
 }
 
-const SummaryLine = ({
+const SummaryLine: React.FC<SummaryLineProps> = ({
   text,
   subText,
   negative,
@@ -28,7 +28,7 @@ const SummaryLine = ({
   money,
   hideEmpty = false,
   className,
-}: SummaryLineProps) => {
+}) => {
   const classes = useSummaryLineStyles();
   const intl = useIntl();
 

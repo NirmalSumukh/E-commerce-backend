@@ -24,7 +24,7 @@ export enum StaffListUrlSortField {
   name = "name",
   email = "email",
 }
-type StaffListUrlSort = Sort<StaffListUrlSortField>;
+export type StaffListUrlSort = Sort<StaffListUrlSortField>;
 export type StaffListUrlQueryParams = ActiveTab &
   BulkAction &
   Dialog<StaffListUrlDialog> &
@@ -35,7 +35,7 @@ export const staffListUrl = (params?: StaffListUrlQueryParams) =>
   staffListPath + "?" + stringifyQs(params);
 
 export const staffMemberDetailsPath = (id: string) => urlJoin(staffSection, id);
-type StaffMemberDetailsUrlDialog = "reset-password" | "remove" | "remove-avatar";
+export type StaffMemberDetailsUrlDialog = "change-password" | "remove" | "remove-avatar";
 export type StaffMemberDetailsUrlQueryParams = Dialog<StaffMemberDetailsUrlDialog>;
 
 export const staffMemberDetailsUrl = (id: string, params?: StaffMemberDetailsUrlQueryParams) =>

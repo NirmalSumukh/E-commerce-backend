@@ -1,10 +1,11 @@
 from collections.abc import Iterable
 from functools import partial
+from typing import Union
 from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-from django.contrib.postgres.indexes import BTreeIndex, GinIndex
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.db.models import JSONField, Q, Value
 from django.db.models.expressions import Exists, OuterRef
@@ -93,10 +94,6 @@ class Address(ModelWithMetadata):
                 ],
                 opclasses=["gin_trgm_ops"] * 6,
             ),
-            BTreeIndex(
-                fields=["country"],
-                name="address_country_idx",
-            ),
         ]
 
     def __eq__(self, other):
@@ -147,7 +144,7 @@ class UserManager(BaseUserManager["User"]):
         group, created = Group.objects.get_or_create(name="Full Access")
         if created:
             group.permissions.add(*get_permissions())
-        group.user_set.add(user)
+        group.user_set.add(user)  # type: ignore[attr-defined]
         return user
 
     def customers(self):
@@ -194,11 +191,7 @@ class User(
     search_document = models.TextField(blank=True, default="")
     uuid = models.UUIDField(default=uuid4, unique=True)
 
-    # Denormalized number of orders placed by the user
-    number_of_orders = models.PositiveIntegerField(default=0, db_default=0)
-
     USERNAME_FIELD = "email"
-    NEWLY_CREATED_USER = False
 
     objects = UserManager()
 
@@ -239,18 +232,6 @@ class User(
                 fields=["last_name"],
                 name="last_name_gin",
                 opclasses=["gin_trgm_ops"],
-            ),
-            BTreeIndex(
-                fields=["date_joined"],
-                name="user_date_joined_idx",
-            ),
-            BTreeIndex(
-                fields=["email"],
-                name="user_email_idx",
-            ),
-            BTreeIndex(
-                fields=["number_of_orders"],
-                name="user_number_of_orders_idx",
             ),
         ]
 
@@ -319,7 +300,7 @@ class User(
     def get_short_name(self):
         return self.email
 
-    def has_perm(self, perm: BasePermissionEnum | str, obj=None) -> bool:
+    def has_perm(self, perm: Union[BasePermissionEnum, str], obj=None) -> bool:
         # This method is overridden to accept perm as BasePermissionEnum
         perm = perm.value if isinstance(perm, BasePermissionEnum) else perm
 
@@ -329,7 +310,7 @@ class User(
         return _user_has_perm(self, perm, obj)
 
     def has_perms(
-        self, perm_list: Iterable[BasePermissionEnum | str], obj=None
+        self, perm_list: Iterable[Union[BasePermissionEnum, str]], obj=None
     ) -> bool:
         # This method is overridden to accept perm as BasePermissionEnum
         perm_list = [

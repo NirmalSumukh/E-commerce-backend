@@ -12,6 +12,7 @@ import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import { stringifyQs } from "@dashboard/utils/urls";
 import { OutputData } from "@editorjs/editorjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationsPagesPage from "../components/TranslationsPagesPage";
@@ -21,7 +22,7 @@ import { getAttributeValueTranslationsInputData, getParsedTranslationInputData }
 export interface TranslationsPagesQueryParams {
   activeField: string;
 }
-interface TranslationsPagesProps {
+export interface TranslationsPagesProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsPagesQueryParams;
@@ -30,7 +31,7 @@ interface TranslationsPagesProps {
 type HandleSubmitData = string | any;
 type HandleSubmitAttributeValue = OutputData | string;
 
-const TranslationsPages = ({ id, languageCode, params }: TranslationsPagesProps) => {
+const TranslationsPages: React.FC<TranslationsPagesProps> = ({ id, languageCode, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

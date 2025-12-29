@@ -23,7 +23,8 @@ class MoneyInput(graphene.InputObjectType):
 class CardInput(graphene.InputObjectType):
     code = graphene.String(
         description=(
-            "Payment method nonce, a token returned by the appropriate provider's SDK."
+            "Payment method nonce, a token returned "
+            "by the appropriate provider's SDK."
         ),
         required=True,
     )
@@ -79,7 +80,7 @@ class PaymentCheckBalance(BaseMutation):
         except PaymentError as e:
             raise ValidationError(
                 str(e), code=PaymentErrorCode.BALANCE_CHECK_ERROR.value
-            ) from e
+            )
 
         return PaymentCheckBalance(data=data)
 

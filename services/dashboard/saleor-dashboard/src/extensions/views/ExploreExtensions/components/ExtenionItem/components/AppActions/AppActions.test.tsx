@@ -1,7 +1,14 @@
 import { render, screen } from "@testing-library/react";
-import * as React from "react";
+import React from "react";
 
 import { AppActions } from "./AppActions";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+}));
 
 jest.mock("@dashboard/components/Link", () => {
   // eslint-disable-next-line react/display-name
@@ -10,7 +17,7 @@ jest.mock("@dashboard/components/Link", () => {
   );
 });
 
-jest.mock("../AppInstallButton/AppInstallButton", () => ({
+jest.mock("../AppInstallButton", () => ({
   AppInstallButton: () => <div>Install</div>,
 }));
 
@@ -20,8 +27,8 @@ describe("Extensions / ExtensionItem / AppActions", () => {
     render(<AppActions isInstalled disabled id="test-id" />);
 
     // Assert
-    expect(screen.getByText("Manage extension")).toBeVisible();
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/extensions/app/test-id/edit?");
+    expect(screen.getByText("Manage app")).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/apps/test-id?");
   });
 
   it("should render link to installed app when app is installed", () => {
@@ -30,7 +37,7 @@ describe("Extensions / ExtensionItem / AppActions", () => {
 
     // Assert
     expect(screen.getByText("View details")).toBeVisible();
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/extensions/app/test-id?");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/apps/test-id/app?");
   });
 
   it("should render install button and link to repository when app is not installed", () => {

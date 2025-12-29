@@ -8,14 +8,13 @@ import {
   Theme,
 } from "@glideapps/glide-data-grid";
 
-const numberCellEmptyValue = Symbol("date-cell-empty-value");
-
+export const numberCellEmptyValue = Symbol("date-cell-empty-value");
 interface DateCellProps {
   readonly kind: "date-cell";
   readonly value: number | typeof numberCellEmptyValue;
 }
 
-type DateCell = CustomCell<DateCellProps>;
+export type DateCell = CustomCell<DateCellProps>;
 
 type DateFormaters = {
   full: Intl.DateTimeFormat;

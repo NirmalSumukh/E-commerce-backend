@@ -9,11 +9,12 @@ import { getShippingWeightRateErrorMessage } from "@dashboard/shipping/errors";
 import { getFormErrors } from "@dashboard/utils/errors";
 import { InputAdornment, TextField } from "@material-ui/core";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStyles } from "./styles";
 
-interface OrderWeightProps {
+export interface OrderWeightProps {
   disabled: boolean;
   errors: ShippingErrorFragment[];
   orderValueRestricted: boolean;
@@ -22,14 +23,14 @@ interface OrderWeightProps {
   onChange: (event: ChangeEvent) => void;
 }
 
-const OrderWeight = ({
+export const OrderWeight: React.FC<OrderWeightProps> = ({
   orderValueRestricted,
   disabled,
   errors,
   maxValue = "",
   minValue = "",
   onChange,
-}: OrderWeightProps) => {
+}) => {
   const classes = useStyles({});
   const intl = useIntl();
   const shop = useShop();

@@ -63,7 +63,6 @@ class TaxConfiguration(ModelWithMetadata):
     display_gross_prices = models.BooleanField(default=True)
     prices_entered_with_tax = models.BooleanField(default=True)
     tax_app_id = models.CharField(blank=True, null=True, max_length=256)
-    use_weighted_tax_for_shipping = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("pk",)
@@ -80,7 +79,6 @@ class TaxConfigurationPerCountry(models.Model):
     )
     display_gross_prices = models.BooleanField(default=True)
     tax_app_id = models.CharField(blank=True, null=True, max_length=256)
-    use_weighted_tax_for_shipping = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("country", "pk")

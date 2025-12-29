@@ -8,9 +8,7 @@ from .... import ChargeStatus, PaymentError, TransactionKind, gateway
 
 @pytest.fixture(autouse=True)
 def setup_dummy_gateway(settings):
-    settings.PLUGINS = [
-        "saleor.payment.gateways.dummy.plugin.DeprecatedDummyGatewayPlugin"
-    ]
+    settings.PLUGINS = ["saleor.payment.gateways.dummy.plugin.DummyGatewayPlugin"]
     return settings
 
 

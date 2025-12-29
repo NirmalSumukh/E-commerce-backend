@@ -10,28 +10,19 @@ from ....core.postgres import FlatConcatSearchVector
 from ....core.taxes import zero_taxed_money
 from ....core.tracing import traced_atomic_transaction
 from ....discount.models import VoucherCode
-from ....discount.utils.voucher import (
-    add_voucher_usage_by_customer,
-    get_customer_email_for_voucher_usage,
-)
+from ....discount.utils.voucher import add_voucher_usage_by_customer
 from ....order import OrderStatus, models
 from ....order.actions import order_created
 from ....order.calculations import fetch_order_prices_if_expired
 from ....order.error_codes import OrderErrorCode
 from ....order.fetch import OrderInfo, OrderLineInfo
-from ....order.models import OrderLine
 from ....order.search import prepare_order_search_vector_value
-from ....order.utils import (
-    get_order_country,
-    store_user_addresses_from_draft_order,
-    update_order_display_gross_prices,
-)
+from ....order.utils import get_order_country, update_order_display_gross_prices
 from ....permission.enums import OrderPermissions
 from ....warehouse.management import allocate_preorders, allocate_stocks
 from ....warehouse.reservations import is_reservation_enabled
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.types import OrderError
@@ -60,8 +51,7 @@ class DraftOrderComplete(BaseMutation):
         error_type_field = "order_errors"
 
     @classmethod
-    def update_user_fields(cls, order: models.Order):
-        update_fields = []
+    def update_user_fields(cls, order: models.Order, update_fields: list[str]):
         if order.user:
             order.user_email = order.user.email
             update_fields.append("user_email")
@@ -71,7 +61,6 @@ class DraftOrderComplete(BaseMutation):
             except User.DoesNotExist:
                 order.user = None
             update_fields.append("user_id")
-        return update_fields
 
     @classmethod
     def validate_order(cls, order):
@@ -95,9 +84,7 @@ class DraftOrderComplete(BaseMutation):
         ):
             code = VoucherCode.objects.filter(code=order.voucher_code).first()
             if code:
-                add_voucher_usage_by_customer(
-                    code, get_customer_email_for_voucher_usage(order)
-                )
+                add_voucher_usage_by_customer(code, order.get_customer_email())
 
     @classmethod
     def perform_mutation(  # type: ignore[override]
@@ -134,8 +121,7 @@ class DraftOrderComplete(BaseMutation):
                 "display_gross_prices",
                 "updated_at",
             ]
-            update_user_fields = cls.update_user_fields(order)
-            update_fields.extend(update_user_fields)
+            cls.update_user_fields(order, update_fields)
             channel = order.channel
             order.status = (
                 OrderStatus.UNFULFILLED
@@ -166,8 +152,7 @@ class DraftOrderComplete(BaseMutation):
 
             cls.setup_voucher_customer(order, channel)
             order_lines_info = []
-            lines = order.lines.all()
-            for line in lines:
+            for line in order.lines.all():
                 if not line.variant:
                     # we only care about stock for variants that still exist
                     continue
@@ -195,13 +180,9 @@ class DraftOrderComplete(BaseMutation):
                                     site.settings
                                 ),
                             )
-                    except InsufficientStock as e:
-                        errors = prepare_insufficient_stock_order_validation_errors(e)
-                        raise ValidationError({"lines": errors}) from e
-
-                # clear draft base price expiration time
-                line.draft_base_price_expire_at = None
-                OrderLine.objects.bulk_update(lines, ["draft_base_price_expire_at"])
+                    except InsufficientStock as exc:
+                        errors = prepare_insufficient_stock_order_validation_errors(exc)
+                        raise ValidationError({"lines": errors})
 
             order_info = OrderInfo(
                 order=order,
@@ -212,12 +193,6 @@ class DraftOrderComplete(BaseMutation):
             )
             app = get_app_promise(info.context).get()
             transaction.on_commit(
-                lambda: store_user_addresses_from_draft_order(
-                    order=order,
-                    manager=manager,
-                )
-            )
-            transaction.on_commit(
                 lambda: order_created(
                     order_info=order_info,
                     user=user,
@@ -226,4 +201,4 @@ class DraftOrderComplete(BaseMutation):
                     from_draft=True,
                 )
             )
-        return DraftOrderComplete(order=SyncWebhookControlContext(node=order))
+        return DraftOrderComplete(order=order)

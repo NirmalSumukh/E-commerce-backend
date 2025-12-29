@@ -13,7 +13,7 @@ from ....payment.interface import (
     PaymentMethodTokenizationResult,
 )
 from ....settings import WEBHOOK_SYNC_TIMEOUT
-from ....webhook.const import WEBHOOK_CACHE_DEFAULT_TTL
+from ....webhook.const import WEBHOOK_CACHE_DEFAULT_TIMEOUT
 from ....webhook.event_types import WebhookEventSyncType
 from ....webhook.models import Webhook
 from ....webhook.transport.utils import (
@@ -358,12 +358,11 @@ def test_payment_method_initialize_tokenization_missing_required_id(
     channel_USD,
 ):
     # given
-    return_value = {
+    expected_error_msg = "Missing payment method `id` in response."
+    mock_request.return_value = {
         "result": result,
         "data": None,
     }
-    mock_request.return_value = return_value
-    expected_error_msg = f"Missing value for field: id. Input: {return_value}."
 
     plugin = webhook_plugin()
 
@@ -496,7 +495,7 @@ def test_expected_result_invalidates_cache_for_app(
     mocked_cache_set.assert_called_once_with(
         expected_cache_key,
         list_stored_payment_methods_response,
-        timeout=WEBHOOK_CACHE_DEFAULT_TTL,
+        timeout=WEBHOOK_CACHE_DEFAULT_TIMEOUT,
     )
 
     # when

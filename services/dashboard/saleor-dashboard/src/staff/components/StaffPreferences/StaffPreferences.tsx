@@ -4,6 +4,7 @@ import FormSpacer from "@dashboard/components/FormSpacer";
 import { Locale, localeNames } from "@dashboard/components/Locale";
 import { capitalize } from "@dashboard/misc";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 interface StaffPreferencesProps {
@@ -11,7 +12,7 @@ interface StaffPreferencesProps {
   onLocaleChange: (locale: Locale) => void;
 }
 
-const StaffPreferences = ({ locale, onLocaleChange }: StaffPreferencesProps) => {
+const StaffPreferences: React.FC<StaffPreferencesProps> = ({ locale, onLocaleChange }) => {
   const intl = useIntl();
   const handleLocaleChange = async (locale: Locale) => {
     if (!locale) {

@@ -8,13 +8,14 @@ import useModalDialogErrors from "@dashboard/hooks/useModalDialogErrors";
 import { buttonMessages } from "@dashboard/intl";
 import { getFormErrors } from "@dashboard/utils/errors";
 import { TextField } from "@material-ui/core";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { AttributeValueEditDialogFormData } from "../../utils/data";
 import AttributeSwatchField from "../AttributeSwatchField";
 import { getAttributeValueFields } from "./utils";
 
-interface AttributeValueEditDialogProps {
+export interface AttributeValueEditDialogProps {
   attributeValue: AttributeValueEditDialogFormData | null;
   confirmButtonState: ConfirmButtonTransitionState;
   disabled: boolean;
@@ -25,7 +26,7 @@ interface AttributeValueEditDialogProps {
   inputType?: AttributeInputTypeEnum;
 }
 
-const AttributeValueEditDialog = ({
+const AttributeValueEditDialog: React.FC<AttributeValueEditDialogProps> = ({
   attributeValue,
   confirmButtonState,
   disabled,
@@ -34,7 +35,7 @@ const AttributeValueEditDialog = ({
   onSubmit,
   open,
   inputType,
-}: AttributeValueEditDialogProps) => {
+}) => {
   const intl = useIntl();
   const isSwatch = inputType === AttributeInputTypeEnum.SWATCH;
   const attributeValueFields = getAttributeValueFields(attributeValue, isSwatch);

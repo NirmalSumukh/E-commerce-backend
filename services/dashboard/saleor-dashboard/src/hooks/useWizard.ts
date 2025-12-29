@@ -1,15 +1,15 @@
 // @ts-strict-ignore
 import { useState } from "react";
 
-interface UseWizardActions<T> {
+export interface UseWizardActions<T> {
   next: () => void;
   prev: () => void;
   set: (step: T) => void;
 }
-interface UseWizardOpts<T> {
+export interface UseWizardOpts<T> {
   onTransition: (prevStep: T, nextStep: T) => void;
 }
-type UseWizard<T> = [T, UseWizardActions<T>];
+export type UseWizard<T> = [T, UseWizardActions<T>];
 function useWizard<T>(initial: T, steps: T[], opts?: UseWizardOpts<T>): UseWizard<T> {
   const [stepIndex, setStepIndex] = useState(steps.indexOf(initial));
 

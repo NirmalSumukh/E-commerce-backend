@@ -190,14 +190,17 @@ def _get_product_to_variant_channel_listings_per_channel_map(
     variant_channel_listings = ProductVariantChannelListing.objects.filter(
         Exists(variants.filter(id=OuterRef("variant_id"))), price_amount__isnull=False
     )
-    variant_to_product_id = dict(
-        variants.values_list("id", "product_id").iterator(chunk_size=1000)
-    )
+    variant_to_product_id = {
+        variant_id: product_id
+        for variant_id, product_id in variants.values_list(
+            "id", "product_id"
+        ).iterator()
+    }
 
     price_data: dict[int, dict[int, list[Money]]] = defaultdict(
         lambda: defaultdict(list)
     )
-    for variant_channel_listing in variant_channel_listings.iterator(chunk_size=1000):
+    for variant_channel_listing in variant_channel_listings.iterator():
         try:
             product_id = variant_to_product_id[variant_channel_listing.variant_id]
         except KeyError:

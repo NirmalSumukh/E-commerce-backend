@@ -23,9 +23,6 @@ mutation orderLinesCreate($id: ID!, $input: [OrderLineCreateInput!]!) {
       subtotal {
         ...BaseTaxedMoney
       }
-      undiscountedTotal {
-        ...BaseTaxedMoney
-      }
       isShippingRequired
       lines {
         id
@@ -40,32 +37,10 @@ mutation orderLinesCreate($id: ID!, $input: [OrderLineCreateInput!]!) {
           ...BaseTaxedMoney
         }
         unitDiscountReason
-        unitDiscountType
-        unitDiscountValue
-        unitDiscount {
-          amount
-        }
         undiscountedUnitPrice {
-          ...BaseTaxedMoney
-        }
-        undiscountedTotalPrice {
-          ...BaseTaxedMoney
-        }
-        undiscountedTotalPrice {
           gross {
             amount
           }
-        }
-      }
-      discounts {
-        id
-        type
-        name
-        valueType
-        value
-        reason
-        amount {
-          amount
         }
       }
     }

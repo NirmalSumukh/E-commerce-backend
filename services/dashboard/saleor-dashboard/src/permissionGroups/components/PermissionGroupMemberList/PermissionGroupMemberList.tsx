@@ -17,6 +17,7 @@ import { TableBody, TableCell } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, Button, Skeleton, Text, TrashBinIcon, vars } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 const useStyles = makeStyles(
@@ -67,7 +68,7 @@ interface PermissionGroupProps extends ListActions, SortPage<MembersListUrlSortF
   onAssign: () => void;
 }
 
-const PermissionGroupMemberList = (props: PermissionGroupProps) => {
+const PermissionGroupMemberList: React.FC<PermissionGroupProps> = props => {
   const {
     disabled,
     users,

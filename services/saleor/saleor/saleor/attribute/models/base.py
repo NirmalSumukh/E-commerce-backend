@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, TypeVar, Union
 
-from django.contrib.postgres.indexes import BTreeIndex, GinIndex
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models, transaction
 from django.db.models import Case, Exists, F, OrderBy, OuterRef, Q, Value, When
 
@@ -12,7 +12,7 @@ from ...core.utils.translations import Translation
 from ...page.models import Page, PageType
 from ...permission.enums import PageTypePermissions, ProductTypePermissions
 from ...permission.utils import has_one_of_permissions
-from ...product.models import Category, Collection, Product, ProductType, ProductVariant
+from ...product.models import Product, ProductType, ProductVariant
 from .. import AttributeEntityType, AttributeInputType, AttributeType
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class AttributeQuerySet(BaseAttributeQuerySet[T]):
         id_field = F(f"{m2m_field_name}__id")
         if asc:
             sort_method = sort_order_field.asc(nulls_last=True)
-            id_sort: OrderBy | F = id_field
+            id_sort: Union[OrderBy, F] = id_field
         else:
             sort_method = sort_order_field.desc(nulls_first=True)
             id_sort = id_field.desc()
@@ -125,22 +125,6 @@ class Attribute(ModelWithMetadata, ModelWithExternalReference):
     )
     entity_type = models.CharField(
         max_length=50, choices=AttributeEntityType.CHOICES, blank=True, null=True
-    )
-    # The product types that are used to narrow down the choices of products
-    # or variants for a reference attribute.
-    # Applicable only for attributes with the `PRODUCT` and `VARIANT` entity types.
-    reference_product_types = models.ManyToManyField(
-        ProductType,
-        blank=True,
-        related_name="+",
-    )
-    # The page types that are used to narrow down the choices of pages
-    # for a reference attribute.
-    # Applicable only for attributes with the `PAGE` entity type.
-    reference_page_types = models.ManyToManyField(
-        PageType,
-        blank=True,
-        related_name="+",
     )
 
     product_types = models.ManyToManyField(
@@ -259,7 +243,7 @@ class AttributeValueManager(models.Manager):
         query = self._prepare_query_for_bulk_operation(objects_data)
 
         # iterate over all records in db and check if they match any of objects data
-        for record in query.iterator(chunk_size=1000):
+        for record in query.iterator():
             # iterate over all objects data and check if they match any of records in db
             for index, obj in objects_enumerated:
                 if self._is_correct_record(record, obj):
@@ -298,7 +282,7 @@ class AttributeValueManager(models.Manager):
         query = self._prepare_query_for_bulk_operation(objects_data)
 
         # iterate over all records in db and check if they match any of objects data
-        for record in query.iterator(chunk_size=1000):
+        for record in query.iterator():
             # iterate over all objects data and check if they match any of records in db
             for index, obj in objects_enumerated:
                 if self._is_correct_record(record, obj):
@@ -335,18 +319,10 @@ class AttributeValueManager(models.Manager):
             )
 
         if objects_to_be_updated:
-            from ..lock_objects import attribute_value_qs_select_for_update
-
-            with transaction.atomic():
-                _locked_qs = (
-                    attribute_value_qs_select_for_update()
-                    .filter(pk__in=[obj.pk for obj in objects_to_be_updated])
-                    .select_for_update(of=(["self"]))
-                )
-                self.bulk_update(
-                    objects_to_be_updated,
-                    fields=update_fields,
-                )
+            self.bulk_update(
+                objects_to_be_updated,
+                fields=update_fields,  # type: ignore[arg-type]
+            )
 
         return results
 
@@ -379,7 +355,6 @@ class AttributeValue(ModelWithExternalReference):
     )
     boolean = models.BooleanField(blank=True, null=True)
     date_time = models.DateTimeField(blank=True, null=True)
-    numeric = models.FloatField(null=True, blank=True)
 
     reference_product = models.ForeignKey(
         Product,
@@ -397,26 +372,9 @@ class AttributeValue(ModelWithExternalReference):
         blank=True,
     )
 
-    reference_collection = models.ForeignKey(
-        Collection,
-        related_name="references",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
-
-    reference_category = models.ForeignKey(
-        Category,
-        related_name="references",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
-
     reference_page = models.ForeignKey(
         Page, related_name="references", on_delete=models.CASCADE, null=True, blank=True
     )
-
     sort_order = models.IntegerField(editable=False, db_index=True, null=True)
 
     objects = AttributeValueManager()
@@ -430,11 +388,7 @@ class AttributeValue(ModelWithExternalReference):
                 # `opclasses` and `fields` should be the same length
                 fields=["name", "slug"],
                 opclasses=["gin_trgm_ops"] * 2,
-            ),
-            BTreeIndex(
-                fields=["numeric"],
-                name="attribute_value_numeric_idx",
-            ),
+            )
         ]
 
     def __str__(self) -> str:

@@ -15,9 +15,9 @@ def get_plugins():
 
 def change_plugin_name_to_plugin_identifier(apps, schema_editor):
     plugins = get_plugins()
-    Payment = apps.get_model("payment", "Payment")
+    payment = apps.get_model("payment", "Payment")
 
-    for payment in Payment.objects.iterator():
+    for payment in payment.objects.iterator():
         gateway = payment.gateway
         if gateway in plugins:
             payment.gateway = plugins[gateway]

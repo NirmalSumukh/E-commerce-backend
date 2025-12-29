@@ -1,6 +1,7 @@
 import { findPriceSeparator } from "@dashboard/components/PriceField/utils";
 import { FormChange } from "@dashboard/hooks/useForm";
 import { InputAdornment, TextField, TextFieldProps } from "@material-ui/core";
+import React from "react";
 
 import { useStyles } from "./styles";
 
@@ -10,7 +11,7 @@ interface TaxInputProps {
   change: FormChange;
 }
 
-const TaxInput = ({ placeholder, value, change }: TaxInputProps) => {
+export const TaxInput: React.FC<TaxInputProps> = ({ placeholder, value, change }) => {
   const classes = useStyles();
   const handleChange: FormChange = e => {
     let value = e.target.value;

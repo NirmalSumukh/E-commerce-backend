@@ -1,10 +1,8 @@
-import { TokenType, UrlToken } from "../UrlToken";
+import { UrlToken } from "../UrlToken";
 import {
-  emptyFetchingParams,
   getEmptyFetchingPrams,
   toAttributesFetchingParams,
   toCollectionFetchingParams,
-  toFetchingParams,
   toGiftCardsFetchingParams,
   toPageFetchingParams,
   toProductTypesFetchingParams,
@@ -27,7 +25,6 @@ describe("TokenArray / fetchingParams / getEmptyFetchingPrams", () => {
       channel: [],
       productType: [],
       attribute: {},
-      attributeReference: {},
     });
   });
 
@@ -40,29 +37,13 @@ describe("TokenArray / fetchingParams / getEmptyFetchingPrams", () => {
 
     // Assert
     expect(fetchingParams).toEqual({
+      paymentStatus: [],
       status: [],
-      fulfillmentStatus: [],
       authorizeStatus: [],
       chargeStatus: [],
       channels: [],
       customer: [],
       ids: [],
-      metadata: [],
-      number: [],
-      userEmail: [],
-      voucherCode: [],
-      linesCount: [],
-      checkoutId: [],
-      linesMetadata: [],
-      transactionsMetadata: [],
-      transactionsPaymentType: [],
-      transactionsCardBrand: [],
-      fulfillmentsMetadata: [],
-      fulfillmentWarehouse: [],
-      billingPhoneNumber: [],
-      billingCountry: [],
-      shippingPhoneNumber: [],
-      shippingCountry: [],
     });
   });
 
@@ -308,28 +289,5 @@ describe("TokenArray / fetchingParams / toAttributesFetchingParams", () => {
       channel: ["chan-1"],
       attributeType: [],
     });
-  });
-});
-
-describe("TokenArray / fetchingParams / toFetchingParams - REFERENCE attribute", () => {
-  it("should add values to `attributeReference` for REFERENCE token, not `attribute` key", () => {
-    // Arrange
-    const params = { ...emptyFetchingParams };
-    const token = {
-      conditionKind: "is",
-      name: "ref-attr",
-      type: TokenType.ATTRIBUTE_REFERENCE,
-      value: ["ref-value-1", "ref-value-2"],
-      isAttribute: () => true,
-      hasDynamicValues: () => true,
-      isLoadable: () => true,
-    } as UrlToken;
-
-    // Act
-    const result = toFetchingParams(params, token);
-
-    // Assert
-    expect(result.attributeReference["ref-attr"]).toEqual(["ref-value-1", "ref-value-2"]);
-    expect(result.attribute["ref-attr"]).toBeUndefined();
   });
 });

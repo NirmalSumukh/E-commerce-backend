@@ -1,5 +1,6 @@
 import { IMoney } from "@dashboard/utils/intl";
 import clsx from "clsx";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { dataLineMessages } from "../messages";
@@ -10,7 +11,7 @@ interface DataLineSettledProps {
   unsettledMoney: IMoney;
 }
 
-export const DataLineSettled = ({ unsettledMoney }: DataLineSettledProps) => {
+export const DataLineSettled: React.FC<DataLineSettledProps> = ({ unsettledMoney }) => {
   const classes = useDataLineSettledStyles();
 
   if (!unsettledMoney) {

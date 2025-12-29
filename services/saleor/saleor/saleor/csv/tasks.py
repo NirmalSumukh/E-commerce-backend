@@ -1,3 +1,6 @@
+from typing import Optional, Union
+
+import celery
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -7,8 +10,6 @@ from django.utils import timezone
 
 from ..celeryconf import app
 from ..core import JobStatus
-from ..core.db.connection import allow_writer
-from ..core.tasks import RestrictWriterDBTask
 from . import events
 from .models import ExportEvent, ExportFile
 from .notifications import send_export_failed_info
@@ -17,7 +18,7 @@ from .utils.export import export_gift_cards, export_products, export_voucher_cod
 task_logger = get_task_logger(__name__)
 
 
-class ExportTask(RestrictWriterDBTask):
+class ExportTask(celery.Task):
     # should be updated when new export task is added
     TASK_NAME_TO_DATA_TYPE_MAPPING = {
         "export-products": "products",
@@ -60,33 +61,23 @@ class ExportTask(RestrictWriterDBTask):
 @app.task(name="export-products", base=ExportTask)
 def export_products_task(
     export_file_id: int,
-    scope: dict[str, str | dict],
+    scope: dict[str, Union[str, dict]],
     export_info: dict[str, list],
     file_type: str,
     delimiter: str = ",",
 ):
-    with allow_writer():
-        # Read the ExportFile instance from the writer instead of replica as it might
-        # not be replicated yet.
-        export_file = ExportFile.objects.select_related("app", "user").get(
-            pk=export_file_id
-        )
+    export_file = ExportFile.objects.get(pk=export_file_id)
     export_products(export_file, scope, export_info, file_type, delimiter)
 
 
 @app.task(name="export-gift-cards", base=ExportTask)
 def export_gift_cards_task(
     export_file_id: int,
-    scope: dict[str, str | dict],
+    scope: dict[str, Union[str, dict]],
     file_type: str,
     delimiter: str = ",",
 ):
-    with allow_writer():
-        # Read the ExportFile instance from the writer instead of replica as it might
-        # not be replicated yet.
-        export_file = ExportFile.objects.select_related("app", "user").get(
-            pk=export_file_id
-        )
+    export_file = ExportFile.objects.get(pk=export_file_id)
     export_gift_cards(export_file, scope, file_type, delimiter)
 
 
@@ -94,20 +85,14 @@ def export_gift_cards_task(
 def export_voucher_codes_task(
     export_file_id: int,
     file_type: str,
-    voucher_id: int | None,
+    voucher_id: Optional[int],
     ids: list[int],
 ):
-    with allow_writer():
-        # Read the ExportFile instance from the writer instead of replica as it might
-        # not be replicated yet.
-        export_file = ExportFile.objects.select_related("app", "user").get(
-            pk=export_file_id
-        )
+    export_file = ExportFile.objects.get(pk=export_file_id)
     export_voucher_codes(export_file, file_type, voucher_id, ids)
 
 
 @app.task
-@allow_writer()
 def delete_old_export_files():
     now = timezone.now()
 

@@ -1,7 +1,17 @@
 import { InstalledExtension } from "@dashboard/extensions/types";
 import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
+import { FormattedMessageProps } from "react-intl";
 
 import { InstalledExtensionsList } from "./InstalledExtensionsList";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: FormattedMessageProps) => <>{defaultMessage}</>,
+}));
 
 describe("InstalledExtensionsList", () => {
   it("should render loading state when loading is true", () => {
@@ -32,7 +42,7 @@ describe("InstalledExtensionsList", () => {
     fireEvent.click(screen.getByText("Clear search"));
 
     // Assert
-    expect(screen.getByText("No extensions found")).toBeInTheDocument();
+    expect(screen.getByText("No Extensions found")).toBeInTheDocument();
     expect(clearSearch).toBeCalledTimes(1);
   });
 

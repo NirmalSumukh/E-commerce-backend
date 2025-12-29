@@ -20,7 +20,6 @@ from ..graphql.notifications.schema import ExternalNotificationMutations
 from .account.schema import AccountMutations, AccountQueries
 from .app.schema import AppMutations, AppQueries
 from .attribute.schema import AttributeMutations, AttributeQueries
-from .attribute.types import ASSIGNED_ATTRIBUTE_TYPES
 from .channel.schema import ChannelMutations, ChannelQueries
 from .checkout.schema import CheckoutMutations, CheckoutQueries
 from .core.enums import unit_enums
@@ -34,7 +33,7 @@ from .menu.schema import MenuMutations, MenuQueries
 from .meta.schema import MetaMutations
 from .order.schema import OrderMutations, OrderQueries
 from .page.schema import PageMutations, PageQueries
-from .payment.schema import PAYMENT_ADDITIONAL_TYPES, PaymentMutations, PaymentQueries
+from .payment.schema import PaymentMutations, PaymentQueries
 from .plugins.schema import PluginsMutations, PluginsQueries
 from .product.schema import ProductMutations, ProductQueries
 from .shipping.schema import ShippingMutations, ShippingQueries
@@ -124,7 +123,6 @@ GraphQLDocDirective = graphql.GraphQLDirective(
         graphql.DirectiveLocation.FIELD_DEFINITION,
         graphql.DirectiveLocation.INPUT_OBJECT,
         graphql.DirectiveLocation.OBJECT,
-        graphql.DirectiveLocation.INTERFACE,
     ],
 )
 
@@ -178,12 +176,7 @@ GraphQLWebhookEventsInfoDirective = graphql.GraphQLDirective(
 schema = build_federated_schema(
     Query,
     mutation=Mutation,
-    types=(
-        unit_enums
-        + list(WEBHOOK_TYPES_MAP.values())
-        + PAYMENT_ADDITIONAL_TYPES
-        + ASSIGNED_ATTRIBUTE_TYPES
-    ),
+    types=unit_enums + list(WEBHOOK_TYPES_MAP.values()),
     subscription=Subscription,
     directives=graphql.specified_directives
     + [GraphQLDocDirective, GraphQLWebhookEventsInfoDirective],
@@ -215,7 +208,7 @@ class SaleorGraphQLBackend(GraphQLCoreBackend):
             schema=schema,
             document_string=document_string,
             document_ast=document_ast,
-            execute=partial(execute, schema, document_ast, **self.execute_params),  # type: ignore[arg-type]
+            execute=partial(execute, schema, document_ast, **self.execute_params),
         )
 
 

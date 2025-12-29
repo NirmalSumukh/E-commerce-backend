@@ -1,4 +1,5 @@
-import datetime
+from datetime import timedelta
+from typing import Optional
 
 from django.core.exceptions import ValidationError
 
@@ -8,7 +9,7 @@ from ...core.enums import ChannelErrorCode
 DELETE_EXPIRED_ORDERS_MAX_DAYS = 120
 
 
-def clean_expire_orders_after(expire_orders_after: int) -> int | None:
+def clean_expire_orders_after(expire_orders_after: int) -> Optional[int]:
     if expire_orders_after is None or expire_orders_after == 0:
         return None
     if expire_orders_after < 0:
@@ -23,9 +24,7 @@ def clean_expire_orders_after(expire_orders_after: int) -> int | None:
     return expire_orders_after
 
 
-def clean_delete_expired_orders_after(
-    delete_expired_orders_after: int,
-) -> datetime.timedelta:
+def clean_delete_expired_orders_after(delete_expired_orders_after: int) -> timedelta:
     if (
         delete_expired_orders_after < 1
         or delete_expired_orders_after > DELETE_EXPIRED_ORDERS_MAX_DAYS
@@ -39,12 +38,12 @@ def clean_delete_expired_orders_after(
                 )
             }
         )
-    return datetime.timedelta(days=delete_expired_orders_after)
+    return timedelta(days=delete_expired_orders_after)
 
 
 def clean_checkout_ttl_before_releasing_funds(
     checkout_ttl_before_releasing_funds: int,
-) -> datetime.timedelta:
+) -> timedelta:
     if checkout_ttl_before_releasing_funds <= 0:
         raise ValidationError(
             {
@@ -54,7 +53,7 @@ def clean_checkout_ttl_before_releasing_funds(
                 )
             }
         )
-    return datetime.timedelta(hours=checkout_ttl_before_releasing_funds)
+    return timedelta(hours=checkout_ttl_before_releasing_funds)
 
 
 def clean_input_order_settings(
@@ -91,20 +90,6 @@ def clean_input_order_settings(
     cleaned_input["prev_include_draft_order_in_voucher_usage"] = (
         instance.include_draft_order_in_voucher_usage
     )
-
-    if "draft_order_line_price_freeze_period" in order_settings:
-        cleaned_input["draft_order_line_price_freeze_period"] = order_settings[
-            "draft_order_line_price_freeze_period"
-        ]
-
-    # For newly created channels, by default use new discount propagation flow
-    if instance.pk is None:
-        cleaned_input["use_legacy_line_discount_propagation_for_order"] = False
-
-    if order_settings.get("use_legacy_line_discount_propagation") is not None:
-        cleaned_input["use_legacy_line_discount_propagation_for_order"] = (
-            order_settings["use_legacy_line_discount_propagation"]
-        )
 
 
 def clean_input_checkout_settings(checkout_settings: dict, cleaned_input: dict):

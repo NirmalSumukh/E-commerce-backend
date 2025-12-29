@@ -45,7 +45,7 @@ class PageTypeReorderAttributes(BaseReorderAttributesMutation):
             page_type = page_models.PageType.objects.prefetch_related(
                 "attributepage"
             ).get(pk=pk)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             raise ValidationError(
                 {
                     "page_type_id": ValidationError(
@@ -53,16 +53,16 @@ class PageTypeReorderAttributes(BaseReorderAttributesMutation):
                         code=PageErrorCode.NOT_FOUND.value,
                     )
                 }
-            ) from e
+            )
 
         page_attributes = page_type.attributepage.all()
         moves = data["moves"]
 
         try:
             operations = cls.prepare_operations(moves, page_attributes)
-        except ValidationError as e:
-            e.code = PageErrorCode.NOT_FOUND.value
-            raise ValidationError({"moves": e}) from e
+        except ValidationError as error:
+            error.code = PageErrorCode.NOT_FOUND.value
+            raise ValidationError({"moves": error})
 
         with traced_atomic_transaction():
             perform_reordering(page_attributes, operations)

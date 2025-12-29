@@ -11,6 +11,7 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { fuzzySearch } from "@dashboard/misc";
 import { TableBody, TableCell, TextField } from "@material-ui/core";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStyles } from "./styles";
@@ -21,7 +22,7 @@ interface FormData {
   query: string;
 }
 
-interface DiscountCountrySelectDialogProps {
+export interface DiscountCountrySelectDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   countries: CountryWithCodeFragment[];
   initial: string[];
@@ -33,7 +34,7 @@ interface DiscountCountrySelectDialogProps {
   };
 }
 
-const DiscountCountrySelectDialog = (props: DiscountCountrySelectDialogProps) => {
+const DiscountCountrySelectDialog: React.FC<DiscountCountrySelectDialogProps> = props => {
   const { confirmButtonState, onClose, countries, open, initial, onConfirm, labels } = props;
   const classes = useStyles(props);
   const intl = useIntl();

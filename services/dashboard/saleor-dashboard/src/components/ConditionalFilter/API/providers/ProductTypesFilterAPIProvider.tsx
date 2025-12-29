@@ -40,13 +40,12 @@ export const useProductTypesFilterAPIProvider = (): FilterAPIProvider => {
 
     return [];
   };
-
-  const fetchAttributeOptions = async () => {
+  const fetchLeftOptions = async () => {
     return [];
   };
 
   return {
     fetchRightOptions,
-    fetchAttributeOptions,
+    fetchLeftOptions,
   };
 };

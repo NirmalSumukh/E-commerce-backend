@@ -13,11 +13,11 @@ const permissionGroupSection = "/permission-groups/";
 
 export const permissionGroupListPath = permissionGroupSection;
 
-type PermissionGroupListUrlDialog = "remove" | TabActionDialog;
+export type PermissionGroupListUrlDialog = "remove" | TabActionDialog;
 export enum PermissionGroupListUrlSortField {
   name = "name",
 }
-type PermissionGroupListUrlSort = Sort<PermissionGroupListUrlSortField>;
+export type PermissionGroupListUrlSort = Sort<PermissionGroupListUrlSortField>;
 export type PermissionGroupListUrlQueryParams = Dialog<PermissionGroupListUrlDialog> &
   Pagination &
   PermissionGroupListUrlSort &
@@ -32,7 +32,7 @@ export enum MembersListUrlSortField {
   name = "name",
   email = "email",
 }
-type MembersListUrlSort = Sort<MembersListUrlSortField>;
+export type MembersListUrlSort = Sort<MembersListUrlSortField>;
 
 export const permissionGroupDetailsPath = (id: string) => urlJoin(permissionGroupSection, id);
 export type PermissionGroupDetailsUrlDialog = "remove" | "assign" | "unassign" | "unassignError";

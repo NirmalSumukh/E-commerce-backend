@@ -1,5 +1,6 @@
 // @ts-strict-ignore
 import TextWithSelectField from "@dashboard/components/TextWithSelectField";
+import { useChannelCurrenciesQuery } from "@dashboard/graphql";
 import { ChangeEvent, FormChange } from "@dashboard/hooks/useForm";
 import useLocalStorage from "@dashboard/hooks/useLocalStorage";
 import { mapSingleValueNodeToChoice } from "@dashboard/utils/maps";
@@ -12,7 +13,6 @@ import {
   GiftCardCreateCommonFormData,
 } from "../GiftCardBulkCreateDialog/types";
 import { getGiftCardErrorMessage } from "../GiftCardUpdate/messages";
-import { useChannelCurrenciesWithCache } from "../hooks/useChannelCurrenciesWithCache";
 import { giftCardCreateMessages as messages } from "./messages";
 
 interface GiftCardCreateMoneyInputProps {
@@ -22,15 +22,16 @@ interface GiftCardCreateMoneyInputProps {
   set: (data: Partial<GiftCardCreateCommonFormData>) => void;
 }
 
-export const GiftCardCreateMoneyInput = ({
+const GiftCardCreateMoneyInput: React.FC<GiftCardCreateMoneyInputProps> = ({
   errors,
   data: { balanceAmount, balanceCurrency },
   change,
   set,
-}: GiftCardCreateMoneyInputProps) => {
+}) => {
   const intl = useIntl();
+  const { data: channelCurrenciesData } = useChannelCurrenciesQuery({});
+  const { channelCurrencies } = channelCurrenciesData?.shop ?? {};
   const [savedCurrency, setCurrency] = useLocalStorage("giftCardCreateCurrency", undefined);
-  const { loadingChannelCurrencies, channelCurrencies } = useChannelCurrenciesWithCache();
 
   const getInitialCurrency = React.useCallback(() => {
     if (
@@ -67,7 +68,7 @@ export const GiftCardCreateMoneyInput = ({
 
   return (
     <TextWithSelectField
-      loading={loadingChannelCurrencies}
+      loading={!channelCurrenciesData?.shop}
       isError={!!errors?.balance}
       helperText={getGiftCardErrorMessage(errors?.balance, intl)}
       change={handleInputChange}
@@ -86,3 +87,5 @@ export const GiftCardCreateMoneyInput = ({
     />
   );
 };
+
+export default GiftCardCreateMoneyInput;

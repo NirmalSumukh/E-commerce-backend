@@ -2,8 +2,8 @@ import graphene
 
 from .....permission.enums import ProductPermissions
 from .....product import models
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
 from ....core.mutations import BaseMutation
 from ....core.types import ProductError
@@ -30,7 +30,7 @@ class ProductMediaDelete(BaseMutation):
         cls, _root, info: ResolveInfo, /, *, id: str
     ):
         media_obj = cls.get_node_or_error(info, id, only_type=ProductMedia)
-        product = models.Product.objects.get(pk=media_obj.product_id)  # type: ignore[misc]
+        product = models.Product.objects.get(pk=media_obj.product_id)  # type: ignore
         media_id = media_obj.id
         media_obj.delete()
         media_obj.id = media_id

@@ -41,7 +41,6 @@ class Migration(migrations.Migration):
             name="description_plaintext",
             field=models.TextField(blank=True),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="category",
             index=django.contrib.postgres.indexes.GinIndex(

@@ -21,12 +21,11 @@ from ..filters import (
 from .common import NonNullList
 
 
-def get_form_field_description(field) -> str | None:
+def get_form_field_description(field):
     if hasattr(field, "help_text"):
         return field.help_text or None
-    if hasattr(field, "extra"):
+    elif hasattr(field, "extra"):
         return field.extra.get("help_text") or None
-    return None
 
 
 @singledispatch

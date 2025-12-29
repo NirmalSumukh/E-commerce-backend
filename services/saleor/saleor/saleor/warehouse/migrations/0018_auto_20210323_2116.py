@@ -46,7 +46,6 @@ class Migration(migrations.Migration):
                 "ordering": ("pk",),
             },
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="reservation",
             index=models.Index(

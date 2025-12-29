@@ -3,7 +3,7 @@ import { DashboardCard } from "@dashboard/components/Card";
 import { Divider } from "@dashboard/components/Divider";
 import useDateLocalize from "@dashboard/hooks/useDateLocalize";
 import { Text } from "@saleor/macaw-ui-next";
-import { Fragment } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { variantDetailsChannelsAvailabilityCardMessages as messages } from "./../messages";
@@ -15,7 +15,12 @@ interface ChannelsListItemProps {
   publishedAt: string;
 }
 
-export const ChannelsListItem = ({ id, name, isPublished, publishedAt }: ChannelsListItemProps) => {
+export const ChannelsListItem: React.FC<ChannelsListItemProps> = ({
+  id,
+  name,
+  isPublished,
+  publishedAt,
+}) => {
   const intl = useIntl();
   const localizeDate = useDateLocalize();
   const getItemSubtitle = () => {
@@ -29,7 +34,7 @@ export const ChannelsListItem = ({ id, name, isPublished, publishedAt }: Channel
   };
 
   return (
-    <Fragment key={id}>
+    <React.Fragment key={id}>
       <Divider />
       <DashboardCard.Content paddingY={6}>
         <Text
@@ -45,6 +50,6 @@ export const ChannelsListItem = ({ id, name, isPublished, publishedAt }: Channel
           {getItemSubtitle()}
         </Text>
       </DashboardCard.Content>
-    </Fragment>
+    </React.Fragment>
   );
 };

@@ -74,7 +74,15 @@ def raw_order_create_from_checkout(api_client, id):
 
 
 def order_create_from_checkout(api_client, id):
-    data = raw_order_create_from_checkout(api_client, id)
+    variables = {"id": id}
+
+    response = api_client.post_graphql(
+        ORDER_CREATE_FROM_CHECKOUT_MUTATION,
+        variables=variables,
+    )
+    content = get_graphql_content(response)
+
+    data = content["data"]["orderCreateFromCheckout"]
 
     order_id = data["order"]["id"]
     errors = data["errors"]

@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 
 import useMap from "../objects/useMap";
 
-type RefsMap<TKey extends string> = Record<TKey, EditorCore | null>;
+export type RefsMap<TKey extends string> = Record<TKey, EditorCore | null>;
 
 export interface RichTextGetters<TKey extends string> {
   getShouldMount: (id: TKey) => boolean;
@@ -15,7 +15,7 @@ export interface RichTextGetters<TKey extends string> {
 
 export type GetRichTextValues = Record<string, OutputData>;
 
-interface RichTextMultipleOptions<TKey extends string> {
+export interface RichTextMultipleOptions<TKey extends string> {
   initial: Record<TKey, string>;
   triggerChange: () => void;
 }

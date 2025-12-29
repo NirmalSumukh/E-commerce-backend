@@ -1,8 +1,6 @@
 from ...utils import get_graphql_content
-from .fragments import ADDRESS_FRAGMENT
 
-ME_QUERY = (
-    """
+ME_QUERY = """
 query Me{
   me{
     id
@@ -14,14 +12,9 @@ query Me{
         }
       }
     }
-    addresses {
-      ...Address
-    }
   }
 }
 """
-    + ADDRESS_FRAGMENT
-)
 
 
 def get_own_data(api_client):

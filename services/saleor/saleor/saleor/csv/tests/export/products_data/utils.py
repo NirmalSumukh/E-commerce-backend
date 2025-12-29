@@ -21,7 +21,7 @@ def add_product_attribute_data_to_expected_data(data, product, attribute_ids, pk
             Exists(product_attributes.filter(attribute_id=OuterRef("id")))
         )
         .order_by("attributeproduct__sort_order")
-        .iterator(chunk_size=1000)
+        .iterator()
     )
     assigned_values = AssignedProductAttributeValue.objects.filter(
         product_id=product.pk
@@ -64,7 +64,7 @@ def get_attribute_value(attribute, value_instance):
     if not value_instance:
         return ""
     if attribute.input_type == AttributeInputType.FILE:
-        value = "https://example.com/media/" + value_instance.file_url
+        value = "http://mirumee.com/media/" + value_instance.file_url
     elif attribute.input_type == AttributeInputType.REFERENCE:
         ref_id = value_instance.slug.split("_")[3]
         value = f"{attribute.entity_type}_{ref_id}"

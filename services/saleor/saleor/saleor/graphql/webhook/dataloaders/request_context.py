@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Optional
 
 from ...core import SaleorContext
 from ...core.dataloaders import DataLoader
@@ -10,7 +11,9 @@ class PayloadsRequestContextByEventTypeLoader(DataLoader):
     context_key = "payloads_request_context_by_event_type"
 
     def batch_load(self, keys):
-        request_context_by_event_type: dict[str, SaleorContext | None] = defaultdict()
+        request_context_by_event_type: dict[str, Optional[SaleorContext]] = (
+            defaultdict()
+        )
         requestor = get_user_or_app_from_context(self.context)
         for event_type in keys:
             request_context_by_event_type[event_type] = initialize_request(

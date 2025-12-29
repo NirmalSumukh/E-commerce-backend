@@ -1,8 +1,9 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface AttributeValueDeleteDialogProps {
+export interface AttributeValueDeleteDialogProps {
   attributeName: string;
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
@@ -12,7 +13,7 @@ interface AttributeValueDeleteDialogProps {
   onClose: () => void;
 }
 
-const AttributeValueDeleteDialog = ({
+const AttributeValueDeleteDialog: React.FC<AttributeValueDeleteDialogProps> = ({
   attributeName,
   name,
   confirmButtonState,
@@ -20,7 +21,7 @@ const AttributeValueDeleteDialog = ({
   onClose,
   onConfirm,
   open,
-}: AttributeValueDeleteDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

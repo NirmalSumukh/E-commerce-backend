@@ -1,6 +1,6 @@
 import { AppActionsHandler } from "@dashboard/apps/components/AppFrame/appActionsHandler";
+import * as ExternalAppContext from "@dashboard/apps/components/ExternalAppContext/ExternalAppContext";
 import * as dashboardConfig from "@dashboard/config";
-import * as ExternalAppContext from "@dashboard/extensions/components/ExternalAppContext/ExternalAppContext";
 import { UseNotifierResult } from "@dashboard/hooks/useNotifier";
 import { renderHook } from "@testing-library/react-hooks";
 import * as ReactIntl from "react-intl";
@@ -14,9 +14,9 @@ jest.mock("@dashboard/config", () => {
     ...actualModule,
   };
 });
-jest.mock("@dashboard/extensions/components/ExternalAppContext/ExternalAppContext", () => {
+jest.mock("@dashboard/apps/components/ExternalAppContext/ExternalAppContext", () => {
   const actualModule = jest.requireActual(
-    "@dashboard/extensions/components/ExternalAppContext/ExternalAppContext",
+    "@dashboard/apps/components/ExternalAppContext/ExternalAppContext",
   );
 
   return {
@@ -63,23 +63,15 @@ describe("AppActionsHandler", function () {
    */
   beforeEach((): void => {
     delete (window as { location?: unknown }).location;
-    // Mock window.location for testing purposes
-    Object.defineProperty(window, "location", {
-      value: {
-        href: "http://localhost:3000",
-        hostname: "localhost",
-        pathname: "/apps/XYZ/app",
-      },
-      writable: true,
-      configurable: true,
-    });
+    // @ts-expect-error error
+    window.location = {
+      href: "http://localhost:3000",
+      hostname: "localhost",
+      pathname: "/apps/XYZ/app",
+    };
   });
   afterAll((): void => {
-    Object.defineProperty(window, "location", {
-      value: location,
-      writable: true,
-      configurable: true,
-    });
+    window.location = location;
   });
   describe("useHandleNotificationAction", () => {
     it("Calls useNotifier with payload from action", () => {

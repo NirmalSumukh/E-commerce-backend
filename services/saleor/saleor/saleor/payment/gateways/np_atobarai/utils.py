@@ -3,10 +3,11 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
+from typing import Optional
 
 from django.db.models import Q
 
-from ....core.tracing import otel_trace
+from ....core.tracing import opentracing_trace
 from ....order import FulfillmentStatus
 from ....order.events import external_notification_event
 from ....order.models import Fulfillment, FulfillmentLine, Order
@@ -33,7 +34,7 @@ STATUSES_NOT_ALLOWED_TO_REFUND = [
 
 def get_shipping_company_code(
     config: ApiConfig, fulfillment: Fulfillment
-) -> str | None:
+) -> Optional[str]:
     code = fulfillment.get_value_from_private_metadata(
         SHIPPING_COMPANY_CODE_METADATA_KEY, default=config.shipping_company
     )
@@ -59,8 +60,12 @@ def get_fulfillment_for_order(order: Order) -> Fulfillment:
 
 
 @contextmanager
-def np_atobarai_otel_trace(span_name: str):
-    with otel_trace(span_name=span_name, component_name="payment"):
+def np_atobarai_opentracing_trace(span_name: str):
+    with opentracing_trace(
+        span_name=span_name,
+        component_name="payment",
+        service_name="np-atobarai",
+    ):
         yield
 
 

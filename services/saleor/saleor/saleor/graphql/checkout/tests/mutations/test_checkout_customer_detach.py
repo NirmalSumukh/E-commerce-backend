@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import pytest
 from django.test import override_settings
@@ -176,7 +176,6 @@ def test_checkout_customer_detach_triggers_webhooks(
     user_api_client,
     checkout_with_item,
     customer_user,
-    address,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -189,12 +188,7 @@ def test_checkout_customer_detach_triggers_webhooks(
 
     checkout = checkout_with_item
     checkout.user = customer_user
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout.shipping_address = address
-    checkout.billing_address = address
-
-    checkout.save(update_fields=["user", "shipping_address", "billing_address"])
+    checkout.save(update_fields=["user"])
 
     variables = {"id": to_global_id_or_none(checkout)}
 
@@ -214,12 +208,11 @@ def test_checkout_customer_detach_triggers_webhooks(
         webhook_id=checkout_updated_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": checkout_update_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": checkout_update_delivery.id},
         queue=settings.CHECKOUT_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

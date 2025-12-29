@@ -1,7 +1,6 @@
 import logging
-from collections.abc import Callable
 from dataclasses import asdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Union
 
 from django.conf import settings
 from promise.promise import Promise
@@ -358,7 +357,7 @@ class UserEmailPlugin(BasePlugin):
 
     def resolve_plugin_configuration(
         self, request
-    ) -> PluginConfigurationType | Promise[PluginConfigurationType]:
+    ) -> Union[PluginConfigurationType, Promise[PluginConfigurationType]]:
         # Get email templates from the database and merge them with self.configuration.
         if not self.db_config:
             return self.configuration
@@ -391,10 +390,10 @@ class UserEmailPlugin(BasePlugin):
 
     def notify(
         self,
-        event: NotifyEventType | str,
+        event: Union[NotifyEventType, str],
         payload_func: Callable[[], dict],
-        previous_value: None,
-    ) -> None:
+        previous_value,
+    ):
         if not self.active:
             return previous_value
         event_map = get_user_event_map()
@@ -402,14 +401,13 @@ class UserEmailPlugin(BasePlugin):
             return previous_value
 
         if event not in event_map:
-            logger.warning("Missing handler for event %s", event)
+            logger.warning(f"Missing handler for event {event}")
             return previous_value
 
         event_func = event_map[event]
         config = asdict(self.config)
         self._add_missing_configuration(config)
         event_func(payload_func, config, self)
-        return previous_value
 
     @classmethod
     def validate_plugin_configuration(

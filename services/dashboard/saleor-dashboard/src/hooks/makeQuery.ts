@@ -23,7 +23,9 @@ export { useLazyQuery } from "@apollo/client";
 
 const getPermissionKey = (permission: string) => `PERMISSION_${permission}` as PrefixedPermissions;
 
-const allPermissions: Record<PrefixedPermissions, boolean> = Object.keys(PermissionEnum).reduce(
+export const allPermissions: Record<PrefixedPermissions, boolean> = Object.keys(
+  PermissionEnum,
+).reduce(
   (prev, code) => ({
     ...prev,
     [getPermissionKey(code)]: false,
@@ -42,7 +44,7 @@ const getUserPermissions = (
     {} as Record<PrefixedPermissions, boolean>,
   );
 
-interface LoadMore<TData, TVariables> {
+export interface LoadMore<TData, TVariables> {
   loadMore: (
     mergeFunc: (prev: TData, next: TData) => TData,
     extraVariables: Partial<TVariables>,

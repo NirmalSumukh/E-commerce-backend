@@ -2,6 +2,7 @@ import datetime
 from collections import defaultdict
 from collections.abc import Iterable
 
+import pytz
 from django.core.exceptions import ValidationError
 
 from ....channel import models
@@ -31,7 +32,8 @@ class BaseChannelListingMutation(BaseMutation):
         duplicated_ids = get_duplicates_items(add_channels_ids, remove_channels_ids)
         if duplicated_ids:
             error_msg = (
-                "The same object cannot be in both lists for adding and removing items."
+                "The same object cannot be in both lists "
+                "for adding and removing items."
             )
             errors["input"].append(
                 ValidationError(
@@ -92,9 +94,7 @@ class BaseChannelListingMutation(BaseMutation):
 
         cleaned_input = {input_source: [], "remove_channels": remove_channels_pks}
 
-        for channel_listing, channel in zip(
-            add_channels, channels_to_add, strict=False
-        ):
+        for channel_listing, channel in zip(add_channels, channels_to_add):
             channel_listing["channel"] = channel
             cleaned_input[input_source].append(channel_listing)
         return cleaned_input
@@ -117,7 +117,7 @@ class BaseChannelListingMutation(BaseMutation):
             )
             is_published = add_channel.get("is_published")
             if is_published and not publication_date:
-                add_channel["published_at"] = datetime.datetime.now(tz=datetime.UTC)
+                add_channel["published_at"] = datetime.datetime.now(pytz.UTC)
             elif "publication_date" in add_channel or "published_at" in add_channel:
                 add_channel["published_at"] = publication_date
         if invalid_channels:

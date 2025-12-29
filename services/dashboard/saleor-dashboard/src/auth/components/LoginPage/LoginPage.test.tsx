@@ -1,7 +1,7 @@
 import { AvailableExternalAuthenticationsQuery } from "@dashboard/graphql";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import * as React from "react";
+import React from "react";
 
 import LoginPage from "./LoginPage";
 
@@ -22,6 +22,14 @@ const defaultProps = {
   onSubmit: jest.fn(),
 };
 
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: (x: unknown) => x,
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
+
 jest.mock("react-router-dom", () => ({
   MemoryRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -31,7 +39,7 @@ describe("LoginPage", () => {
   describe("External Authentication", () => {
     it("sets optimisticLoaderAuthId when clicking external auth button", async () => {
       // Arrange & Act
-      render(<LoginPage lastLoginMethod={null} {...defaultProps} />);
+      render(<LoginPage {...defaultProps} />);
 
       const authButton = screen.getByRole("button", { name: "Cloud" });
 
@@ -52,9 +60,7 @@ describe("LoginPage", () => {
       ] as AuthType;
 
       // Act
-      render(
-        <LoginPage lastLoginMethod={null} {...defaultProps} externalAuthentications={twoAuths} />,
-      );
+      render(<LoginPage {...defaultProps} externalAuthentications={twoAuths} />);
 
       const oidcButton = screen.getByRole("button", { name: "OIDC" });
       const cloudButton = screen.getByRole("button", { name: "Cloud" });

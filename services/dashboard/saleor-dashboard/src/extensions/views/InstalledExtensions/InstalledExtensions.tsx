@@ -1,8 +1,8 @@
+import { InstallWithManifestFormButton } from "@dashboard/apps/components/InstallWithManifestFormButton";
+import { AppUrls } from "@dashboard/apps/urls";
 import { TopNav } from "@dashboard/components/AppLayout";
-import { useContextualLink } from "@dashboard/components/AppLayout/ContextualLinks/useContextualLink";
 import SearchInput from "@dashboard/components/AppLayout/ListFilters/components/SearchInput";
-import { DashboardCard } from "@dashboard/components/Card";
-import { ListPageLayout } from "@dashboard/components/Layouts";
+import { RequestExtensionsButton } from "@dashboard/extensions/components/RequestExtensionsButton";
 import { headerTitles, messages } from "@dashboard/extensions/messages";
 import {
   ExtensionsListUrlDialog,
@@ -13,18 +13,16 @@ import { useInstalledExtensionsFilter } from "@dashboard/extensions/views/Instal
 import { useHasManagedAppsPermission } from "@dashboard/hooks/useHasManagedAppsPermission";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
-import { useOnboarding } from "@dashboard/welcomePage/WelcomePageOnboarding/onboardingContext";
-import { Box, ChevronRightIcon, Text } from "@saleor/macaw-ui-next";
-import { useEffect } from "react";
+import { Box } from "@saleor/macaw-ui-next";
+import React, { useCallback } from "react";
 import { useIntl } from "react-intl";
 
-import { AddExtensionDropdown } from "./components/AddExtensionDropdown/AddExtensionDropdown";
 import { DeleteFailedInstallationDialog } from "./components/DeleteFailedInstallationDialog";
-import { InstalledExtensionsList } from "./components/InstalledExtensionsList/InstalledExtensionsList";
+import { InstalledExtensionsList } from "./components/InstalledExtensionsList";
 import { useInstalledExtensions } from "./hooks/useInstalledExtensions";
 import { usePendingInstallation } from "./hooks/usePendingInstallation";
 
-export interface InstalledExtensionsProps {
+interface InstalledExtensionsProps {
   params: ExtensionsListUrlQueryParams;
 }
 
@@ -32,12 +30,13 @@ export const InstalledExtensions = ({ params }: InstalledExtensionsProps) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const { hasManagedAppsPermission } = useHasManagedAppsPermission();
-  const { markOnboardingStepAsCompleted } = useOnboarding();
-  const subtitle = useContextualLink("extensions");
 
-  useEffect(() => {
-    markOnboardingStepAsCompleted("view-extensions");
-  }, [markOnboardingStepAsCompleted]);
+  const navigateToAppInstallPage = useCallback(
+    (manifestUrl: string) => {
+      navigate(AppUrls.resolveAppInstallUrl(manifestUrl));
+    },
+    [navigate],
+  );
 
   const [openModal, closeModal] = createDialogActionHandlers<
     ExtensionsListUrlDialog,
@@ -66,28 +65,19 @@ export const InstalledExtensions = ({ params }: InstalledExtensionsProps) => {
   });
 
   return (
-    <ListPageLayout>
-      <TopNav
-        withoutBorder
-        isAlignToRight={false}
-        title={intl.formatMessage(headerTitles.extensions)}
-        subtitle={subtitle}
-      >
-        <Box __flex={1} display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex">
-            <Box marginX={3} display="flex" alignItems="center">
-              <ChevronRightIcon />
-            </Box>
-            <Text size={6}>{intl.formatMessage(headerTitles.installedExtensions)}</Text>
-          </Box>
-        </Box>
+    <>
+      <TopNav title={intl.formatMessage(headerTitles.installedExtensions)}>
         <Box display="flex" gap={4} alignItems="center">
-          {hasManagedAppsPermission && <AddExtensionDropdown />}
+          <RequestExtensionsButton />
+          {hasManagedAppsPermission && (
+            <InstallWithManifestFormButton onSubmitted={navigateToAppInstallPage} />
+          )}
         </Box>
       </TopNav>
-      <DashboardCard paddingX={6}>
-        <Box __width="370px">
+      <Box paddingX={6}>
+        <Box __width="370px" marginTop={8} marginBottom={12}>
           <SearchInput
+            withBorder
             size="medium"
             initialSearch={query}
             placeholder={intl.formatMessage(messages.searchPlaceholder)}
@@ -109,7 +99,7 @@ export const InstalledExtensions = ({ params }: InstalledExtensionsProps) => {
           onConfirm={() => handleRemoveInProgress(params?.id || "")}
           open={params.action === "app-installation-remove"}
         />
-      </DashboardCard>
-    </ListPageLayout>
+      </Box>
+    </>
   );
 };

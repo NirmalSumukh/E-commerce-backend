@@ -1,11 +1,10 @@
 import { Box, Text, WarningIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
-export const LegacyFlowWarning = ({
-  taxCalculationStrategy,
-}: {
+export const LegacyFlowWarning: React.FC<{
   taxCalculationStrategy: string;
-}) => {
+}> = ({ taxCalculationStrategy }) => {
   const intl = useIntl();
 
   if (taxCalculationStrategy !== "legacy-flow") {

@@ -182,7 +182,7 @@ def test_order_capture_by_app(
 @override_settings(
     PLUGINS=[
         "saleor.plugins.webhook.plugin.WebhookPlugin",
-        "saleor.payment.gateways.dummy.plugin.DeprecatedDummyGatewayPlugin",
+        "saleor.payment.gateways.dummy.plugin.DummyGatewayPlugin",
     ]
 )
 def test_order_capture_triggers_webhooks(
@@ -195,6 +195,7 @@ def test_order_capture_triggers_webhooks(
     payment_txn_preauth,
     staff_user,
     settings,
+    django_capture_on_commit_callbacks,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -220,7 +221,8 @@ def test_order_capture_triggers_webhooks(
     variables = {"id": order_id, "amount": amount}
 
     # when
-    response = staff_api_client.post_graphql(ORDER_CAPTURE_MUTATION, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(ORDER_CAPTURE_MUTATION, variables)
 
     # then
     content = get_graphql_content(response)
@@ -249,9 +251,11 @@ def test_order_capture_triggers_webhooks(
     mocked_send_webhook_request_async.assert_has_calls(
         [
             call(
-                kwargs={"event_delivery_id": delivery.id, "telemetry_context": ANY},
+                kwargs={"event_delivery_id": delivery.id},
                 queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-                MessageGroupId="example.com:saleor.app.additional",
+                bind=True,
+                retry_backoff=10,
+                retry_kwargs={"max_retries": 5},
             )
             for delivery in order_deliveries
         ],

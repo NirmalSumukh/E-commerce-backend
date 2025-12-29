@@ -5,6 +5,7 @@ from .....payment.interface import PaymentMethodInitializeTokenizationRequestDat
 from .....permission.auth_filters import AuthorizationFilters
 from .....webhook.event_types import WebhookEventSyncType
 from ....channel.utils import validate_channel
+from ....core.descriptions import ADDED_IN_316, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_PAYMENTS
 from ....core.enums import PaymentMethodInitializeTokenizationErrorCode
 from ....core.mutations import BaseMutation
@@ -49,7 +50,7 @@ class PaymentMethodInitializeTokenization(BaseMutation):
 
     class Meta:
         doc_category = DOC_CATEGORY_PAYMENTS
-        description = "Tokenize payment method."
+        description = "Tokenize payment method." + ADDED_IN_316 + PREVIEW_FEATURE
         webhook_events_info = [
             WebhookEventInfo(
                 type=(
@@ -89,7 +90,7 @@ class PaymentMethodInitializeTokenization(BaseMutation):
         )
 
     @classmethod
-    def perform_mutation(  # type: ignore[override]
+    def perform_mutation(
         cls, root, info, id, channel, payment_flow_to_support, data=None
     ):
         try:

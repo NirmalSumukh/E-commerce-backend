@@ -3,19 +3,24 @@ import {
   CollectionFilterKeys,
   CollectionListFilterOpts,
 } from "@dashboard/collections/components/CollectionListPage";
-import { FilterElement, FilterElementRegular } from "@dashboard/components/Filter/types";
+import { FilterElement, FilterElementRegular } from "@dashboard/components/Filter";
 import { CollectionFilterInput, CollectionPublished } from "@dashboard/graphql";
 import { findValueInEnum, maybe } from "@dashboard/misc";
 import { Option } from "@saleor/macaw-ui-next";
 
 import {
   createFilterTabUtils,
+  createFilterUtils,
   getSingleEnumValueQueryParam,
   getSingleValueQueryParam,
 } from "../../../utils/filters";
-import { CollectionListUrlFilters, CollectionListUrlFiltersEnum } from "../../urls";
+import {
+  CollectionListUrlFilters,
+  CollectionListUrlFiltersEnum,
+  CollectionListUrlQueryParams,
+} from "../../urls";
 
-const COLLECTION_FILTERS_KEY = "collectionFilters";
+export const COLLECTION_FILTERS_KEY = "collectionFilters";
 
 export function getFilterOpts(
   params: CollectionListUrlFilters,
@@ -59,3 +64,8 @@ export function getFilterQueryParam(
 }
 
 export const storageUtils = createFilterTabUtils<string>(COLLECTION_FILTERS_KEY);
+
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
+  CollectionListUrlQueryParams,
+  CollectionListUrlFilters
+>(CollectionListUrlFiltersEnum);

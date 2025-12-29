@@ -81,7 +81,6 @@ mutation CreateCheckout($input: CheckoutCreateInput!) {
       }
       lines {
         id
-        quantity
         totalPrice {
           gross {
             amount
@@ -124,10 +123,8 @@ def raw_checkout_create(
     lines,
     channel_slug,
     email=None,
-    billing_address=DEFAULT_ADDRESS,
-    shipping_address=DEFAULT_ADDRESS,
-    save_billing_address=None,
-    save_shipping_address=None,
+    set_default_billing_address=False,
+    set_default_shipping_address=False,
 ):
     variables = {
         "input": {
@@ -137,17 +134,11 @@ def raw_checkout_create(
         }
     }
 
-    if billing_address:
-        variables["input"]["billingAddress"] = billing_address
+    if set_default_billing_address:
+        variables["input"]["billingAddress"] = DEFAULT_ADDRESS
 
-    if shipping_address:
-        variables["input"]["shippingAddress"] = shipping_address
-
-    if save_billing_address is not None:
-        variables["input"]["saveBillingAddress"] = save_billing_address
-
-    if save_shipping_address is not None:
-        variables["input"]["saveShippingAddress"] = save_shipping_address
+    if set_default_shipping_address:
+        variables["input"]["shippingAddress"] = DEFAULT_ADDRESS
 
     response = api_client.post_graphql(
         CHECKOUT_CREATE_MUTATION,
@@ -165,20 +156,16 @@ def checkout_create(
     lines,
     channel_slug,
     email=None,
-    billing_address=DEFAULT_ADDRESS,
-    shipping_address=DEFAULT_ADDRESS,
-    save_billing_address=None,
-    save_shipping_address=None,
+    set_default_billing_address=False,
+    set_default_shipping_address=False,
 ):
     checkout_response = raw_checkout_create(
         api_client,
         lines,
         channel_slug,
         email,
-        billing_address,
-        shipping_address,
-        save_billing_address,
-        save_shipping_address,
+        set_default_billing_address,
+        set_default_shipping_address,
     )
     assert checkout_response["errors"] == []
 

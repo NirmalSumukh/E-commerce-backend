@@ -16,24 +16,22 @@ from .....core.utils import get_client_ip
 from .....core.utils.url import validate_storefront_url
 from .....payment import StorePaymentMethod
 from .....payment.error_codes import PaymentErrorCode
-from .....payment.models import TransactionItem
 from .....payment.utils import create_payment, is_currency_supported
 from ....account.i18n import I18nMixin
 from ....checkout.mutations.utils import get_checkout
 from ....checkout.types import Checkout
 from ....core import ResolveInfo
-from ....core.context import SyncWebhookControlContext
-from ....core.descriptions import DEPRECATED_IN_3X_INPUT
+from ....core.descriptions import ADDED_IN_31, ADDED_IN_34, DEPRECATED_IN_3X_INPUT
 from ....core.doc_category import DOC_CATEGORY_CHECKOUT, DOC_CATEGORY_PAYMENTS
 from ....core.mutations import BaseMutation
 from ....core.scalars import UUID, PositiveDecimal
 from ....core.types import BaseInputObjectType
 from ....core.types import common as common_types
-from ....meta.inputs import MetadataInput, MetadataInputDescription
+from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ...enums import StorePaymentMethodEnum
 from ...types import Payment
-from ...utils import deprecated_metadata_contains_empty_key
+from ...utils import metadata_contains_empty_key
 
 
 class PaymentInput(BaseInputObjectType):
@@ -66,14 +64,13 @@ class PaymentInput(BaseInputObjectType):
         ),
     )
     store_payment_method = StorePaymentMethodEnum(
-        description="Payment store type.",
+        description="Payment store type." + ADDED_IN_31,
         required=False,
         default_value=StorePaymentMethodEnum.NONE.name,
     )
     metadata = common_types.NonNullList(
         MetadataInput,
-        description="User public metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description="User public metadata." + ADDED_IN_31,
         required=False,
     )
 
@@ -87,7 +84,7 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
 
     class Arguments:
         id = graphene.ID(
-            description="The checkout's ID.",
+            description="The checkout's ID." + ADDED_IN_34,
             required=False,
         )
         token = UUID(
@@ -105,7 +102,7 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
         )
 
     class Meta:
-        description = "Creates a new payment for given checkout."
+        description = "Create a new payment for given checkout."
         doc_category = DOC_CATEGORY_CHECKOUT
         error_type_class = common_types.PaymentError
         error_type_field = "payment_errors"
@@ -172,16 +169,14 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
             return
         try:
             validate_storefront_url(return_url)
-        except ValidationError as e:
+        except ValidationError as error:
             raise ValidationError(
-                {"redirect_url": e}, code=PaymentErrorCode.INVALID.value
-            ) from e
+                {"redirect_url": error}, code=PaymentErrorCode.INVALID.value
+            )
 
-    # TODO This should be unified with metadata_manager and MetadataItemCollection
-    # EXT-2054
     @classmethod
     def validate_metadata_keys(cls, metadata_list: list[dict]):
-        if deprecated_metadata_contains_empty_key(metadata_list):
+        if metadata_contains_empty_key(metadata_list):
             raise ValidationError(
                 {
                     "input": ValidationError(
@@ -204,16 +199,6 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
             )
 
     @classmethod
-    def validate_checkout_has_no_transactions(
-        cls, checkout: "checkout_models.Checkout"
-    ):
-        if TransactionItem.objects.filter(checkout=checkout).exists():
-            raise ValidationError(
-                "Mixing Payments and Transactions within one Checkout object is not allowed.",
-                code=PaymentErrorCode.CHECKOUT_HAS_TRANSACTION.value,
-            )
-
-    @classmethod
     def perform_mutation(  # type: ignore[override]
         cls,
         _root,
@@ -226,7 +211,6 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
         token=None,
     ):
         checkout = get_checkout(cls, info, checkout_id=checkout_id, token=token, id=id)
-        cls.validate_checkout_has_no_transactions(checkout)
 
         use_legacy_error_flow_for_checkout = (
             checkout.channel.use_legacy_error_flow_for_checkout
@@ -332,7 +316,7 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
                     payment_token=input.get("token", ""),
                     total=amount,
                     currency=checkout.currency,
-                    email=checkout.get_customer_email(),  # type: ignore[arg-type]
+                    email=checkout.get_customer_email(),
                     extra_data=extra_data,
                     # FIXME this is not a customer IP address.
                     # It is a client storefront ip
@@ -343,6 +327,4 @@ class CheckoutPaymentCreate(BaseMutation, I18nMixin):
                     metadata=metadata,
                 )
 
-        return CheckoutPaymentCreate(
-            payment=payment, checkout=SyncWebhookControlContext(node=checkout)
-        )
+        return CheckoutPaymentCreate(payment=payment, checkout=checkout)

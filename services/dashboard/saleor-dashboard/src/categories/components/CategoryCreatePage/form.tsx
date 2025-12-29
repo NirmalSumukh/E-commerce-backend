@@ -6,10 +6,9 @@ import useMetadataChangeTrigger from "@dashboard/utils/metadata/useMetadataChang
 import { RichTextContext, RichTextContextValues } from "@dashboard/utils/richText/context";
 import useRichText from "@dashboard/utils/richText/useRichText";
 import { OutputData } from "@editorjs/editorjs";
-import { useEffect } from "react";
-import * as React from "react";
+import React, { useEffect } from "react";
 
-interface CategoryCreateFormData extends MetadataFormData {
+export interface CategoryCreateFormData extends MetadataFormData {
   name: string;
   seoDescription: string;
   seoTitle: string;
@@ -23,11 +22,11 @@ interface CategoryCreateHandlers {
   changeMetadata: FormChange;
 }
 
-interface UseCategoryCreateFormResult extends CommonUseFormResult<CategoryCreateData> {
+export interface UseCategoryCreateFormResult extends CommonUseFormResult<CategoryCreateData> {
   handlers: CategoryCreateHandlers;
 }
 
-interface CategoryCreateFormProps {
+export interface CategoryCreateFormProps {
   children: (props: UseCategoryCreateFormResult) => React.ReactNode;
   onSubmit: (data: CategoryCreateData) => Promise<any[]>;
   disabled: boolean;
@@ -92,7 +91,11 @@ function useCategoryCreateForm(
   };
 }
 
-const CategoryCreateForm = ({ children, onSubmit, disabled }: CategoryCreateFormProps) => {
+const CategoryCreateForm: React.FC<CategoryCreateFormProps> = ({
+  children,
+  onSubmit,
+  disabled,
+}) => {
   const { richText, ...props } = useCategoryCreateForm(onSubmit, disabled);
 
   return (

@@ -1,4 +1,5 @@
 import graphene
+from django.conf import settings
 from django.contrib.auth import password_validation
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
@@ -13,6 +14,7 @@ from ....core.context import disallow_replica_in_context
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.mutations import validation_error_to_error_type
 from ....core.types import AccountError
+from ....plugins.dataloaders import get_plugin_manager_promise
 from ..base import INVALID_TOKEN
 from . import CreateToken
 
@@ -41,6 +43,17 @@ class SetPassword(CreateToken):
     ):
         disallow_replica_in_context(info.context)
 
+        if settings.ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION:
+            manager = get_plugin_manager_promise(info.context).get()
+            result = manager.perform_mutation(
+                mutation_cls=cls,
+                root=root,
+                info=info,
+                data={"email": email, "password": password, "token": token},
+            )
+            if result is not None:
+                return result
+
         try:
             cls._set_password_for_user(email, password, token)
         except ValidationError as e:
@@ -50,17 +63,17 @@ class SetPassword(CreateToken):
 
     @classmethod
     def _set_password_for_user(cls, email, password, token):
-        error = False
         try:
             user = models.User.objects.get(email=email)
         except ObjectDoesNotExist:
-            # If user doesn't exists in the database we create fake user for calculation
-            # purpose, as we don't want to indicate non existence of user in the system.
-            error = True
-            user = models.User()
-
-        valid_token = token_generator.check_token(user, token)
-        if not valid_token or error:
+            raise ValidationError(
+                {
+                    "email": ValidationError(
+                        "User doesn't exist", code=AccountErrorCode.NOT_FOUND.value
+                    )
+                }
+            )
+        if not token_generator.check_token(user, token):
             raise ValidationError(
                 {
                     "token": ValidationError(
@@ -70,8 +83,8 @@ class SetPassword(CreateToken):
             )
         try:
             password_validation.validate_password(password, user)
-        except ValidationError as e:
-            raise ValidationError({"password": e}) from e
+        except ValidationError as error:
+            raise ValidationError({"password": error})
         fields_to_save = ["password", "updated_at"]
         user.set_password(password)
         # To reset the password user need to process the token sent separately by email,

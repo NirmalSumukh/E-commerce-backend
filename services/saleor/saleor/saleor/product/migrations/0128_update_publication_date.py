@@ -1,4 +1,4 @@
-import datetime
+from datetime import date
 
 from django.db import migrations
 
@@ -8,9 +8,7 @@ def set_missing_product_publication_date(apps, schema_editor):
     published_product = Product.objects.filter(
         publication_date__isnull=True, is_published=True
     )
-    published_product.update(
-        publication_date=datetime.datetime.now(tz=datetime.UTC).date()
-    )
+    published_product.update(publication_date=date.today())
 
 
 def set_missing_collection_publication_date(apps, schema_editor):
@@ -18,9 +16,7 @@ def set_missing_collection_publication_date(apps, schema_editor):
     published_collection = Collection.objects.filter(
         publication_date__isnull=True, is_published=True
     )
-    published_collection.update(
-        publication_date=datetime.datetime.now(tz=datetime.UTC).date()
-    )
+    published_collection.update(publication_date=date.today())
 
 
 class Migration(migrations.Migration):

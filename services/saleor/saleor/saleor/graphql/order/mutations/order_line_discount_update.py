@@ -8,7 +8,6 @@ from ....order.utils import invalidate_order_prices, update_discount_for_order_l
 from ....permission.enums import OrderPermissions
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.types import OrderError
 from ..types import Order, OrderLine
@@ -83,7 +82,4 @@ class OrderLineDiscountUpdate(OrderDiscountCommon):
                     line_before_update=order_line_before_update,
                 )
                 invalidate_order_prices(order, save=True)
-        return OrderLineDiscountUpdate(
-            order_line=SyncWebhookControlContext(order_line),
-            order=SyncWebhookControlContext(order),
-        )
+        return OrderLineDiscountUpdate(order_line=order_line, order=order)

@@ -1,3 +1,5 @@
+import React from "react";
+
 export const DisabledIcon = ({
   height = "12px",
   width = "12px",

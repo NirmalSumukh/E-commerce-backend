@@ -3,7 +3,7 @@ export const onboardingCompletedMock = {
   stepsCompleted: [
     "get-started",
     "invite-staff",
-    "view-extensions",
+    "view-webhooks",
     "explore-orders",
     "graphql-playground",
     "create-product",

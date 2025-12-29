@@ -1,14 +1,16 @@
 from collections import defaultdict
-from collections.abc import Sequence
 
 from promise import Promise
 
-from ....checkout.fetch import CheckoutInfo, CheckoutLineInfo
+from ....checkout.fetch import (
+    CheckoutInfo,
+    CheckoutLineInfo,
+)
 from ....core.db.connection import allow_writer_in_context
 from ....discount import VoucherType
-from ....discount.utils.voucher import attach_voucher_to_line_info
+from ....discount.utils.voucher import apply_voucher_to_line
 from ...account.dataloaders import AddressByIdLoader, UserByUserIdLoader
-from ...channel.dataloaders.by_self import ChannelByIdLoader
+from ...channel.dataloaders import ChannelByIdLoader
 from ...core.dataloaders import DataLoader
 from ...discount.dataloaders import (
     CheckoutDiscountByCheckoutIdLoader,
@@ -29,7 +31,12 @@ from ...shipping.dataloaders import (
     ShippingMethodChannelListingByChannelSlugLoader,
 )
 from ...tax.dataloaders import TaxClassByVariantIdLoader, TaxConfigurationByChannelId
-from ...warehouse.dataloaders import WarehouseByIdLoader
+from ...warehouse.dataloaders import (
+    WarehouseByIdLoader,
+)
+from ...webhook.dataloaders.pregenerated_payloads_for_checkout_filter_shipping_methods import (
+    PregeneratedCheckoutFilterShippingMethodPayloadsByCheckoutTokenLoader,
+)
 from .models import CheckoutByTokenLoader, CheckoutLinesByCheckoutTokenLoader
 from .promotion_rule_infos import VariantPromotionRuleInfoByCheckoutLineIdLoader
 
@@ -44,6 +51,7 @@ class CheckoutInfoByCheckoutTokenLoader(DataLoader[str, CheckoutInfo]):
                 checkout_line_infos,
                 checkout_discounts,
                 manager,
+                pregenerated_payloads_for_excluded_shipping_methods,
             ) = data
 
             channel_pks = [checkout.channel_id for checkout in checkouts]
@@ -139,13 +147,14 @@ class CheckoutInfoByCheckoutTokenLoader(DataLoader[str, CheckoutInfo]):
                         channel,
                         checkout_lines,
                         discounts,
+                        pregenerated_payloads_for_excluded_shipping_method,
                     ) in zip(
                         keys,
                         checkouts,
                         channels,
                         checkout_line_infos,
                         checkout_discounts,
-                        strict=False,
+                        pregenerated_payloads_for_excluded_shipping_methods,
                     ):
                         shipping_method = shipping_method_map.get(
                             checkout.shipping_method_id
@@ -184,6 +193,9 @@ class CheckoutInfoByCheckoutTokenLoader(DataLoader[str, CheckoutInfo]):
                             voucher=voucher_code.voucher if voucher_code else None,
                             voucher_code=voucher_code,
                             database_connection_name=self.database_connection_name,
+                            pregenerated_payloads_for_excluded_shipping_method=(
+                                pregenerated_payloads_for_excluded_shipping_method
+                            ),
                         )
                         checkout_info_map[key] = checkout_info
 
@@ -213,19 +225,23 @@ class CheckoutInfoByCheckoutTokenLoader(DataLoader[str, CheckoutInfo]):
         ).load_many(keys)
         discounts = CheckoutDiscountByCheckoutIdLoader(self.context).load_many(keys)
         manager = get_plugin_manager_promise(self.context)
+        pregenerated_payloads_for_excluded_shipping_methods_loader = (
+            PregeneratedCheckoutFilterShippingMethodPayloadsByCheckoutTokenLoader(
+                self.context
+            ).load_many(keys)
+        )
         return Promise.all(
             [
                 checkouts,
                 checkout_line_infos,
                 discounts,
                 manager,
+                pregenerated_payloads_for_excluded_shipping_methods_loader,
             ]
         ).then(with_checkout)
 
 
-class CheckoutLinesInfoByCheckoutTokenLoader(
-    DataLoader[str, Sequence[CheckoutLineInfo]]
-):
+class CheckoutLinesInfoByCheckoutTokenLoader(DataLoader[str, list[CheckoutLineInfo]]):
     context_key = "checkoutlinesinfo_by_checkout"
 
     def batch_load(self, keys):
@@ -259,21 +275,19 @@ class CheckoutLinesInfoByCheckoutTokenLoader(
                     checkout_lines_discounts,
                     variant_promotion_rules_info,
                 ) = results
-                variants_map = dict(zip(variants_pks, variants, strict=False))
-                products_map = dict(zip(variants_pks, products, strict=False))
-                product_types_map = dict(zip(variants_pks, product_types, strict=False))
-                collections_map = dict(zip(variants_pks, collections, strict=False))
-                tax_class_map = dict(zip(variants_pks, tax_classes, strict=False))
+                variants_map = dict(zip(variants_pks, variants))
+                products_map = dict(zip(variants_pks, products))
+                product_types_map = dict(zip(variants_pks, product_types))
+                collections_map = dict(zip(variants_pks, collections))
+                tax_class_map = dict(zip(variants_pks, tax_classes))
                 channel_listings_map = dict(
-                    zip(variant_ids_channel_ids, channel_listings, strict=False)
+                    zip(variant_ids_channel_ids, channel_listings)
                 )
-                channels = dict(zip(channel_pks, channels, strict=False))
+                channels = dict(zip(channel_pks, channels))
                 checkout_lines_discounts = dict(
-                    zip(lines_pks, checkout_lines_discounts, strict=False)
+                    zip(lines_pks, checkout_lines_discounts)
                 )
-                rules_info_map = dict(
-                    zip(lines_pks, variant_promotion_rules_info, strict=False)
-                )
+                rules_info_map = dict(zip(lines_pks, variant_promotion_rules_info))
 
                 lines_info_map = defaultdict(list)
                 voucher_infos_map = {
@@ -281,7 +295,7 @@ class CheckoutLinesInfoByCheckoutTokenLoader(
                     for voucher_info in voucher_infos
                     if voucher_info is not None and voucher_info.voucher_code
                 }
-                for checkout, lines in zip(checkouts, checkout_lines, strict=False):
+                for checkout, lines in zip(checkouts, checkout_lines):
                     lines_info_map[checkout.pk].extend(
                         [
                             CheckoutLineInfo(
@@ -322,7 +336,7 @@ class CheckoutLinesInfoByCheckoutTokenLoader(
                         voucher.type == VoucherType.SPECIFIC_PRODUCT
                         or voucher.apply_once_per_order
                     ):
-                        attach_voucher_to_line_info(
+                        apply_voucher_to_line(
                             voucher_info=voucher_info,
                             lines_info=lines_info_map[checkout.pk],
                         )
@@ -356,7 +370,7 @@ class CheckoutLinesInfoByCheckoutTokenLoader(
             )
 
             variant_ids_channel_ids = []
-            for channel_id, lines in zip(channel_pks, checkout_lines, strict=False):
+            for channel_id, lines in zip(channel_pks, checkout_lines):
                 variant_ids_channel_ids.extend(
                     [(line.variant_id, channel_id) for line in lines]
                 )

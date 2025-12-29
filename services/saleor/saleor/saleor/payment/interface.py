@@ -1,10 +1,9 @@
-import datetime
-from collections.abc import Callable
 from dataclasses import InitVar, dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from ..order import FulfillmentLineData
 from ..order.fetch import OrderLineInfo
@@ -17,8 +16,8 @@ if TYPE_CHECKING:
     from ..checkout.models import Checkout
     from ..order.models import Order, OrderGrantedRefund
 
-JSONValue = str | int | float | bool | None | dict[str, Any] | list[Any]
-JSONType = dict[str, JSONValue] | list[JSONValue]
+JSONValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+JSONType = Union[dict[str, JSONValue], list[JSONValue]]
 
 
 @dataclass
@@ -42,7 +41,7 @@ class StoredPaymentMethodRequestDeleteResponseData:
     """Dataclass for storing the response information from payment app."""
 
     result: StoredPaymentMethodRequestDeleteResult
-    error: str | None = None
+    error: Optional[str] = None
 
 
 @dataclass
@@ -76,7 +75,7 @@ class PaymentMethodCreditCardInfo:
     last_digits: str
     exp_month: int
     exp_year: int
-    first_digits: str | None = None
+    first_digits: Optional[str] = None
 
 
 @dataclass
@@ -103,9 +102,9 @@ class PaymentMethodData:
     external_id: str
     gateway: PaymentGateway
     supported_payment_flows: list[str] = field(default_factory=list)
-    credit_card_info: PaymentMethodCreditCardInfo | None = None
-    name: str | None = None
-    data: JSONValue | None = None
+    credit_card_info: Optional[PaymentMethodCreditCardInfo] = None
+    name: Optional[str] = None
+    data: Optional[JSONType] = None
 
 
 @dataclass
@@ -114,45 +113,24 @@ class TransactionActionData:
     transaction: TransactionItem
     event: "TransactionEvent"
     transaction_app_owner: Optional["App"]
-    action_value: Decimal
+    action_value: Optional[Decimal] = None
     granted_refund: Optional["OrderGrantedRefund"] = None
 
 
 @dataclass
 class TransactionRequestEventResponse:
-    psp_reference: str | None
+    psp_reference: Optional[str]
     type: str
     amount: Decimal
-    time: datetime.datetime | None = None
-    external_url: str | None = ""
-    message: str | None = ""
+    time: Optional[datetime] = None
+    external_url: Optional[str] = ""
+    message: Optional[str] = ""
 
 
 @dataclass
-class PaymentMethodDetails:
-    type: str
-    name: str
-    brand: str | None = None
-    first_digits: str | None = None
-    last_digits: str | None = None
-    exp_month: int | None = None
-    exp_year: int | None = None
-
-
-@dataclass
-class TransactionResponseBase:
-    psp_reference: str | None
-    available_actions: list[str] | None
-
-
-@dataclass
-class TransactionSessionResponse(TransactionResponseBase):
-    event: TransactionRequestEventResponse
-    payment_method_details: PaymentMethodDetails | None = None
-
-
-@dataclass
-class TransactionRequestResponse(TransactionResponseBase):
+class TransactionRequestResponse:
+    psp_reference: Optional[str]
+    available_actions: Optional[list[str]] = None
     event: Optional["TransactionRequestEventResponse"] = None
 
 
@@ -168,8 +146,8 @@ class TransactionData:
 @dataclass
 class PaymentGatewayData:
     app_identifier: str
-    data: JSONValue | None = None
-    error: str | None = None
+    data: Optional[dict[Any, Any]] = None
+    error: Optional[str] = None
 
 
 @dataclass
@@ -185,28 +163,28 @@ class TransactionSessionData:
     source_object: Union["Checkout", "Order"]
     action: TransactionProcessActionData
     payment_gateway_data: PaymentGatewayData
-    customer_ip_address: str | None
-    idempotency_key: str | None = None
+    customer_ip_address: Optional[str]
+    idempotency_key: Optional[str] = None
 
 
 @dataclass
 class TransactionSessionResult:
     app_identifier: str
-    response: dict[Any, Any] | None = None
-    error: str | None = None
+    response: Optional[dict[Any, Any]] = None
+    error: Optional[str] = None
 
 
 @dataclass
 class PaymentMethodTokenizationBaseRequestData:
     channel: "Channel"
     user: "User"
-    data: dict | None
+    data: Optional[dict]
 
 
 @dataclass
 class PaymentMethodTokenizationBaseResponseData:
-    error: str | None
-    data: JSONValue | None
+    error: Optional[str]
+    data: Optional[dict]
 
 
 @dataclass
@@ -283,20 +261,20 @@ class PaymentMethodTokenizationResponseData(PaymentMethodTokenizationBaseRespons
     """Dataclass for storing the response information from payment app."""
 
     result: PaymentMethodTokenizationResult
-    id: str | None = None
+    id: Optional[str] = None
 
 
 @dataclass
 class PaymentMethodInfo:
     """Uniform way to represent payment method information."""
 
-    first_4: str | None = None
-    last_4: str | None = None
-    exp_year: int | None = None
-    exp_month: int | None = None
-    brand: str | None = None
-    name: str | None = None
-    type: str | None = None
+    first_4: Optional[str] = None
+    last_4: Optional[str] = None
+    exp_year: Optional[int] = None
+    exp_month: Optional[int] = None
+    brand: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[str] = None
 
 
 @dataclass
@@ -313,16 +291,16 @@ class GatewayResponse:
     amount: Decimal
     currency: str
     transaction_id: str
-    error: str | None
-    customer_id: str | None = None
-    payment_method_info: PaymentMethodInfo | None = None
+    error: Optional[str]
+    customer_id: Optional[str] = None
+    payment_method_info: Optional[PaymentMethodInfo] = None
     # @deprecated
-    raw_response: dict[str, str] | None = None
-    action_required_data: JSONType | None = None
+    raw_response: Optional[dict[str, str]] = None
+    action_required_data: Optional[JSONType] = None
     # Some gateway can process transaction asynchronously. This value define if we
     # should create new transaction based on this response
     transaction_already_processed: bool = False
-    psp_reference: str | None = None
+    psp_reference: Optional[str] = None
 
     # Temporary pass Adyen-plugin-specific data to model, so we can drop raw_response
     # After the plugin is gone, this should be removed
@@ -343,8 +321,8 @@ class AddressData:
     country: str
     country_area: str
     phone: str
-    metadata: dict | None
-    private_metadata: dict | None
+    metadata: Optional[dict]
+    private_metadata: Optional[dict]
     validation_skipped: bool = False
 
 
@@ -359,7 +337,7 @@ class PaymentLineData:
     amount: Decimal
     variant_id: int
     product_name: str
-    product_sku: str | None
+    product_sku: Optional[str]
     quantity: int
 
 
@@ -389,25 +367,25 @@ class PaymentData:
     gateway: str
     amount: Decimal
     currency: str
-    billing: AddressData | None
-    shipping: AddressData | None
+    billing: Optional[AddressData]
+    shipping: Optional[AddressData]
     payment_id: int
     graphql_payment_id: str
-    order_id: str | None
-    customer_ip_address: str | None
+    order_id: Optional[str]
+    customer_ip_address: Optional[str]
     customer_email: str
-    order_channel_slug: str | None = None
-    token: str | None = None
-    customer_id: str | None = None  # stores payment gateway customer ID
+    order_channel_slug: Optional[str] = None
+    token: Optional[str] = None
+    customer_id: Optional[str] = None  # stores payment gateway customer ID
     reuse_source: bool = False  # Note: this field will be removed in 4.0.
-    data: dict | None = None
-    graphql_customer_id: str | None = None
-    checkout_token: str | None = None
-    checkout_metadata: dict | None = None
+    data: Optional[dict] = None
+    graphql_customer_id: Optional[str] = None
+    checkout_token: Optional[str] = None
+    checkout_metadata: Optional[dict] = None
     store_payment_method: StorePaymentMethodEnum = StorePaymentMethodEnum.NONE
     payment_metadata: dict[str, str] = field(default_factory=dict)
-    psp_reference: str | None = None
-    refund_data: RefundData | None = None
+    psp_reference: Optional[str] = None
+    refund_data: Optional[RefundData] = None
     transactions: list[TransactionData] = field(default_factory=list)
     # Optional, lazy-evaluated gateway arguments
     _resolve_lines_data: InitVar[Callable[[], PaymentLinesData]] = None
@@ -426,7 +404,7 @@ class PaymentData:
 class TokenConfig:
     """Dataclass for payment gateway token fetching customization."""
 
-    customer_id: str | None = None
+    customer_id: Optional[str] = None
 
 
 @dataclass
@@ -453,12 +431,12 @@ class CustomerSource:
 
     id: str
     gateway: str
-    credit_card_info: PaymentMethodInfo | None = None
-    metadata: dict[str, str] | None = None
+    credit_card_info: Optional[PaymentMethodInfo] = None
+    metadata: Optional[dict[str, str]] = None
 
 
 @dataclass
 class InitializedPaymentResponse:
     gateway: str
     name: str
-    data: JSONType | None = None
+    data: Optional[JSONType] = None

@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 
 import graphene
 import pytest
@@ -243,44 +243,6 @@ def test_product_filter_by_categories(
     }
 
 
-def test_product_filter_by_subcategories(
-    api_client, product_list, channel_USD, category_list
-):
-    # given
-    subcategory_1 = category_list[0]
-    subcategory_2 = category_list[1]
-    parent_category = category_list[2]
-
-    subcategory_1.parent = parent_category
-    subcategory_2.parent = parent_category
-    subcategory_1.save()
-    subcategory_2.save()
-
-    product_list[0].category = subcategory_1
-    product_list[1].category = subcategory_2
-    Product.objects.bulk_update(product_list, ["category"])
-
-    category_id = graphene.Node.to_global_id("Category", parent_category.pk)
-
-    variables = {
-        "channel": channel_USD.slug,
-        "where": {"category": {"eq": category_id}},
-    }
-
-    # when
-    response = api_client.post_graphql(PRODUCTS_WHERE_QUERY, variables)
-
-    # then
-    data = get_graphql_content(response)
-    products = data["data"]["products"]["edges"]
-    assert len(products) == 2
-    returned_slugs = {node["node"]["slug"] for node in products}
-    assert returned_slugs == {
-        product_list[0].slug,
-        product_list[1].slug,
-    }
-
-
 def test_product_filter_by_category(
     api_client, product_list, channel_USD, category_list
 ):
@@ -412,7 +374,7 @@ def test_product_filter_by_is_available(
     # given
     ProductChannelListing.objects.filter(
         product=product_list[1], channel=channel_USD
-    ).update(available_for_purchase_at=timezone.now() + datetime.timedelta(days=1))
+    ).update(available_for_purchase_at=timezone.now() + timedelta(days=1))
     variables = {
         "channel": channel_USD.slug,
         "where": where,
@@ -526,10 +488,10 @@ def test_product_filter_by_published_from(api_client, product_list, channel_USD)
     timestamp = timezone.now()
     ProductChannelListing.objects.filter(
         product__in=product_list, channel=channel_USD
-    ).update(published_at=timestamp + datetime.timedelta(days=1))
+    ).update(published_at=timestamp + timedelta(days=1))
     ProductChannelListing.objects.filter(
         product=product_list[0], channel=channel_USD
-    ).update(published_at=timestamp - datetime.timedelta(days=1))
+    ).update(published_at=timestamp - timedelta(days=1))
     variables = {
         "channel": channel_USD.slug,
         "where": {"publishedFrom": timestamp},
@@ -552,10 +514,10 @@ def test_product_filter_by_none_as_published_from(
     timestamp = timezone.now()
     ProductChannelListing.objects.filter(
         product__in=product_list, channel=channel_USD
-    ).update(published_at=timestamp + datetime.timedelta(days=1))
+    ).update(published_at=timestamp + timedelta(days=1))
     ProductChannelListing.objects.filter(
         product=product_list[0], channel=channel_USD
-    ).update(published_at=timestamp - datetime.timedelta(days=1))
+    ).update(published_at=timestamp - timedelta(days=1))
     variables = {
         "channel": channel_USD.slug,
         "where": {"publishedFrom": None},
@@ -575,10 +537,10 @@ def test_product_filter_by_available_from(api_client, product_list, channel_USD)
     timestamp = timezone.now()
     ProductChannelListing.objects.filter(
         product__in=product_list, channel=channel_USD
-    ).update(available_for_purchase_at=timestamp - datetime.timedelta(days=1))
+    ).update(available_for_purchase_at=timestamp - timedelta(days=1))
     ProductChannelListing.objects.filter(
         product=product_list[0], channel=channel_USD
-    ).update(available_for_purchase_at=timestamp + datetime.timedelta(days=1))
+    ).update(available_for_purchase_at=timestamp + timedelta(days=1))
     variables = {
         "channel": channel_USD.slug,
         "where": {"availableFrom": timestamp},
@@ -602,10 +564,10 @@ def test_product_filter_by_none_as_available_from(
     timestamp = timezone.now()
     ProductChannelListing.objects.filter(
         product__in=product_list, channel=channel_USD
-    ).update(available_for_purchase_at=timestamp - datetime.timedelta(days=1))
+    ).update(available_for_purchase_at=timestamp - timedelta(days=1))
     ProductChannelListing.objects.filter(
         product=product_list[0], channel=channel_USD
-    ).update(available_for_purchase_at=timestamp + datetime.timedelta(days=1))
+    ).update(available_for_purchase_at=timestamp + timedelta(days=1))
     variables = {
         "channel": channel_USD.slug,
         "where": {"availableFrom": None},
@@ -688,7 +650,7 @@ def test_product_filter_by_minimal_price(
     assert returned_slugs == {product_list[index].slug for index in indexes}
 
 
-def test_products_filter_by_attributes_value_slug(
+def test_products_filter_by_attributes(
     api_client,
     product_list,
     channel_USD,
@@ -706,21 +668,12 @@ def test_products_filter_by_attributes_value_slug(
     attr_value = AttributeValue.objects.create(
         attribute=attribute, name="First", slug="first"
     )
-    # Associate the same attribute value to two products
-    product1 = product_list[0]
-    product1.product_type = product_type
-    product1.save()
+    product = product_list[0]
+    product.product_type = product_type
+    product.save()
     associate_attribute_values_to_instance(
-        product1,
-        {attribute.pk: [attr_value]},
-    )
-
-    product2 = product_list[1]
-    product2.product_type = product_type
-    product2.save()
-    associate_attribute_values_to_instance(
-        product2,
-        {attribute.pk: [attr_value]},
+        product,
+        {attribute.id: [attr_value]},
     )
 
     variables = {
@@ -735,13 +688,12 @@ def test_products_filter_by_attributes_value_slug(
     content = get_graphql_content(response)
 
     # then
-    product1_id = graphene.Node.to_global_id("Product", product1.id)
-    product2_id = graphene.Node.to_global_id("Product", product2.id)
+    product_id = graphene.Node.to_global_id("Product", product.id)
     products = content["data"]["products"]["edges"]
 
-    assert len(products) == 2
-    returned_ids = {product["node"]["id"] for product in products}
-    assert returned_ids == {product1_id, product2_id}
+    assert len(products) == 1
+    assert products[0]["node"]["id"] == product_id
+    assert products[0]["node"]["name"] == product.name
 
 
 def test_products_filter_by_attributes_empty_list(
@@ -767,7 +719,7 @@ def test_products_filter_by_attributes_empty_list(
     product.save()
     associate_attribute_values_to_instance(
         product,
-        {attribute.pk: [attr_value]},
+        {attribute.id: [attr_value]},
     )
 
     variables = {
@@ -827,7 +779,7 @@ def test_products_filter_by_numeric_attributes(
 
     product_list[1].product_type = product_type
     attr_value = AttributeValue.objects.create(
-        attribute=numeric_attribute, name="5", slug="5", numeric=5.0
+        attribute=numeric_attribute, name="5", slug="5"
     )
     associate_attribute_values_to_instance(
         product_list[1],
@@ -835,7 +787,7 @@ def test_products_filter_by_numeric_attributes(
     )
 
     attr_value = AttributeValue.objects.create(
-        attribute=numeric_attribute, name="5", slug="5_X", numeric=5.0
+        attribute=numeric_attribute, name="5", slug="5_X"
     )
     product_list[2].product_type = product_type
     associate_attribute_values_to_instance(
@@ -940,7 +892,7 @@ def test_products_filter_by_attributes_values_and_range(
 
     product_list[1].product_type = product_type
     attr_value_2 = AttributeValue.objects.create(
-        attribute=numeric_attribute, name="1.2", slug="1_2", numeric=1.2
+        attribute=numeric_attribute, name="1.2", slug="1_2"
     )
     associate_attribute_values_to_instance(
         product_list[1],
@@ -1036,7 +988,7 @@ def test_products_filter_by_date_range_date_attributes(
         attribute=date_attribute,
         name="Third",
         slug="third",
-        date_time=date_value - datetime.timedelta(days=1),
+        date_time=date_value - timedelta(days=1),
     )
 
     associate_attribute_values_to_instance(
@@ -1091,7 +1043,7 @@ def test_products_filter_by_date_range_date_variant_attributes(
         attribute=date_attribute,
         name="First",
         slug="first",
-        date_time=date_value - datetime.timedelta(days=1),
+        date_time=date_value - timedelta(days=1),
     )
     attr_value_2 = AttributeValue.objects.create(
         attribute=date_attribute, name="Second", slug="second", date_time=date_value
@@ -1161,7 +1113,7 @@ def test_products_filter_by_date_range_date_time_attributes(
         attribute=date_time_attribute,
         name="Third",
         slug="third",
-        date_time=date_value - datetime.timedelta(days=1),
+        date_time=date_value - timedelta(days=1),
     )
 
     associate_attribute_values_to_instance(
@@ -1216,7 +1168,7 @@ def test_products_filter_by_date_range_date_time_variant_attributes(
         attribute=date_time_attribute,
         name="First",
         slug="first",
-        date_time=date_value - datetime.timedelta(days=1),
+        date_time=date_value - timedelta(days=1),
     )
     attr_value_2 = AttributeValue.objects.create(
         attribute=date_time_attribute,
@@ -1281,19 +1233,19 @@ def test_products_filter_by_date_time_range_date_time_attributes(
         attribute=date_time_attribute,
         name="First",
         slug="first",
-        date_time=date_value - datetime.timedelta(hours=2),
+        date_time=date_value - timedelta(hours=2),
     )
     attr_value_2 = AttributeValue.objects.create(
         attribute=date_time_attribute,
         name="Second",
         slug="second",
-        date_time=date_value + datetime.timedelta(hours=3),
+        date_time=date_value + timedelta(hours=3),
     )
     attr_value_3 = AttributeValue.objects.create(
         attribute=date_time_attribute,
         name="Third",
         slug="third",
-        date_time=date_value - datetime.timedelta(hours=6),
+        date_time=date_value - timedelta(hours=6),
     )
 
     associate_attribute_values_to_instance(
@@ -1316,8 +1268,8 @@ def test_products_filter_by_date_time_range_date_time_attributes(
                 {
                     "slug": date_time_attribute.slug,
                     "dateTime": {
-                        "gte": date_value - datetime.timedelta(hours=4),
-                        "lte": date_value + datetime.timedelta(hours=4),
+                        "gte": date_value - timedelta(hours=4),
+                        "lte": date_value + timedelta(hours=4),
                     },
                 }
             ],
@@ -1410,19 +1362,19 @@ def test_products_filter_by_stock_availability_including_reservations(
                 checkout_line=checkout_line,
                 stock=stocks[0],
                 quantity_reserved=50,
-                reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+                reserved_until=timezone.now() + timedelta(minutes=5),
             ),
             Reservation(
                 checkout_line=checkout_line,
                 stock=stocks[1],
                 quantity_reserved=100,
-                reserved_until=timezone.now() - datetime.timedelta(minutes=5),
+                reserved_until=timezone.now() - timedelta(minutes=5),
             ),
             Reservation(
                 checkout_line=checkout_line,
                 stock=stocks[2],
                 quantity_reserved=50,
-                reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+                reserved_until=timezone.now() + timedelta(minutes=5),
             ),
         ]
     )
@@ -1779,7 +1731,7 @@ def test_products_filter_by_has_preordered_variants_before_end_date(
 ):
     # given
     variant = preorder_variant_global_threshold
-    variant.preorder_end_date = timezone.now() + datetime.timedelta(days=3)
+    variant.preorder_end_date = timezone.now() + timedelta(days=3)
     variant.save(update_fields=["preorder_end_date"])
 
     product = preorder_variant_global_threshold.product
@@ -1802,7 +1754,7 @@ def test_products_filter_by_has_preordered_variants_after_end_date(
 ):
     # given
     variant = preorder_variant_global_threshold
-    variant.preorder_end_date = timezone.now() - datetime.timedelta(days=3)
+    variant.preorder_end_date = timezone.now() - timedelta(days=3)
     variant.save(update_fields=["preorder_end_date"])
 
     variables = {"channel": channel_USD.slug, "where": {"hasPreorderedVariants": True}}
@@ -1828,7 +1780,7 @@ def test_product_filter_by_updated_at(api_client, product_list, channel_USD):
             "updatedAt": {
                 "range": {
                     "gte": timestamp,
-                    "lte": timezone.now() + datetime.timedelta(days=1),
+                    "lte": timezone.now() + timedelta(days=1),
                 }
             }
         },

@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from collections.abc import Iterable
+from typing import Optional
 from uuid import UUID
 
 from celery.utils.log import get_task_logger
@@ -12,7 +13,6 @@ from django.utils import timezone
 
 from ..attribute.models import Attribute
 from ..celeryconf import app
-from ..core.db.connection import allow_writer
 from ..core.exceptions import PreorderAllocationError
 from ..discount import PromotionType
 from ..discount.models import Promotion, PromotionRule
@@ -20,7 +20,6 @@ from ..plugins.manager import get_plugins_manager
 from ..warehouse.management import deactivate_preorder_for_variant
 from ..webhook.event_types import WebhookEventAsyncType
 from ..webhook.utils import get_webhooks_for_event
-from .lock_objects import product_qs_select_for_update
 from .models import Product, ProductChannelListing, ProductType, ProductVariant
 from .search import update_products_search_vector
 from .utils.product import mark_products_in_channels_as_dirty
@@ -90,17 +89,15 @@ def update_variants_names(product_type_pk: int, saved_attributes_ids: list[int])
             settings.DATABASE_CONNECTION_REPLICA_NAME
         ).get(pk=product_type_pk)
     except ObjectDoesNotExist:
-        logger.warning("Cannot find product type with id: %s.", product_type_pk)
+        logging.warning(f"Cannot find product type with id: {product_type_pk}.")
         return
     saved_attributes = Attribute.objects.using(
         settings.DATABASE_CONNECTION_REPLICA_NAME
     ).filter(pk__in=saved_attributes_ids)
-    with allow_writer():
-        _update_variants_names(instance, saved_attributes)
+    _update_variants_names(instance, saved_attributes)
 
 
 @app.task
-@allow_writer()
 def update_products_discounted_prices_of_promotion_task(promotion_pk: UUID):
     # FIXME: Should be removed in Saleor 3.21
 
@@ -110,9 +107,9 @@ def update_products_discounted_prices_of_promotion_task(promotion_pk: UUID):
 
 
 def _get_channel_to_products_map(rule_to_variant_list):
-    variant_ids = {
-        rule_to_variant.productvariant_id for rule_to_variant in rule_to_variant_list
-    }
+    variant_ids = set(
+        [rule_to_variant.productvariant_id for rule_to_variant in rule_to_variant_list]
+    )
     variant_id_with_product_id_qs = (
         ProductVariant.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
         .filter(id__in=variant_ids)
@@ -122,9 +119,9 @@ def _get_channel_to_products_map(rule_to_variant_list):
     for variant_id, product_id in variant_id_with_product_id_qs:
         variant_id_to_product_id_map[variant_id] = product_id
 
-    rule_ids = {
-        rule_to_variant.promotionrule_id for rule_to_variant in rule_to_variant_list
-    }
+    rule_ids = set(
+        [rule_to_variant.promotionrule_id for rule_to_variant in rule_to_variant_list]
+    )
     PromotionChannel = PromotionRule.channels.through
     promotion_channel_qs = (
         PromotionChannel.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
@@ -133,7 +130,7 @@ def _get_channel_to_products_map(rule_to_variant_list):
     )
 
     rule_to_channels_map = defaultdict(set)
-    for promotionrule_id, channel_id in promotion_channel_qs.iterator(chunk_size=1000):
+    for promotionrule_id, channel_id in promotion_channel_qs.iterator():
         rule_to_channels_map[promotionrule_id].add(channel_id)
     channel_to_products_map = defaultdict(set)
     for rule_to_variant in rule_to_variant_list:
@@ -168,7 +165,6 @@ def _get_existing_rule_variant_list(rules: QuerySet[PromotionRule]):
 
 
 @app.task
-@allow_writer()
 def update_variant_relations_for_active_promotion_rules_task():
     promotions = (
         Promotion.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
@@ -196,7 +192,10 @@ def update_variant_relations_for_active_promotion_rules_task():
         # in the promotion as dirty
         existing_variant_relation = _get_existing_rule_variant_list(rules)
 
-        new_rule_to_variant_list = fetch_variants_for_promotion_rules(rules=rules)
+        new_rule_to_variant_list = fetch_variants_for_promotion_rules(
+            rules=rules,
+            database_connection_name=settings.DATABASE_CONNECTION_REPLICA_NAME,
+        )
         channel_to_product_map = _get_channel_to_products_map(
             existing_variant_relation + new_rule_to_variant_list
         )
@@ -216,12 +215,11 @@ def update_variant_relations_for_active_promotion_rules_task():
 
 
 @app.task
-@allow_writer()
 def update_products_discounted_prices_for_promotion_task(
     product_ids: Iterable[int],
-    start_id: UUID | None = None,
+    start_id: Optional[UUID] = None,
     *,
-    rule_ids: list[UUID] | None = None,
+    rule_ids: Optional[list[UUID]] = None,
 ):
     # FIXME: Should be removed in Saleor 3.21
 
@@ -231,7 +229,6 @@ def update_products_discounted_prices_for_promotion_task(
 
 
 @app.task
-@allow_writer()
 def recalculate_discounted_price_for_products_task():
     """Recalculate discounted price for products."""
     listings = (
@@ -243,8 +240,8 @@ def recalculate_discounted_price_for_products_task():
         "id",
         "product_id",
     )
-    products_ids = {product_id for _, product_id in listing_details}
-    listing_ids = {listing_id for listing_id, _ in listing_details}
+    products_ids = set([product_id for _, product_id in listing_details])
+    listing_ids = set([listing_id for listing_id, _ in listing_details])
     if products_ids:
         products = Product.objects.using(
             settings.DATABASE_CONNECTION_REPLICA_NAME
@@ -264,7 +261,6 @@ def recalculate_discounted_price_for_products_task():
 
 
 @app.task
-@allow_writer()
 def update_discounted_prices_task(product_ids: Iterable[int]):
     # FIXME: Should be removed in Saleor 3.21
 
@@ -276,7 +272,6 @@ def update_discounted_prices_task(product_ids: Iterable[int]):
 
 
 @app.task
-@allow_writer()
 def deactivate_preorder_for_variants_task():
     variants_to_clean = _get_preorder_variants_to_clean()
 
@@ -293,17 +288,6 @@ def _get_preorder_variants_to_clean():
     )
 
 
-@app.task
-@allow_writer()
-def mark_products_search_vector_as_dirty(product_ids: list[int]):
-    """Mark products as needing search index updates."""
-    if not product_ids:
-        return
-    with transaction.atomic():
-        ids = product_qs_select_for_update().filter(pk__in=product_ids).values("id")
-        Product.objects.filter(id__in=ids).update(search_index_dirty=True)
-
-
 @app.task(
     queue=settings.UPDATE_SEARCH_VECTOR_INDEX_QUEUE_NAME,
     expires=settings.BEAT_UPDATE_SEARCH_EXPIRE_AFTER_SEC,
@@ -315,22 +299,24 @@ def update_products_search_vector_task():
         .order_by("updated_at")[:PRODUCTS_BATCH_SIZE]
         .values_list("id", flat=True)
     )
-    with allow_writer():
-        update_products_search_vector(products)
+    update_products_search_vector(products)
 
 
 @app.task(queue=settings.COLLECTION_PRODUCT_UPDATED_QUEUE_NAME)
-@allow_writer()
 def collection_product_updated_task(product_ids):
     manager = get_plugins_manager(allow_replica=True)
     products = list(
-        Product.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME).filter(
-            id__in=product_ids
-        )
+        Product.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
+        .filter(id__in=product_ids)
+        .prefetched_for_webhook(single_object=False)
     )
     replica_products_count = len(products)
     if replica_products_count != len(product_ids):
-        products = list(Product.objects.filter(id__in=product_ids))
+        products = list(
+            Product.objects.filter(id__in=product_ids).prefetched_for_webhook(
+                single_object=False
+            )
+        )
         if len(products) != replica_products_count:
             logger.warning(
                 "collection_product_updated_task fetched %s products from replica, "

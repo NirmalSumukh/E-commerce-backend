@@ -7,7 +7,7 @@ import { useCollectionOptions } from "./options/useCollectionOptions";
 import { useProductOptions } from "./options/useProductOptions";
 import { useVariantOptions } from "./options/useVariantOptions";
 
-interface FetchOptions {
+export interface FetchOptions {
   fetch: (query: string) => void;
   fetchMoreProps?: ReturnType<typeof getSearchFetchMoreProps>;
   options: Option[];

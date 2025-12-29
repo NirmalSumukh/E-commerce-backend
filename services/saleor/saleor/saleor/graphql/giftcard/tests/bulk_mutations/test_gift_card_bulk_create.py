@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta
 from unittest import mock
 
 import pytest
@@ -232,9 +232,7 @@ def test_create_gift_cards_with_expiry_date_by_app(
     tag = "gift-card-tag"
     count = 5
     is_active = False
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     variables = {
         "input": {
             "count": count,
@@ -346,9 +344,7 @@ def test_create_gift_cards_invalid_count_value(
     currency = "USD"
     tag = "gift-card-tag"
     is_active = False
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     variables = {
         "input": {
             "count": count_value,
@@ -396,9 +392,7 @@ def test_create_gift_cards_too_many_decimal_places_in_balance_amount(
     currency = "USD"
     tag = "gift-card-tag"
     is_active = False
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     variables = {
         "input": {
             "count": 2,
@@ -446,9 +440,7 @@ def test_create_gift_cards_zero_balance_amount(
     currency = "USD"
     tag = "gift-card-tag"
     is_active = False
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     variables = {
         "input": {
             "count": 2,
@@ -485,10 +477,7 @@ def test_create_gift_cards_zero_balance_amount(
     assert errors[0]["code"] == GiftCardErrorCode.INVALID.name
 
 
-@pytest.mark.parametrize(
-    "date_value",
-    [datetime.date(1999, 1, 1), datetime.datetime.now(tz=datetime.UTC).date()],
-)
+@pytest.mark.parametrize("date_value", [date(1999, 1, 1), date.today()])
 def test_create_gift_cards_invalid_expiry_date(
     date_value,
     app_api_client,

@@ -3,7 +3,7 @@ import {
   ShippingMethodWithPostalCodesFragment,
 } from "@dashboard/graphql";
 
-interface PostalCodesState {
+export interface PostalCodesState {
   codesToDelete?: string[];
   havePostalCodesChanged?: boolean;
   inclusionType?: PostalCodeRuleInclusionTypeEnum;

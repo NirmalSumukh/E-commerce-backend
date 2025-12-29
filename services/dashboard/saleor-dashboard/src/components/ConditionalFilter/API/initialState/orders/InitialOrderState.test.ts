@@ -3,22 +3,22 @@ import { UrlEntry, UrlToken } from "@dashboard/components/ConditionalFilter/Valu
 import { InitialOrderStateResponse } from "./InitialOrderState";
 
 describe("ConditionalFilter / API / Orders / InitialOrderState", () => {
-  it("should filter by charge status", () => {
+  it("should filter by payment status", () => {
     // Arrange
     const initialOrderState = InitialOrderStateResponse.empty();
 
-    initialOrderState.chargeStatus = [
+    initialOrderState.paymentStatus = [
       {
-        label: "Fully Charged",
+        label: "Paid",
         value: "FULLY_CHARGED",
         slug: "FULLY_CHARGED",
       },
     ];
 
-    const token = UrlToken.fromUrlEntry(new UrlEntry("s0.chargeStatus", "FULLY_CHARGED"));
+    const token = UrlToken.fromUrlEntry(new UrlEntry("s0.paymentStatus", "FULLY_CHARGED"));
     const expectedOutput = [
       {
-        label: "Fully Charged",
+        label: "Paid",
         value: "FULLY_CHARGED",
         slug: "FULLY_CHARGED",
       },
@@ -62,11 +62,8 @@ describe("ConditionalFilter / API / Orders / InitialOrderState", () => {
   it("should filter by created date", () => {
     const initialOrderState = InitialOrderStateResponse.empty();
 
-    const token = UrlToken.fromUrlEntry(new UrlEntry("s4.createdAt", "2024-06-04T11%3A22"));
-    const result = initialOrderState.filterByUrlToken(token);
+    const token = UrlToken.fromUrlEntry(new UrlEntry("s4.created", "2024-06-04T11%3A22"));
 
-    // For date fields, filterByUrlToken returns the raw token value (string)
-    expect(result).toEqual("2024-06-04T11%3A22");
-    expect(result).toEqual(token.value);
+    expect(token.value).toEqual(initialOrderState.filterByUrlToken(token));
   });
 });

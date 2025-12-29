@@ -1,3 +1,5 @@
+import React from "react";
+
 import { SavebarProps } from "../Savebar";
 
 export const SavebarRoot = ({ children }: SavebarProps) => <div>{children}</div>;

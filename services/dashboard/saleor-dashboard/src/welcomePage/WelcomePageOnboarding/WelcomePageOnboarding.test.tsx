@@ -1,9 +1,7 @@
 import { useUser } from "@dashboard/auth";
-import { useFlag } from "@dashboard/featureFlags";
 import { ApolloMockedProvider } from "@test/ApolloMockedProvider";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import * as React from "react";
+import React from "react";
 
 import { onboardingCompletedMock, onboardingInitState } from "./mocks";
 import { OnboardingProvider } from "./onboardingContext";
@@ -18,10 +16,16 @@ jest.mock("@dashboard/components/Router/useRouteChange", () => ({
 jest.mock("@dashboard/auth");
 jest.mock("@dashboard/featureFlags", () => ({
   useFlag: jest.fn().mockReturnValue({
-    enabled: false,
+    enabled: true,
   }),
 }));
-
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: any }) => <>{defaultMessage}</>,
+}));
 jest.mock("./onboardingContext/useOnboardingStorage");
 jest.useFakeTimers();
 jest.mock("@dashboard/components/DevModePanel/hooks", () => ({
@@ -44,7 +48,7 @@ const allMarkAsDoneStepsIds = [
   "create-product",
   "explore-orders",
   "graphql-playground",
-  "view-extensions",
+  "view-webhooks",
   "invite-staff",
 ];
 
@@ -121,15 +125,13 @@ describe("WelcomePageOnboarding", () => {
     expect(screen.queryByText("Mark all as done")).toBeNull();
   });
 
-  it("should show 'Onboarding completed' after marking each steps as done", async () => {
+  it("should show 'Onboarding completed' after marking each steps as done", () => {
     // Arrange
     (useUser as jest.Mock).mockReturnValue({ user: { dateJoined: NEW_ACCOUNT_DATE } });
     (useOnboardingStorage as jest.Mock).mockReturnValue({
       getOnboardingState: jest.fn(() => onboardingInitState),
       saveOnboardingState: jest.fn(),
     });
-
-    const user = userEvent.setup();
 
     // Act
     render(
@@ -141,17 +143,13 @@ describe("WelcomePageOnboarding", () => {
     // 'get-started' has only 'Next step' button
     const getStartedNextStepBtn = screen.getByTestId("get-started-next-step-btn");
 
-    user.click(getStartedNextStepBtn);
+    getStartedNextStepBtn.click();
 
-    for (const stepId of allMarkAsDoneStepsIds) {
-      await waitFor(() => {
-        expect(screen.getByTestId(stepId + "-mark-as-done")).toBeInTheDocument();
-      });
-
+    allMarkAsDoneStepsIds.forEach(stepId => {
       const markAsDone = screen.getByTestId(stepId + "-mark-as-done");
 
       markAsDone.click();
-    }
+    });
 
     // Assert
     expect(screen.getByText(onboardingCompleteMessage)).toBeInTheDocument();
@@ -241,40 +239,5 @@ describe("WelcomePageOnboarding", () => {
         stepsExpanded: {},
       });
     });
-  });
-
-  it("should show 'Discover extension capabilities' step when extensions flag is enabled", () => {
-    // Arrange
-    (useUser as jest.Mock).mockReturnValue({ user: { dateJoined: NEW_ACCOUNT_DATE } });
-    (useOnboardingStorage as jest.Mock).mockReturnValue({
-      getOnboardingState: jest.fn(() => onboardingInitState),
-      saveOnboardingState: jest.fn(),
-    });
-    // Override useFlag mock for this specific test
-    (useFlag as jest.Mock).mockImplementation((flag: string) => ({
-      enabled: flag === "extensions",
-    }));
-
-    // Act
-    render(
-      <Wrapper>
-        <WelcomePageOnboarding />
-      </Wrapper>,
-    );
-
-    // Click through the first step to reveal others
-    screen.getByTestId("get-started-next-step-btn").click();
-
-    // Open the relevant step accordion
-    screen.getByTestId("accordion-step-trigger-view-extensions").click();
-
-    // Assert
-    // Check for 'view-extensions' step
-    expect(screen.getByText("Discover extension capabilities")).toBeInTheDocument();
-    expect(screen.getByTestId("view-extensions-mark-as-done")).toBeInTheDocument();
-
-    // Check that 'view-webhooks' step is NOT present
-    expect(screen.queryByText("View webhooks functionalities")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("view-webhooks-mark-as-done")).not.toBeInTheDocument();
   });
 });

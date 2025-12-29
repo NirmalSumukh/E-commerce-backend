@@ -1,11 +1,13 @@
-import datetime
 import json
+from datetime import timedelta
 from unittest.mock import call, patch
 
 import graphene
 import pytest
+import pytz
 from django.utils.functional import SimpleLazyObject
 from django.utils.text import slugify
+from django.utils.timezone import datetime
 from freezegun import freeze_time
 
 from .....channel.error_codes import ChannelErrorCode
@@ -47,8 +49,6 @@ CHANNEL_UPDATE_MUTATION = """
                     deleteExpiredOrdersAfter
                     allowUnpaidOrders
                     includeDraftOrderInVoucherUsage
-                    draftOrderLinePriceFreezePeriod
-                    useLegacyLineDiscountPropagation
                 }
             }
             errors{
@@ -1038,7 +1038,7 @@ def test_channel_update_delete_expired_orders_after(
     channel_USD,
 ):
     # given
-    channel_USD.delete_expired_orders_after = datetime.timedelta(days=1)
+    channel_USD.delete_expired_orders_after = timedelta(days=1)
     channel_USD.save()
 
     delete_expired_after = 10
@@ -1069,7 +1069,7 @@ def test_channel_update_delete_expired_orders_after(
         channel_data["orderSettings"]["deleteExpiredOrdersAfter"]
         == delete_expired_after
     )
-    assert channel_USD.delete_expired_orders_after == datetime.timedelta(
+    assert channel_USD.delete_expired_orders_after == timedelta(
         days=delete_expired_after
     )
 
@@ -1082,7 +1082,7 @@ def test_channel_update_set_incorrect_delete_expired_orders_after(
     channel_USD,
 ):
     # given
-    channel_USD.delete_expired_orders_after = datetime.timedelta(days=1)
+    channel_USD.delete_expired_orders_after = timedelta(days=1)
     channel_USD.save()
 
     channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
@@ -1207,77 +1207,6 @@ def test_channel_update_order_settings_voucher_usage_enable(
     assert not data["errors"]
     assert data["channel"]["orderSettings"]["includeDraftOrderInVoucherUsage"] is True
     disconnect_voucher_codes_from_draft_orders_task_mock.assert_called_once()
-
-
-@pytest.mark.parametrize("new_freeze_period", [10, None, 0])
-def test_channel_update_draft_order_line_price_freeze_period(
-    new_freeze_period,
-    permission_manage_orders,
-    staff_api_client,
-    channel_USD,
-):
-    # given
-    assert channel_USD.draft_order_line_price_freeze_period == 24
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-    variables = {
-        "id": channel_id,
-        "input": {
-            "orderSettings": {
-                "draftOrderLinePriceFreezePeriod": new_freeze_period,
-            },
-        },
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHANNEL_UPDATE_MUTATION,
-        variables=variables,
-        permissions=(permission_manage_orders,),
-    )
-    content = get_graphql_content(response)
-
-    # then
-    data = content["data"]["channelUpdate"]
-    assert not data["errors"]
-    channel_data = data["channel"]
-    channel_USD.refresh_from_db()
-    assert (
-        channel_data["orderSettings"]["draftOrderLinePriceFreezePeriod"]
-        == new_freeze_period
-    )
-    assert channel_USD.draft_order_line_price_freeze_period == new_freeze_period
-
-
-def test_channel_update_draft_order_line_price_freeze_period_negative_value(
-    permission_manage_orders,
-    staff_api_client,
-    channel_USD,
-):
-    # given
-    assert channel_USD.draft_order_line_price_freeze_period == 24
-    new_freeze_period = -5
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-    variables = {
-        "id": channel_id,
-        "input": {
-            "orderSettings": {
-                "draftOrderLinePriceFreezePeriod": new_freeze_period,
-            },
-        },
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHANNEL_UPDATE_MUTATION,
-        variables=variables,
-        permissions=(permission_manage_orders,),
-    )
-    content = get_graphql_content(response)
-
-    # then
-    error = content["data"]["channelUpdate"]["errors"][0]
-    assert error["field"] == "draftOrderLinePriceFreezePeriod"
-    assert error["code"] == ChannelErrorCode.INVALID.name
 
 
 CHANNEL_UPDATE_MUTATION_WITH_CHECKOUT_SETTINGS = """
@@ -1601,7 +1530,7 @@ def test_channel_update_checkout_release_settings(
 ):
     # given
     channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-    date = datetime.datetime(2022, 5, 12, 0, 0, 0, tzinfo=datetime.UTC)
+    date = datetime(2022, 5, 12, 0, 0, 0, tzinfo=pytz.UTC)
     ttl_before_releasing_funds = 7
     variables = {
         "id": channel_id,
@@ -1638,7 +1567,7 @@ def test_channel_update_checkout_release_settings(
 
     channel_USD.refresh_from_db()
     assert not channel_USD.release_funds_for_expired_checkouts
-    assert channel_USD.checkout_ttl_before_releasing_funds == datetime.timedelta(
+    assert channel_USD.checkout_ttl_before_releasing_funds == timedelta(
         hours=ttl_before_releasing_funds
     )
     assert channel_USD.checkout_release_funds_cut_off_date == date
@@ -1715,56 +1644,3 @@ def test_channel_update_default_transaction_flow_strategy_with_payment_permissio
         channel_USD.default_transaction_flow_strategy
         == TransactionFlowStrategyEnum.AUTHORIZATION.value
     )
-
-
-@pytest.mark.parametrize(
-    ("use_legacy_input", "expected_result", "current_value_on_db"),
-    [
-        ({"useLegacyLineDiscountPropagation": True}, True, True),
-        ({"useLegacyLineDiscountPropagation": True}, True, False),
-        ({"useLegacyLineDiscountPropagation": False}, False, True),
-        ({"useLegacyLineDiscountPropagation": False}, False, False),
-        (None, True, True),
-        (None, False, False),
-        ({"allowUnpaidOrders": False}, False, False),
-        ({"allowUnpaidOrders": True}, True, True),
-    ],
-)
-def test_channel_update_set_use_legacy_line_discount_propagation(
-    use_legacy_input,
-    expected_result,
-    current_value_on_db,
-    permission_manage_channels,
-    staff_api_client,
-    channel_USD,
-):
-    # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = current_value_on_db
-    channel_USD.save()
-
-    channel_id = graphene.Node.to_global_id("Channel", channel_USD.id)
-    variables = {
-        "id": channel_id,
-        "input": {
-            "orderSettings": use_legacy_input,
-        },
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHANNEL_UPDATE_MUTATION,
-        variables=variables,
-        permissions=(permission_manage_channels,),
-    )
-    content = get_graphql_content(response)
-
-    # then
-    data = content["data"]["channelUpdate"]
-    assert not data["errors"]
-    channel_data = data["channel"]
-    channel_USD.refresh_from_db()
-    assert (
-        channel_data["orderSettings"]["useLegacyLineDiscountPropagation"]
-        == expected_result
-    )
-    assert channel_USD.use_legacy_line_discount_propagation_for_order == expected_result

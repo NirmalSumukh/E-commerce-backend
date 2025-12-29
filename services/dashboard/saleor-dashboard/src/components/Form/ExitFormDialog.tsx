@@ -1,6 +1,7 @@
 import BackButton from "@dashboard/components/BackButton";
 import { DashboardModal } from "@dashboard/components/Modal";
 import { Button } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { exitFormPromptMessages as messages } from "./messages";
@@ -11,8 +12,7 @@ interface ExitFormDialogProps {
   isOpen: boolean;
 }
 
-/** @deprecated Use react-hook-form instead */
-const ExitFormDialog = ({ onLeave, onClose, isOpen }: ExitFormDialogProps) => {
+const ExitFormDialog: React.FC<ExitFormDialogProps> = ({ onLeave, onClose, isOpen }) => {
   const intl = useIntl();
 
   return (

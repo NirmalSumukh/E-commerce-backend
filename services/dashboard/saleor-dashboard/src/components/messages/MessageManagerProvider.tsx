@@ -1,10 +1,10 @@
-import { PropsWithChildren } from "react";
+import React, { ReactNode } from "react";
 
 import { MessageContext } from ".";
 import { MessageDisplay } from "./MessageDisplay";
 import { useMessageState } from "./useMessageState";
 
-const MessageManagerProvider = ({ children }: PropsWithChildren) => {
+const MessageManagerProvider = ({ children }: { children: ReactNode }) => {
   const { context, componentState } = useMessageState();
 
   return (

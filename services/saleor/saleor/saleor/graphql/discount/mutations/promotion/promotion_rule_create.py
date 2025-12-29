@@ -9,8 +9,9 @@ from .....product.utils.product import mark_products_in_channels_as_dirty
 from .....webhook.event_types import WebhookEventAsyncType
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_317, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.types import Error
 from ....core.utils import WebhookEventInfo
 from ....plugins.dataloaders import get_plugin_manager_promise
@@ -48,14 +49,14 @@ class PromotionRuleCreateError(Error):
     )
 
 
-class PromotionRuleCreate(DeprecatedModelMutation):
+class PromotionRuleCreate(ModelMutation):
     class Arguments:
         input = PromotionRuleCreateInput(
             description="Fields required to create a promotion rule.", required=True
         )
 
     class Meta:
-        description = "Creates a new promotion rule."
+        description = "Creates a new promotion rule." + ADDED_IN_317 + PREVIEW_FEATURE
         model = models.PromotionRule
         object_type = PromotionRule
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)
@@ -104,7 +105,7 @@ class PromotionRuleCreate(DeprecatedModelMutation):
             if product_ids := set(products.values_list("id", flat=True)):
                 cls.call_event(
                     mark_products_in_channels_as_dirty,
-                    dict.fromkeys(channel_ids, product_ids),
+                    {channel_id: product_ids for channel_id in channel_ids},
                 )
 
         clear_promotion_old_sale_id(instance.promotion, save=True)

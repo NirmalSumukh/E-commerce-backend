@@ -1,8 +1,9 @@
-import datetime
 from collections import defaultdict
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import graphene
+import pytz
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 
@@ -18,11 +19,16 @@ from ....product.models import (
 from ....product.models import Product as ProductModel
 from ....product.models import ProductVariant as ProductVariantModel
 from ....product.utils.product import mark_products_in_channels_as_dirty
+from ...channel import ChannelContext
 from ...channel.mutations import BaseChannelListingMutation
 from ...channel.types import Channel
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
-from ...core.descriptions import ADDED_IN_321, DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_33,
+    ADDED_IN_38,
+    DEPRECATED_IN_3X_INPUT,
+)
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.mutations import BaseMutation
 from ...core.scalars import Date, DateTime, PositiveDecimal
@@ -60,7 +66,9 @@ class PublishableChannelListingInput(BaseInputObjectType):
             "Use `publishedAt` field instead."
         )
     )
-    published_at = DateTime(description="Publication date time. ISO 8601 standard.")
+    published_at = DateTime(
+        description="Publication date time. ISO 8601 standard." + ADDED_IN_33
+    )
 
     class Meta:
         doc_category = DOC_CATEGORY_PRODUCTS
@@ -92,7 +100,7 @@ class ProductChannelListingAddInput(PublishableChannelListingInput):
         description=(
             "A start date time from which a product will be available "
             "for purchase. When not set and `isAvailable` is set to True, "
-            "the current day is assumed."
+            "the current day is assumed." + ADDED_IN_33
         )
     )
     add_variants = NonNullList(
@@ -260,8 +268,8 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
         )
         if is_available_for_purchase is False:
             return None
-        if is_available_for_purchase is True and not available_for_purchase_date:
-            return datetime.datetime.now(tz=datetime.UTC)
+        elif is_available_for_purchase is True and not available_for_purchase_date:
+            return datetime.now(pytz.UTC)
         return available_for_purchase_date
 
     @classmethod
@@ -275,7 +283,7 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
                 errors["addVariants"].append(error)
 
     @classmethod
-    def add_variants(cls, channel, add_variants: list[dict] | None):
+    def add_variants(cls, channel, add_variants: list[dict]):
         if not add_variants:
             return
         variants = cls.get_nodes_or_error(add_variants, "id", ProductVariant)
@@ -289,7 +297,7 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
 
         try:
             ProductVariantChannelListing.objects.bulk_create(variant_channel_listings)
-        except IntegrityError as e:
+        except IntegrityError:
             raise ValidationError(
                 {
                     "addVariants": ValidationError(
@@ -298,7 +306,7 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
                         code=ProductErrorCode.ALREADY_EXISTS.value,
                     )
                 }
-            ) from e
+            )
 
     @classmethod
     def remove_variants(
@@ -306,7 +314,7 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
         product_channel_listing,
         product,
         channel,
-        remove_variants: list[dict] | None,
+        remove_variants: list[dict],
     ):
         if not remove_variants:
             return
@@ -347,7 +355,7 @@ class ProductChannelListingUpdate(BaseChannelListingMutation):
             mark_products_in_channels_as_dirty,
             {channel_id: {product.pk} for channel_id in modified_channel_ids},
         )
-        product = ProductModel.objects.get(pk=product.pk)
+        product = ProductModel.objects.prefetched_for_webhook().get(pk=product.pk)
         manager = get_plugin_manager_promise(info.context).get()
         cls.call_event(manager.product_updated, product)
 
@@ -388,13 +396,8 @@ class ProductVariantChannelListingAddInput(BaseInputObjectType):
         required=True, description="Price of the particular variant in channel."
     )
     cost_price = PositiveDecimal(description="Cost price of the variant in channel.")
-    prior_price = PositiveDecimal(
-        description="Previous price of the variant in channel. Useful for providing "
-        "promotion information required by customer protection laws such as EU Omnibus "
-        "directive." + ADDED_IN_321
-    )
     preorder_threshold = graphene.Int(
-        description="The threshold for preorder variant in channel."
+        description=("The threshold for preorder variant in channel." + ADDED_IN_31)
     )
 
     class Meta:
@@ -411,7 +414,8 @@ class ProductVariantChannelListingUpdate(BaseMutation):
             required=False, description="ID of a product variant to update."
         )
         sku = graphene.String(
-            required=False, description="SKU of a product variant to update."
+            required=False,
+            description="SKU of a product variant to update." + ADDED_IN_38,
         )
         input = NonNullList(
             ProductVariantChannelListingAddInput,
@@ -451,7 +455,7 @@ class ProductVariantChannelListingUpdate(BaseMutation):
                 channels = cls.get_nodes_or_error(
                     add_channels_ids, "channel_id", Channel
                 )
-            for channel_listing_data, channel in zip(input, channels, strict=False):
+            for channel_listing_data, channel in zip(input, channels):
                 channel_listing_data["channel"] = channel
                 cleaned_input.append(channel_listing_data)
         return cleaned_input
@@ -503,15 +507,11 @@ class ProductVariantChannelListingUpdate(BaseMutation):
         for channel_listing_data in cleaned_input:
             price = channel_listing_data.get("price")
             cost_price = channel_listing_data.get("cost_price")
-            prior_price = channel_listing_data.get("prior_price")
             channel_id = channel_listing_data["channel_id"]
             currency_code = channel_listing_data["channel"].currency_code
 
             cls.clean_price(price, "price", currency_code, channel_id, errors)
             cls.clean_price(cost_price, "cost_price", currency_code, channel_id, errors)
-            cls.clean_price(
-                prior_price, "prior_price", currency_code, channel_id, errors
-            )
 
         return cleaned_input
 
@@ -531,10 +531,6 @@ class ProductVariantChannelListingUpdate(BaseMutation):
                 if "cost_price" in channel_listing_data.keys():
                     defaults["cost_price_amount"] = channel_listing_data.get(
                         "cost_price", None
-                    )
-                if "prior_price" in channel_listing_data.keys():
-                    defaults["prior_price_amount"] = channel_listing_data.get(
-                        "prior_price", None
                     )
                 if "preorder_threshold" in channel_listing_data.keys():
                     defaults["preorder_quantity_threshold"] = channel_listing_data.get(

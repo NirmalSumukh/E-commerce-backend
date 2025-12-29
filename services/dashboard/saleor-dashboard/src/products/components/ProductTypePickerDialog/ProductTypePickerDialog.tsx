@@ -6,11 +6,12 @@ import useModalDialogOpen from "@dashboard/hooks/useModalDialogOpen";
 import useStateFromProps from "@dashboard/hooks/useStateFromProps";
 import { FetchMoreProps } from "@dashboard/types";
 import { Option } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { messages } from "./messages";
 
-interface ProductTypePickerDialogProps {
+export interface ProductTypePickerDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   productTypes?: Option[];
@@ -20,7 +21,7 @@ interface ProductTypePickerDialogProps {
   onConfirm: (choice: string) => void;
 }
 
-const ProductTypePickerDialog = ({
+const ProductTypePickerDialog: React.FC<ProductTypePickerDialogProps> = ({
   confirmButtonState,
   open,
   productTypes,
@@ -28,7 +29,7 @@ const ProductTypePickerDialog = ({
   fetchMoreProductTypes,
   onClose,
   onConfirm,
-}: ProductTypePickerDialogProps) => {
+}) => {
   const intl = useIntl();
   const [choice, setChoice] = useStateFromProps("");
   const productTypeDisplayValue = productTypes.find(

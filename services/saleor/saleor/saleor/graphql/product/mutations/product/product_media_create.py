@@ -2,15 +2,14 @@ import graphene
 from django.core.exceptions import ValidationError
 from django.core.files import File
 
-from .....core.exceptions import UnsupportedMediaProviderException
 from .....core.http_client import HTTPClient
 from .....core.utils.validators import get_oembed_data
 from .....permission.enums import ProductPermissions
 from .....product import ProductMediaTypes, models
 from .....product.error_codes import ProductErrorCode
 from .....thumbnail.utils import get_filename_from_url
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
 from ....core.mutations import BaseMutation
 from ....core.types import BaseInputObjectType, ProductError, Upload
@@ -86,7 +85,8 @@ class ProductMediaCreate(BaseMutation):
             raise ValidationError(
                 {
                     "input": ValidationError(
-                        f"Alt field exceeds the character limit of {ALT_CHAR_LIMIT}.",
+                        f"Alt field exceeds the character "
+                        f"limit of {ALT_CHAR_LIMIT}.",
                         code=ProductErrorCode.INVALID.value,
                     )
                 }
@@ -133,19 +133,7 @@ class ProductMediaCreate(BaseMutation):
                     type=ProductMediaTypes.IMAGE,
                 )
             else:
-                try:
-                    oembed_data, media_type = get_oembed_data(
-                        media_url,
-                    )
-                except UnsupportedMediaProviderException as exc:
-                    raise ValidationError(
-                        {
-                            "media_url": ValidationError(
-                                exc.message,
-                                code=ProductErrorCode.UNSUPPORTED_MEDIA_PROVIDER.value,
-                            )
-                        }
-                    ) from exc
+                oembed_data, media_type = get_oembed_data(media_url, "media_url")
                 media = product.media.create(
                     external_url=oembed_data["url"],
                     alt=oembed_data.get("title", alt),

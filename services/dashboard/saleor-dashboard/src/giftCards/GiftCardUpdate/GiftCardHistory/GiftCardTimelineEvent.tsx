@@ -3,10 +3,10 @@ import { AppPaths } from "@dashboard/apps/urls";
 import Link from "@dashboard/components/Link";
 import { TimelineEvent } from "@dashboard/components/Timeline";
 import { customerPath } from "@dashboard/customers/urls";
-import { ExtensionsUrls } from "@dashboard/extensions/urls";
 import { GiftCardDetailsQuery, GiftCardEventsEnum } from "@dashboard/graphql";
 import { orderUrl } from "@dashboard/orders/urls";
 import { staffMemberDetailsUrl } from "@dashboard/staff/urls";
+import React from "react";
 import { IntlShape, useIntl } from "react-intl";
 
 import { giftCardHistoryTimelineMessages as timelineMessages } from "./messages";
@@ -36,7 +36,7 @@ const getUserOrAppUrl = (event: GiftCardEventType): string => {
   }
 
   if (event.app) {
-    return ExtensionsUrls.resolveViewManifestExtensionUrl(event.app.id);
+    return AppPaths.resolveAppPath(event.app.id);
   }
 
   return null;
@@ -107,12 +107,12 @@ const getEventMessage = (event: GiftCardEventType, intl: IntlShape) => {
   }
 };
 
-interface GiftCardTimelineEventProps {
+export interface GiftCardTimelineEventProps {
   date: string;
   event: GiftCardEventType;
 }
 
-const GiftCardTimelineEvent = ({ date, event }: GiftCardTimelineEventProps) => {
+const GiftCardTimelineEvent: React.FC<GiftCardTimelineEventProps> = ({ date, event }) => {
   const intl = useIntl();
 
   return <TimelineEvent date={date} title={getEventMessage(event, intl)} hasPlainDate={false} />;

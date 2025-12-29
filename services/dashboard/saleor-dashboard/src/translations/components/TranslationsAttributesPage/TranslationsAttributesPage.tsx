@@ -1,11 +1,10 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import CardSpacer from "@dashboard/components/CardSpacer";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { ListSettingsUpdate } from "@dashboard/components/TablePagination";
 import { AttributeTranslationDetailsFragment, LanguageCodeEnum } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import { TranslationsEntitiesPageProps } from "@dashboard/translations/types";
@@ -15,13 +14,14 @@ import {
   TranslatableEntities,
 } from "@dashboard/translations/urls";
 import { ListSettings } from "@dashboard/types";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { getTranslationFields } from "../../utils";
 import TranslationFields from "../TranslationFields";
 import { transtionsAttributesPageFieldsMessages as messages } from "./messages";
 
-interface TranslationsAttributesPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsAttributesPageProps extends TranslationsEntitiesPageProps {
   data: AttributeTranslationDetailsFragment;
   settings?: ListSettings;
   onUpdateListSettings?: ListSettingsUpdate;
@@ -33,7 +33,7 @@ export const fieldNames = {
   richTextValue: "attributeRichTextValue",
 };
 
-const TranslationsAttributesPage = ({
+const TranslationsAttributesPage: React.FC<TranslationsAttributesPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -46,9 +46,8 @@ const TranslationsAttributesPage = ({
   onSubmit,
   settings,
   onUpdateListSettings,
-}: TranslationsAttributesPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
   const withChoices = data?.attribute?.withChoices;
 
   return (
@@ -69,11 +68,11 @@ const TranslationsAttributesPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.attributes, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.attributes, translationId)
           }
         />
       </TopNav>

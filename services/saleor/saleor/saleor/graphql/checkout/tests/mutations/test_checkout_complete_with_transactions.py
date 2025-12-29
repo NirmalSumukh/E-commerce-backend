@@ -1,9 +1,11 @@
-import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import ANY, patch
 
+import before_after
 import graphene
 import pytest
+import pytz
 from django.db import transaction
 from django.db.models.aggregates import Sum
 from django.test import override_settings
@@ -20,12 +22,7 @@ from .....checkout.payment_utils import update_checkout_payment_statuses
 from .....checkout.utils import PRIVATE_META_APP_SHIPPING_ID, add_voucher_to_checkout
 from .....core.taxes import TaxError, zero_money, zero_taxed_money
 from .....discount import DiscountType, DiscountValueType, RewardValueType
-from .....discount.models import (
-    CheckoutLineDiscount,
-    OrderLineDiscount,
-    PromotionRule,
-    Voucher,
-)
+from .....discount.models import CheckoutLineDiscount, PromotionRule, Voucher
 from .....giftcard import GiftCardEvents
 from .....giftcard.models import GiftCard, GiftCardEvent
 from .....order import OrderAuthorizeStatus, OrderChargeStatus, OrderOrigin, OrderStatus
@@ -39,7 +36,6 @@ from .....product.models import (
     ProductVariantChannelListing,
     VariantChannelListingPromotionRule,
 )
-from .....tests import race_condition
 from .....warehouse.models import Reservation, Stock, WarehouseClickAndCollectOption
 from .....warehouse.tests.utils import get_available_quantity_for_stock
 from ....core.utils import to_global_id_or_none
@@ -112,18 +108,10 @@ def prepare_checkout_for_test(
     transaction_item_generator,
     transaction_events_generator,
     voucher=None,
-    user=None,
-    save_shipping_address=None,
-    save_billing_address=None,
 ):
     checkout.shipping_address = shipping_address
     checkout.shipping_method = shipping_method
     checkout.billing_address = billing_address
-    if save_shipping_address is not None:
-        checkout.save_shipping_address = save_shipping_address
-    if save_billing_address is not None:
-        checkout.save_billing_address = save_billing_address
-    checkout.user = user
     checkout.save()
 
     manager = get_plugins_manager(allow_replica=False)
@@ -156,12 +144,11 @@ def prepare_checkout_for_test(
         ],
     )
     recalculate_transaction_amounts(transaction)
-
-    # Set price expiration to force payment status recalculcation upon fetching checkout
-    # data.
-    checkout.price_expiration = timezone.now()
-    checkout.save()
-
+    update_checkout_payment_statuses(
+        checkout=checkout_info.checkout,
+        checkout_total_gross=total.gross,
+        checkout_has_lines=bool(lines),
+    )
     return checkout
 
 
@@ -267,8 +254,6 @@ def test_checkout_without_any_transaction_allow_to_create_order(
     assert order.authorize_status == OrderAuthorizeStatus.NONE
     assert order.subtotal.gross == get_subtotal(order.lines.all(), order.currency).gross
 
-    assert order.lines_count == len(lines)
-
 
 def test_checkout_with_total_0(
     checkout_with_item_total_0,
@@ -328,8 +313,6 @@ def test_checkout_with_total_0(
     assert order.base_shipping_price_amount == 0
     assert order.undiscounted_base_shipping_price_amount == 0
 
-    assert order.lines_count == len(lines)
-
 
 def test_checkout_with_authorized(
     user_api_client,
@@ -338,7 +321,6 @@ def test_checkout_with_authorized(
     transaction_item_generator,
     address,
     shipping_method,
-    customer_user,
 ):
     # given
     checkout = checkout_with_gift_card
@@ -350,11 +332,8 @@ def test_checkout_with_authorized(
         items={"accepted": "false"}
     )
     checkout.tax_exemption = True
-    checkout.user = customer_user
     checkout.save()
     checkout.metadata_storage.save()
-
-    user_number_of_orders = customer_user.number_of_orders
 
     checkout_line = checkout.lines.first()
     checkout_line_quantity = checkout_line.quantity
@@ -436,13 +415,8 @@ def test_checkout_with_authorized(
     assert order.base_shipping_price_amount == shipping_price.amount
     assert order.undiscounted_base_shipping_price_amount == shipping_price.amount
 
-    assert order.lines_count == len(lines)
-
     assert not Checkout.objects.filter()
     assert not len(Reservation.objects.all())
-
-    customer_user.refresh_from_db()
-    assert customer_user.number_of_orders == user_number_of_orders + 1
 
 
 def test_checkout_with_charged(
@@ -452,7 +426,6 @@ def test_checkout_with_charged(
     transaction_item_generator,
     address,
     shipping_method,
-    customer_user,
 ):
     # given
     checkout = checkout_with_gift_card
@@ -464,11 +437,8 @@ def test_checkout_with_charged(
         items={"accepted": "false"}
     )
     checkout.tax_exemption = True
-    checkout.user = customer_user
     checkout.save()
     checkout.metadata_storage.save()
-
-    user_number_of_orders = customer_user.number_of_orders
 
     checkout_line = checkout.lines.first()
     checkout_line_quantity = checkout_line.quantity
@@ -544,13 +514,8 @@ def test_checkout_with_charged(
         order.shipping_tax_class_private_metadata == shipping_tax_class.private_metadata
     )
 
-    assert order.lines_count == len(lines)
-
     assert not Checkout.objects.filter()
     assert not len(Reservation.objects.all())
-
-    customer_user.refresh_from_db()
-    assert customer_user.number_of_orders == user_number_of_orders + 1
 
 
 def test_checkout_price_override(
@@ -652,8 +617,6 @@ def test_checkout_price_override(
         order.shipping_tax_class_private_metadata == shipping_tax_class.private_metadata
     )
 
-    assert order.lines_count == len(lines)
-
     assert not Checkout.objects.filter()
 
 
@@ -684,10 +647,10 @@ def test_checkout_paid_with_multiple_transactions(
     )
 
     transaction = transaction_item_generator(
-        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal(10)
+        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal("10")
     )
     second_transaction = transaction_item_generator(
-        checkout_id=checkout.pk, charged_value=Decimal(10)
+        checkout_id=checkout.pk, charged_value=Decimal("10")
     )
 
     update_checkout_payment_statuses(
@@ -747,7 +710,7 @@ def test_checkout_partially_paid(
     )
 
     transaction_item_generator(
-        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal(10)
+        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal("10")
     )
 
     update_checkout_payment_statuses(
@@ -800,7 +763,7 @@ def test_checkout_partially_paid_allow_unpaid_order(
     )
 
     transaction = transaction_item_generator(
-        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal(10)
+        checkout_id=checkout.pk, charged_value=total.gross.amount - Decimal("10")
     )
 
     update_checkout_payment_statuses(
@@ -1024,16 +987,6 @@ def test_checkout_with_voucher_not_applicable(
         transaction_item_generator,
         transaction_events_generator,
     )
-
-    manager = get_plugins_manager(allow_replica=False)
-    lines, _ = fetch_checkout_lines(checkout)
-    checkout_info = fetch_checkout_info(checkout, lines, manager)
-    calculations.fetch_checkout_data(
-        checkout_info,
-        manager,
-        lines,
-    )
-
     Voucher.objects.all().delete()
 
     redirect_url = "https://www.example.com"
@@ -1069,16 +1022,6 @@ def test_checkout_with_voucher_inactive_code(
         transaction_item_generator,
         transaction_events_generator,
     )
-
-    manager = get_plugins_manager(allow_replica=False)
-    lines, _ = fetch_checkout_lines(checkout)
-    checkout_info = fetch_checkout_info(checkout, lines, manager)
-    calculations.fetch_checkout_data(
-        checkout_info,
-        manager,
-        lines,
-    )
-
     code.is_active = False
     code.save(update_fields=["is_active"])
 
@@ -1113,11 +1056,11 @@ def test_checkout_with_insufficient_stock(
         transaction_item_generator,
         transaction_events_generator,
     )
-
     checkout_line = checkout.lines.first()
     stock = Stock.objects.get(product_variant=checkout_line.variant)
-    stock.quantity = 0
-    stock.save(update_fields=["quantity"])
+    quantity_available = get_available_quantity_for_stock(stock)
+    checkout_line.quantity = quantity_available + 1
+    checkout_line.save()
 
     redirect_url = "https://www.example.com"
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
@@ -1142,9 +1085,7 @@ def test_checkout_with_gift_card_not_applicable(
     transaction_events_generator,
 ):
     # given
-    gift_card.expiry_date = datetime.datetime.now(
-        tz=datetime.UTC
-    ).date() - datetime.timedelta(days=1)
+    gift_card.expiry_date = date.today() - timedelta(days=1)
     gift_card.save(update_fields=["expiry_date"])
 
     checkout = prepare_checkout_for_test(
@@ -1315,22 +1256,20 @@ def test_checkout_complete(
     checkout_with_gift_card,
     gift_card,
     address,
-    address_usa,
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
     caplog,
-    customer_user,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
         checkout_with_gift_card,
         address,
-        address_usa,
+        address,
         shipping_method,
         transaction_item_generator,
         transaction_events_generator,
-        user=customer_user,
     )
 
     checkout.metadata_storage.store_value_in_metadata(items={"accepted": "true"})
@@ -1340,9 +1279,6 @@ def test_checkout_complete(
     checkout.tax_exemption = True
     checkout.save()
     checkout.metadata_storage.save()
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
 
     checkout_line = checkout.lines.first()
     checkout_line_quantity = checkout_line.quantity
@@ -1364,7 +1300,8 @@ def test_checkout_complete(
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -1402,10 +1339,7 @@ def test_checkout_complete(
     assert order_line.tax_class_metadata == line_tax_class.metadata
     assert order_line.tax_class_private_metadata == line_tax_class.private_metadata
 
-    assert order.billing_address.id == address_usa.id
     assert order.shipping_address == address
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
     assert order.shipping_method == checkout.shipping_method
     assert order.shipping_tax_rate is not None
     assert order.shipping_tax_class_name == shipping_tax_class.name
@@ -1421,34 +1355,25 @@ def test_checkout_complete(
     assert GiftCardEvent.objects.filter(
         gift_card=gift_card, type=GiftCardEvents.USED_IN_ORDER
     )
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
     recalculate_with_plugins_mock.assert_not_called()
 
     assert not len(Reservation.objects.all())
 
+    order_utils_log = caplog.records[1]
     assert (
         graphene.Node.to_global_id("Checkout", checkout_info.checkout.pk)
-        == caplog.records[0].checkout_id
+        == order_utils_log.checkout_id
     )
     assert gift_card.initial_balance_amount == Decimal(
-        caplog.records[0].gift_card_compensation
+        order_utils_log.gift_card_compensation
     )
     assert total.gross.amount == Decimal(
-        caplog.records[0].total_after_gift_card_compensation
+        order_utils_log.total_after_gift_card_compensation
     )
-
-    assert customer_user.addresses.count() == user_address_count + 2
-    # ensure the the customer addresses are not the same instances as the order addresses
-    customer_address_ids = list(customer_user.addresses.values_list("pk", flat=True))
-    assert not (
-        set(customer_address_ids)
-        & {order.billing_address.pk, order.shipping_address.pk}
-    )
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
 
 
 @pytest.mark.integration
@@ -1462,6 +1387,7 @@ def test_checkout_complete_with_metadata(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
@@ -1493,7 +1419,8 @@ def test_checkout_complete_with_metadata(
     }
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
     content = get_graphql_content(response)
     data = content["data"]["checkoutComplete"]
 
@@ -1511,9 +1438,9 @@ def test_checkout_complete_with_metadata(
     }
     assert order.private_metadata == checkout.metadata_storage.private_metadata
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
 
@@ -1582,6 +1509,7 @@ def test_checkout_complete_with_metadata_checkout_without_metadata(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
@@ -1609,7 +1537,8 @@ def test_checkout_complete_with_metadata_checkout_without_metadata(
     }
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
     content = get_graphql_content(response)
     data = content["data"]["checkoutComplete"]
 
@@ -1627,9 +1556,9 @@ def test_checkout_complete_with_metadata_checkout_without_metadata(
     }
     assert order.private_metadata == checkout.metadata_storage.private_metadata
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
 
@@ -1758,6 +1687,7 @@ def test_checkout_complete_gift_card_bought(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
@@ -1772,7 +1702,6 @@ def test_checkout_complete_gift_card_bought(
     checkout.metadata_storage.store_value_in_private_metadata(
         items={"accepted": "false"}
     )
-    checkout.email = customer_user.email
     checkout.metadata_storage.save()
     checkout.user = customer_user
     checkout.save()
@@ -1786,7 +1715,8 @@ def test_checkout_complete_gift_card_bought(
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -1824,12 +1754,13 @@ def test_checkout_complete_with_shipping_voucher_and_gift_card(
     voucher_free_shipping,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     shipping_listing = shipping_method.channel_listings.get(
         channel_id=checkout_with_gift_card.channel_id
     )
-    shipping_listing.price_amount = Decimal(35)
+    shipping_listing.price_amount = Decimal("35")
     shipping_listing.save(update_fields=["price_amount"])
 
     checkout = prepare_checkout_for_test(
@@ -1871,7 +1802,8 @@ def test_checkout_complete_with_shipping_voucher_and_gift_card(
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -1930,9 +1862,9 @@ def test_checkout_complete_with_shipping_voucher_and_gift_card(
     assert GiftCardEvent.objects.filter(
         gift_card=gift_card, type=GiftCardEvents.USED_IN_ORDER
     )
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
     assert not len(Reservation.objects.all())
@@ -1989,22 +1921,8 @@ def test_checkout_complete_with_variant_without_sku(
     assert order_line.product_variant_id == order_line.variant.get_global_id()
 
 
-@pytest.mark.parametrize(
-    (
-        "legacy_discount_propagation",
-        "expected_unit_discount_amount",
-        "expected_unit_discount_reason",
-    ),
-    [
-        (True, Decimal(1), "Entire order voucher code: saleor"),
-        (False, Decimal(0), None),
-    ],
-)
 @pytest.mark.integration
 def test_checkout_with_voucher_complete(
-    legacy_discount_propagation,
-    expected_unit_discount_amount,
-    expected_unit_discount_reason,
     user_api_client,
     checkout_with_voucher_percentage,
     voucher_percentage,
@@ -2014,10 +1932,6 @@ def test_checkout_with_voucher_complete(
     transaction_item_generator,
 ):
     # given
-    channel = checkout_with_voucher_percentage.channel
-    channel.use_legacy_line_discount_propagation_for_order = legacy_discount_propagation
-    channel.save()
-
     code = voucher_percentage.codes.first()
     checkout = prepare_checkout_for_test(
         checkout_with_voucher_percentage,
@@ -2043,7 +1957,7 @@ def test_checkout_with_voucher_complete(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager, checkout_info=checkout_info, lines=lines, address=address
     )
 
@@ -2084,109 +1998,20 @@ def test_checkout_with_voucher_complete(
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
     order_line = order.lines.first()
-    assert order_line.unit_discount_amount == expected_unit_discount_amount
-    assert order_line.unit_discount_reason == expected_unit_discount_reason
-
-
-@pytest.mark.parametrize(
-    (
-        "legacy_propagation",
-        "expected_unit_discount_amount",
-    ),
-    [
-        (True, Decimal("1.67")),
-        (
-            False,
-            Decimal(0),
-        ),
-    ],
-)
-@pytest.mark.integration
-def test_checkout_with_order_promotion_complete(
-    legacy_propagation,
-    expected_unit_discount_amount,
-    user_api_client,
-    checkout_with_item_and_order_discount,
-    address,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-):
-    # given
-    checkout = checkout_with_item_and_order_discount
-
-    channel = checkout.channel
-    channel.use_legacy_line_discount_propagation_for_order = legacy_propagation
-    channel.save()
-
-    checkout = prepare_checkout_for_test(
-        checkout,
-        address,
-        address,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-    )
-
-    discount_amount = checkout.discount
-
-    manager = get_plugins_manager(allow_replica=False)
-    lines, _ = fetch_checkout_lines(checkout)
-    checkout_info = fetch_checkout_info(checkout, lines, manager)
-
-    total = calculations.calculate_checkout_total(
-        manager=manager, checkout_info=checkout_info, lines=lines, address=address
-    )
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order_token = data["order"]["token"]
-    order_id = data["order"]["id"]
-    assert Order.objects.count() == 1
-    order = Order.objects.first()
-    assert str(order.id) == order_token
-    assert order_id == graphene.Node.to_global_id("Order", order.id)
-    assert order.metadata == checkout.metadata_storage.metadata
-    assert order.private_metadata == checkout.metadata_storage.private_metadata
-
-    assert order.total == total
-    assert order.subtotal.gross == get_subtotal(order.lines.all(), order.currency).gross
-    assert order.undiscounted_total == total + discount_amount
-
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
-
-    order_line = order.lines.first()
-    assert order_line.unit_discount_amount == expected_unit_discount_amount
-    assert order_line.unit_discount_reason is None
-
-    order_discount = order.discounts.filter(type=DiscountType.ORDER_PROMOTION).first()
-    assert order_discount
     assert (
-        order_discount.amount_value
-        == (order.undiscounted_total - order.total).gross.amount
+        order_line.unit_discount_amount
+        == (discount_amount / order_line.quantity).amount
     )
+    assert order_line.unit_discount_reason
 
 
 @pytest.mark.integration
-def test_checkout_complete_with_entire_order_voucher_paid_with_gift_card_and_transaction(
+def test_checkout_complete_with_entire_order_voucher_and_gift_card(
     user_api_client,
     checkout_with_voucher_percentage,
     voucher_percentage,
@@ -2203,7 +2028,7 @@ def test_checkout_complete_with_entire_order_voucher_paid_with_gift_card_and_tra
     shipping_listing = shipping_method.channel_listings.get(
         channel_id=checkout_with_voucher_percentage.channel_id
     )
-    shipping_listing.price_amount = Decimal(35)
+    shipping_listing.price_amount = Decimal("35")
     shipping_listing.save(update_fields=["price_amount"])
 
     checkout = prepare_checkout_for_test(
@@ -2277,9 +2102,9 @@ def test_checkout_complete_with_entire_order_voucher_paid_with_gift_card_and_tra
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
     order_line = order.lines.first()
     assert (
@@ -2297,123 +2122,7 @@ def test_checkout_complete_with_entire_order_voucher_paid_with_gift_card_and_tra
 
 
 @pytest.mark.integration
-def test_checkout_complete_with_voucher_paid_with_gift_card(
-    user_api_client,
-    checkout_with_voucher_percentage,
-    voucher_percentage,
-    gift_card,
-    address,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_with_voucher_percentage,
-        address,
-        address,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-    )
-    checkout.gift_cards.add(gift_card)
-
-    code = voucher_percentage.codes.first()
-    voucher_used_count = code.used
-    voucher_percentage.usage_limit = voucher_used_count + 1
-    voucher_percentage.save(update_fields=["usage_limit"])
-
-    expected_voucher_discount = checkout.discount
-
-    manager = get_plugins_manager(allow_replica=False)
-    lines, _ = fetch_checkout_lines(checkout)
-    checkout_info = fetch_checkout_info(checkout, lines, manager)
-
-    total_without_gc = calculations.calculate_checkout_total(
-        manager=manager, checkout_info=checkout_info, lines=lines, address=address
-    )
-
-    gift_card.initial_balance_amount = total_without_gc.gross.amount + Decimal(1)
-    gift_card.current_balance_amount = total_without_gc.gross.amount + Decimal(1)
-    gift_card.save()
-
-    expected_gc_balance_amount = (
-        gift_card.initial_balance_amount - total_without_gc.gross.amount
-    )
-
-    total = calculations.calculate_checkout_total_with_gift_cards(
-        manager, checkout_info, lines, address
-    )
-
-    shipping_price = shipping_method.channel_listings.get(
-        channel=checkout.channel
-    ).price
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order = Order.objects.get()
-    assert order.total == total
-    subtotal = get_subtotal(order.lines.all(), order.currency)
-    assert order.subtotal.gross == subtotal.gross
-    assert (
-        order.undiscounted_total
-        == subtotal + shipping_price + expected_voucher_discount
-    )
-
-    code.refresh_from_db()
-    assert code.used == voucher_used_count + 1
-    order_discount = order.discounts.filter(type=DiscountType.VOUCHER).first()
-    assert order_discount
-    assert order_discount.amount_value == expected_voucher_discount.amount
-    assert order.voucher == voucher_percentage
-    assert order.voucher.code == code.code
-
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
-
-    order_line = order.lines.first()
-    assert (
-        order_line.unit_discount_amount
-        == (expected_voucher_discount / order_line.quantity).amount
-    )
-    assert order_line.unit_discount_reason
-
-    gift_card.refresh_from_db()
-    assert gift_card.current_balance.amount == expected_gc_balance_amount
-    assert gift_card.last_used_on
-    assert GiftCardEvent.objects.filter(
-        gift_card=gift_card, type=GiftCardEvents.USED_IN_ORDER
-    )
-
-
-@pytest.mark.parametrize(
-    (
-        "use_legacy_discount_propagation",
-        "expected_voucher_discount_value_type",
-        "expected_voucher_discount_value",
-    ),
-    [
-        (True, DiscountValueType.FIXED, Decimal(1)),
-        (False, DiscountValueType.PERCENTAGE, Decimal(10)),
-    ],
-)
-@pytest.mark.integration
 def test_checkout_complete_with_voucher_apply_once_per_order(
-    use_legacy_discount_propagation,
-    expected_voucher_discount_value_type,
-    expected_voucher_discount_value,
     user_api_client,
     checkout_with_voucher_percentage,
     voucher_percentage,
@@ -2421,14 +2130,8 @@ def test_checkout_complete_with_voucher_apply_once_per_order(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
-    channel_USD,
 ):
     # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = (
-        use_legacy_discount_propagation
-    )
-    channel_USD.save()
-
     checkout = checkout_with_voucher_percentage
 
     code = voucher_percentage.codes.first()
@@ -2460,7 +2163,7 @@ def test_checkout_complete_with_voucher_apply_once_per_order(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager, checkout_info=checkout_info, lines=lines, address=address
     )
 
@@ -2490,26 +2193,18 @@ def test_checkout_complete_with_voucher_apply_once_per_order(
 
     code.refresh_from_db()
     assert code.used == voucher_used_count + 1
-    order_line_discount = OrderLineDiscount.objects.get()
-    assert order_line_discount
+    order_discount = order.discounts.filter(type=DiscountType.VOUCHER).first()
+    assert order_discount
     assert (
-        order_line_discount.amount_value
+        order_discount.amount_value
         == (order.undiscounted_total - order.total).gross.amount
     )
-    assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.voucher == voucher_percentage
-    assert order_line_discount.voucher_code == code.code
-    assert order_line_discount.value_type == expected_voucher_discount_value_type
-    assert order_line_discount.value == expected_voucher_discount_value
-
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not order.discounts.exists()
-
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 @pytest.mark.integration
@@ -2531,7 +2226,7 @@ def test_checkout_complete_with_voucher_apply_once_per_order_and_gift_card(
     shipping_listing = shipping_method.channel_listings.get(
         channel_id=checkout.channel_id
     )
-    shipping_listing.price_amount = Decimal(35)
+    shipping_listing.price_amount = Decimal("35")
     shipping_listing.save(update_fields=["price_amount"])
 
     code = voucher_percentage.codes.first()
@@ -2598,24 +2293,19 @@ def test_checkout_complete_with_voucher_apply_once_per_order_and_gift_card(
 
     code.refresh_from_db()
     assert code.used == voucher_used_count + 1
-    order_line_discount = OrderLineDiscount.objects.get()
-    assert order_line_discount
+    order_discount = order.discounts.filter(type=DiscountType.VOUCHER).first()
+    assert order_discount
     assert (
-        order_line_discount.amount_value
+        order_discount.amount_value
         == (order.undiscounted_total - order.total).gross.amount
         - gift_card_initial_balance
     )
-    assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.voucher == voucher_percentage
-    assert order_line_discount.voucher_code == code.code
-    assert order_line_discount.value_type == DiscountValueType.FIXED
-
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
     gift_card.refresh_from_db()
     assert gift_card.current_balance == zero_money(gift_card.currency)
@@ -2660,7 +2350,7 @@ def test_checkout_complete_with_voucher_single_use(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager, checkout_info=checkout_info, lines=lines, address=address
     )
 
@@ -2702,9 +2392,9 @@ def test_checkout_complete_with_voucher_single_use(
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 @patch("saleor.plugins.manager.PluginsManager.order_confirmed")
@@ -2717,13 +2407,14 @@ def test_checkout_complete_with_shipping_voucher(
     voucher_free_shipping,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = checkout_with_voucher_free_shipping
     shipping_listing = shipping_method.channel_listings.get(
         channel_id=checkout.channel_id
     )
-    shipping_listing.price_amount = Decimal(35)
+    shipping_listing.price_amount = Decimal("35")
     shipping_listing.save(update_fields=["price_amount"])
     checkout.discount = shipping_listing.price
     checkout.save(update_fields=["discount_amount"])
@@ -2765,7 +2456,8 @@ def test_checkout_complete_with_shipping_voucher(
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -2815,9 +2507,9 @@ def test_checkout_complete_with_shipping_voucher(
     )
     assert order.search_vector
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
     assert not len(Reservation.objects.all())
@@ -2855,7 +2547,7 @@ def test_checkout_with_voucher_complete_product_on_sale(
     checkout_line_variant = checkout_line.variant
 
     channel = checkout.channel
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     rule = catalogue_promotion_without_rules.rules.create(
         catalogue_predicate={
             "productPredicate": {
@@ -2902,7 +2594,7 @@ def test_checkout_with_voucher_complete_product_on_sale(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -2947,26 +2639,12 @@ def test_checkout_with_voucher_complete_product_on_sale(
     assert order.voucher == voucher_percentage
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
-@pytest.mark.parametrize(
-    (
-        "use_legacy_discount_propagation",
-        "expected_voucher_discount_value_type",
-        "expected_voucher_discount_value",
-    ),
-    [
-        (True, DiscountValueType.FIXED, Decimal(3)),
-        (False, DiscountValueType.PERCENTAGE, Decimal(10)),
-    ],
-)
 def test_checkout_with_voucher_on_specific_product_complete(
-    use_legacy_discount_propagation,
-    expected_voucher_discount_value_type,
-    expected_voucher_discount_value,
     user_api_client,
     checkout_with_item_and_voucher_specific_products,
     voucher_specific_product_type,
@@ -2974,14 +2652,8 @@ def test_checkout_with_voucher_on_specific_product_complete(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
-    channel_USD,
 ):
     # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = (
-        use_legacy_discount_propagation
-    )
-    channel_USD.save()
-
     checkout = prepare_checkout_for_test(
         checkout_with_item_and_voucher_specific_products,
         address,
@@ -3001,7 +2673,7 @@ def test_checkout_with_voucher_on_specific_product_complete(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager, checkout_info=checkout_info, lines=lines, address=address
     )
 
@@ -3032,28 +2704,21 @@ def test_checkout_with_voucher_on_specific_product_complete(
         order_line.undiscounted_total_price - order_line.total_price
     )
 
-    order_line_discount = OrderLineDiscount.objects.get()
-    assert order_line_discount
+    order_discount = order.discounts.filter(type=DiscountType.VOUCHER).first()
+    assert order_discount
     assert (
-        order_line_discount.amount_value
+        order_discount.amount_value
         == (order.undiscounted_total - order.total).gross.amount
     )
-    assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.voucher == voucher_specific_product_type
-    assert order_line_discount.voucher_code == code.code
-    assert order_line_discount.value_type == expected_voucher_discount_value_type
-    assert order_line_discount.value == expected_voucher_discount_value
 
     code.refresh_from_db()
     assert code.used == voucher_used_count + 1
     assert order.voucher == voucher_specific_product_type
     assert order.voucher.code == code.code
 
-    assert not order.discounts.exists()
-
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 def test_checkout_complete_with_voucher_on_specific_product_and_gift_card(
@@ -3073,7 +2738,7 @@ def test_checkout_complete_with_voucher_on_specific_product_and_gift_card(
     shipping_listing = shipping_method.channel_listings.get(
         channel_id=checkout_with_item_and_voucher_specific_products.channel_id
     )
-    shipping_listing.price_amount = Decimal(35)
+    shipping_listing.price_amount = Decimal("35")
     shipping_listing.save(update_fields=["price_amount"])
 
     checkout = prepare_checkout_for_test(
@@ -3135,26 +2800,22 @@ def test_checkout_complete_with_voucher_on_specific_product_and_gift_card(
         + shipping_price
     )
 
-    order_line_discount = OrderLineDiscount.objects.get()
-    assert order_line_discount
+    order_discount = order.discounts.filter(type=DiscountType.VOUCHER).first()
+    assert order_discount
     assert (
-        order_line_discount.amount_value
+        order_discount.amount_value
         == (order.undiscounted_total - order.total).gross.amount
         - gift_card_initial_balance
     )
-    assert order_line_discount.type == DiscountType.VOUCHER
-    assert order_line_discount.voucher == voucher_specific_product_type
-    assert order_line_discount.voucher_code == code.code
-    assert order_line_discount.value_type == DiscountValueType.FIXED
 
     code.refresh_from_db()
     assert code.used == voucher_used_count + 1
     assert order.voucher == voucher_specific_product_type
     assert order.voucher.code == code.code
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
     gift_card.refresh_from_db()
     assert gift_card.current_balance == zero_money(gift_card.currency)
@@ -3188,7 +2849,7 @@ def test_checkout_complete_product_on_promotion(
 
     channel = checkout.channel
 
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     rule = catalogue_promotion_without_rules.rules.create(
         catalogue_predicate={
             "productPredicate": {
@@ -3231,7 +2892,7 @@ def test_checkout_complete_product_on_promotion(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3267,9 +2928,9 @@ def test_checkout_complete_product_on_promotion(
     assert order_line.sale_id == graphene.Node.to_global_id(
         "Promotion", catalogue_promotion_without_rules.id
     )
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 def test_checkout_complete_multiple_rules_applied(
@@ -3296,8 +2957,8 @@ def test_checkout_complete_multiple_rules_applied(
 
     channel = checkout.channel
 
-    reward_value_1 = Decimal(2)
-    reward_value_2 = Decimal(10)
+    reward_value_1 = Decimal("2")
+    reward_value_2 = Decimal("10")
     rule_1, rule_2 = PromotionRule.objects.bulk_create(
         [
             PromotionRule(
@@ -3388,7 +3049,7 @@ def test_checkout_complete_multiple_rules_applied(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3425,26 +3086,12 @@ def test_checkout_complete_multiple_rules_applied(
     assert order_line.sale_id == graphene.Node.to_global_id(
         "Promotion", catalogue_promotion_without_rules.id
     )
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
-@pytest.mark.parametrize(
-    (
-        "use_legacy_discount_propagation",
-        "expected_voucher_discount_value_type",
-        "expected_voucher_discount_value",
-    ),
-    [
-        (True, DiscountValueType.FIXED, Decimal(3)),
-        (False, DiscountValueType.PERCENTAGE, Decimal(10)),
-    ],
-)
 def test_checkout_with_voucher_on_specific_product_complete_with_product_on_promotion(
-    use_legacy_discount_propagation,
-    expected_voucher_discount_value_type,
-    expected_voucher_discount_value,
     user_api_client,
     checkout_with_item_and_voucher_specific_products,
     voucher_specific_product_type,
@@ -3453,14 +3100,8 @@ def test_checkout_with_voucher_on_specific_product_complete_with_product_on_prom
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
-    channel_USD,
 ):
     # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = (
-        use_legacy_discount_propagation
-    )
-    channel_USD.save()
-
     checkout = prepare_checkout_for_test(
         checkout_with_item_and_voucher_specific_products,
         address,
@@ -3473,15 +3114,6 @@ def test_checkout_with_voucher_on_specific_product_complete_with_product_on_prom
     voucher_used_count = code.used
     voucher_specific_product_type.usage_limit = voucher_used_count + 1
     voucher_specific_product_type.save(update_fields=["usage_limit"])
-
-    voucher_expected_value = Decimal(10)
-    voucher_specific_product_type.channel_listings.update(
-        discount_value=voucher_expected_value
-    )
-    assert (
-        voucher_specific_product_type.discount_value_type
-        == DiscountValueType.PERCENTAGE
-    )
 
     checkout_line = checkout.lines.first()
     checkout_line_variant = checkout_line.variant
@@ -3498,7 +3130,7 @@ def test_checkout_with_voucher_on_specific_product_complete_with_product_on_prom
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3532,18 +3164,12 @@ def test_checkout_with_voucher_on_specific_product_complete_with_product_on_prom
         order_line.undiscounted_total_price - order_line.total_price
     )
 
-    line_voucher_discount = order_line.discounts.get(type=DiscountType.VOUCHER)
-    assert line_voucher_discount.value_type == expected_voucher_discount_value_type
-    assert line_voucher_discount.value == expected_voucher_discount_value
-
     code.refresh_from_db()
     assert code.used == voucher_used_count + 1
 
-    assert not order.discounts.exists()
-
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 @patch.object(PluginsManager, "preprocess_order_creation")
@@ -3591,9 +3217,9 @@ def test_checkout_with_voucher_not_increase_uses_on_preprocess_order_creation_fa
     code.refresh_from_db()
     assert code.used == 0
 
-    assert Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout shouldn't have been deleted"
-    )
+    assert Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout shouldn't have been deleted"
 
 
 @pytest.mark.integration
@@ -3726,7 +3352,7 @@ def test_checkout_complete_insufficient_stock_reserved_by_other_user(
         checkout_line=other_checkout_line,
         stock=stock,
         quantity_reserved=quantity_available,
-        reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+        reserved_until=timezone.now() + timedelta(minutes=5),
     )
 
     checkout_line.quantity = 1
@@ -3755,14 +3381,6 @@ def test_checkout_complete_own_reservation(
     transaction_item_generator,
 ):
     # given
-    checkout = checkout_with_item
-    checkout_line = checkout.lines.first()
-    stock = Stock.objects.get(product_variant=checkout_line.variant)
-    quantity_available = get_available_quantity_for_stock(stock)
-
-    checkout_line.quantity = quantity_available
-    checkout_line.save()
-
     checkout = prepare_checkout_for_test(
         checkout_with_item,
         address,
@@ -3771,12 +3389,18 @@ def test_checkout_complete_own_reservation(
         transaction_item_generator,
         transaction_events_generator,
     )
+    checkout_line = checkout.lines.first()
+    stock = Stock.objects.get(product_variant=checkout_line.variant)
+    quantity_available = get_available_quantity_for_stock(stock)
+
+    checkout_line.quantity = quantity_available
+    checkout_line.save()
 
     reservation = Reservation.objects.create(
         checkout_line=checkout_line,
         stock=stock,
         quantity_reserved=quantity_available,
-        reserved_until=timezone.now() + datetime.timedelta(minutes=5),
+        reserved_until=timezone.now() + timedelta(minutes=5),
     )
 
     variables = {
@@ -3803,9 +3427,9 @@ def test_checkout_complete_own_reservation(
     assert order_line.quantity == quantity_available
     assert order_line.variant == checkout_line.variant
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
     # Reservation associated with checkout has been deleted
     with pytest.raises(Reservation.DoesNotExist):
@@ -3848,32 +3472,26 @@ def test_checkout_complete_without_redirect_url(
     assert gift_card.current_balance == zero_money(gift_card.currency)
     assert gift_card.last_used_on
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
 
 
 def test_checkout_complete_with_digital(
     api_client,
     checkout_with_digital_item,
     address,
-    address_usa,
     transaction_events_generator,
     transaction_item_generator,
-    customer_user,
 ):
     # given
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
-
     checkout = prepare_checkout_for_test(
         checkout_with_digital_item,
         address,
-        address_usa,
+        address,
         None,
         transaction_item_generator,
         transaction_events_generator,
-        user=customer_user,
     )
 
     variables = {
@@ -3888,103 +3506,8 @@ def test_checkout_complete_with_digital(
     content = get_graphql_content(response)["data"]["checkoutComplete"]
     assert not content["errors"]
 
-    order = Order.objects.first()
     # Ensure the order was actually created
-    assert order, "The order should have been created"
-
-    assert order.shipping_address
-    assert order.billing_address
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
-
-    assert customer_user.addresses.count() == user_address_count + 2
-
-
-def test_checkout_complete_with_digital_no_shipping_address_set(
-    api_client,
-    checkout_with_digital_item,
-    address,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_with_digital_item,
-        None,
-        address,
-        None,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-    )
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)["data"]["checkoutComplete"]
-    assert not content["errors"]
-
-    order = Order.objects.first()
-    # Ensure the order was actually created
-    assert order, "The order should have been created"
-    assert not order.shipping_address
-    assert order.billing_address
-
-
-def test_checkout_complete_with_digital_saving_addresses_off(
-    api_client,
-    checkout_with_digital_item,
-    address,
-    address_usa,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
-
-    checkout = prepare_checkout_for_test(
-        checkout_with_digital_item,
-        address,
-        address_usa,
-        None,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-        save_billing_address=False,
-        save_shipping_address=False,
-    )
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)["data"]["checkoutComplete"]
-    assert not content["errors"]
-
-    order = Order.objects.first()
-    # Ensure the order was actually created
-    assert order, "The order should have been created"
-
-    assert order.shipping_address
-    assert order.billing_address
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
-
-    assert customer_user.addresses.count() == user_address_count
+    assert Order.objects.count() == 1, "The order should have been created"
 
 
 def test_complete_checkout_for_local_click_and_collect(
@@ -4112,13 +3635,6 @@ def test_complete_checkout_raises_error_for_local_stock(
     transaction_item_generator,
 ):
     # given
-    checkout = checkout_with_item_for_cc
-    checkout_line = checkout.lines.first()
-    stock = Stock.objects.get(product_variant=checkout_line.variant)
-    quantity_available = get_available_quantity_for_stock(stock)
-    checkout_line.quantity = quantity_available + 1
-    checkout_line.save()
-
     checkout = prepare_checkout_for_test(
         checkout_with_item_for_cc,
         None,
@@ -4127,10 +3643,15 @@ def test_complete_checkout_raises_error_for_local_stock(
         transaction_item_generator,
         transaction_events_generator,
     )
+    checkout_line = checkout.lines.first()
+    stock = Stock.objects.get(product_variant=checkout_line.variant)
+    quantity_available = get_available_quantity_for_stock(stock)
+    checkout_line.quantity = quantity_available + 1
+    checkout_line.save()
 
     variables = {
         "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
+        "rediirectUrl": "https://www.example.com",
     }
 
     checkout.collection_point = warehouse_for_cc
@@ -4159,14 +3680,6 @@ def test_comp_checkout_builds_order_for_all_warehouse_even_if_not_available_loca
     transaction_item_generator,
 ):
     # given
-    checkout = checkout_with_item_for_cc
-    checkout_line = checkout.lines.first()
-    stock = Stock.objects.get(
-        product_variant=checkout_line.variant, warehouse=warehouse_for_cc
-    )
-    quantity_available = get_available_quantity_for_stock(stock)
-    checkout_line.quantity = quantity_available + 1
-    checkout_line.save()
     checkout = prepare_checkout_for_test(
         checkout_with_item_for_cc,
         None,
@@ -4175,6 +3688,13 @@ def test_comp_checkout_builds_order_for_all_warehouse_even_if_not_available_loca
         transaction_item_generator,
         transaction_events_generator,
     )
+    checkout_line = checkout.lines.first()
+    stock = Stock.objects.get(
+        product_variant=checkout_line.variant, warehouse=warehouse_for_cc
+    )
+    quantity_available = get_available_quantity_for_stock(stock)
+    checkout_line.quantity = quantity_available + 1
+    checkout_line.save()
 
     warehouse_for_cc.click_and_collect_option = (
         WarehouseClickAndCollectOption.ALL_WAREHOUSES
@@ -4208,15 +3728,6 @@ def test_checkout_complete_raises_InsufficientStock_when_quantity_above_stock_su
     transaction_item_generator,
 ):
     # given
-    checkout = checkout_with_item_for_cc
-    checkout_line = checkout.lines.first()
-    overall_stock_quantity = (
-        Stock.objects.filter(product_variant=checkout_line.variant).aggregate(
-            Sum("quantity")
-        )
-    ).pop("quantity__sum")
-    checkout_line.quantity = overall_stock_quantity + 1
-    checkout_line.save()
     checkout = prepare_checkout_for_test(
         checkout_with_item_for_cc,
         None,
@@ -4225,6 +3736,14 @@ def test_checkout_complete_raises_InsufficientStock_when_quantity_above_stock_su
         transaction_item_generator,
         transaction_events_generator,
     )
+    checkout_line = checkout.lines.first()
+    overall_stock_quantity = (
+        Stock.objects.filter(product_variant=checkout_line.variant).aggregate(
+            Sum("quantity")
+        )
+    ).pop("quantity__sum")
+    checkout_line.quantity = overall_stock_quantity + 1
+    checkout_line.save()
     warehouse_for_cc.click_and_collect_option = (
         WarehouseClickAndCollectOption.ALL_WAREHOUSES
     )
@@ -4285,7 +3804,7 @@ def test_checkout_complete_raises_InvalidShippingMethod_when_warehouse_disabled(
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
     assert not checkout_info.valid_pick_up_points
-    assert not checkout_info.get_delivery_method_info().is_method_in_valid_methods(
+    assert not checkout_info.delivery_method_info.is_method_in_valid_methods(
         checkout_info
     )
     # when
@@ -4311,6 +3830,7 @@ def test_checkout_complete_with_preorder_variant(
     shipping_method,
     transaction_events_generator,
     transaction_item_generator,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
@@ -4341,7 +3861,8 @@ def test_checkout_complete_with_preorder_variant(
     }
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -4370,9 +3891,9 @@ def test_checkout_complete_with_preorder_variant(
     assert stock_line.allocations.exists()
     assert not stock_line.preorder_allocations.exists()
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
 
@@ -4425,7 +3946,7 @@ def test_checkout_complete_with_click_collect_preorder_fails_for_disabled_wareho
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
     assert not checkout_info.valid_pick_up_points
-    assert not checkout_info.get_delivery_method_info().is_method_in_valid_methods(
+    assert not checkout_info.delivery_method_info.is_method_in_valid_methods(
         checkout_info
     )
 
@@ -4579,8 +4100,7 @@ def test_checkout_complete_product_channel_listing_does_not_exist(
 
 
 @pytest.mark.parametrize(
-    "available_for_purchase",
-    [None, datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=1)],
+    "available_for_purchase", [None, datetime.now(pytz.UTC) + timedelta(days=1)]
 )
 def test_checkout_complete_product_channel_listing_not_available_for_purchase(
     user_api_client,
@@ -4970,7 +4490,7 @@ def test_checkout_complete_line_deleted_in_the_meantime(
         CheckoutLine.objects.get(id=checkout.lines.first().id).delete()
 
     # when
-    with race_condition.RunBefore(
+    with before_after.before(
         "saleor.graphql.checkout.mutations.checkout_complete.complete_checkout",
         delete_order_line,
     ):
@@ -4988,9 +4508,9 @@ def test_checkout_complete_line_deleted_in_the_meantime(
 def test_checkout_complete_with_invalid_address(
     user_api_client,
     checkout_with_item,
+    transaction_item_generator,
     address,
     shipping_method,
-    customer_user,
 ):
     """Check if checkout can be completed with invalid address.
 
@@ -5009,11 +4529,7 @@ def test_checkout_complete_with_invalid_address(
     checkout.shipping_method = shipping_method
     checkout.billing_address = address
     checkout.tax_exemption = True
-    checkout.user = customer_user
     checkout.save()
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
 
     channel = checkout.channel
     channel.automatically_confirm_all_new_orders = True
@@ -5048,11 +4564,6 @@ def test_checkout_complete_with_invalid_address(
     assert not data["errors"]
     assert order.shipping_address.postal_code == invalid_postal_code
     assert order.billing_address.postal_code == invalid_postal_code
-    assert customer_user.addresses.count() == user_address_count + 1
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
-    assert customer_user.addresses.first().id != order.shipping_address.id
-    assert customer_user.addresses.first().id != order.billing_address.id
 
 
 @patch("saleor.checkout.complete_checkout._get_unit_discount_reason")
@@ -5096,7 +4607,7 @@ def test_checkout_complete_log_unknown_discount_reason(
     order_line = order.lines.first()
     assert not order_line.unit_discount_reason
     assert "Unknown discount reason" in caplog.text
-    assert caplog.records[0].checkout_id == to_global_id_or_none(checkout)
+    assert caplog.records[1].checkout_id == to_global_id_or_none(checkout)
 
 
 @patch("saleor.order.calculations._recalculate_with_plugins")
@@ -5112,6 +4623,7 @@ def test_checkout_complete_empty_product_translation(
     transaction_events_generator,
     transaction_item_generator,
     caplog,
+    django_capture_on_commit_callbacks,
 ):
     # given
     checkout = prepare_checkout_for_test(
@@ -5147,7 +4659,8 @@ def test_checkout_complete_empty_product_translation(
     variables = {"id": to_global_id_or_none(checkout), "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -5177,8 +4690,6 @@ def test_checkout_complete_empty_product_translation(
 
     assert checkout_line_quantity == order_line.quantity
     assert checkout_line_variant == order_line.variant
-    assert order_line.translated_product_name == ""
-    assert order_line.translated_variant_name == ""
 
     assert order.shipping_address == address
     assert order.shipping_method == checkout.shipping_method
@@ -5190,9 +4701,9 @@ def test_checkout_complete_empty_product_translation(
     assert GiftCardEvent.objects.filter(
         gift_card=gift_card, type=GiftCardEvents.USED_IN_ORDER
     )
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
     recalculate_with_plugins_mock.assert_not_called()
 
@@ -5279,7 +4790,10 @@ def test_checkout_complete_with_external_shipping_method(
     checkout.billing_address = address
     checkout.metadata_storage.store_value_in_metadata(items={"accepted": "true"})
     checkout.metadata_storage.store_value_in_private_metadata(
-        items={"accepted": "false"}
+        items={
+            "accepted": "false",
+            PRIVATE_META_APP_SHIPPING_ID: graphql_externa_method_id,
+        }
     )
     checkout.tax_exemption = True
     checkout.save()
@@ -5317,197 +4831,3 @@ def test_checkout_complete_with_external_shipping_method(
         order.private_metadata[PRIVATE_META_APP_SHIPPING_ID]
         == graphql_externa_method_id
     )
-
-
-def test_checkout_complete_saving_addresses_off(
-    user_api_client,
-    checkout_with_item_and_voucher_specific_products,
-    address,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_with_item_and_voucher_specific_products,
-        address,
-        address,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-        save_billing_address=False,
-        save_shipping_address=False,
-    )
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order = Order.objects.first()
-    assert order.billing_address
-    assert order.shipping_address
-    assert customer_user.addresses.count() == user_address_count
-
-
-def test_checkout_complete_saving_addresses_on(
-    user_api_client,
-    checkout_with_item_and_voucher_specific_products,
-    address,
-    address_usa,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_with_item_and_voucher_specific_products,
-        address,
-        address_usa,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-        save_billing_address=True,
-        save_shipping_address=True,
-    )
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order = Order.objects.first()
-    assert order.billing_address
-    assert order.shipping_address
-    assert customer_user.addresses.count() == user_address_count + 2
-    # ensure the the customer addresses are not the same instances as the order addresses
-    customer_address_ids = list(customer_user.addresses.values_list("pk", flat=True))
-    assert not (
-        set(customer_address_ids)
-        & {order.billing_address.pk, order.shipping_address.pk}
-    )
-
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
-
-
-def test_checkout_complete_with_different_email_than_user_email(
-    user_api_client,
-    checkout_ready_to_complete,
-    address,
-    address_usa,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_ready_to_complete,
-        address,
-        address_usa,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-        save_billing_address=True,
-        save_shipping_address=True,
-    )
-
-    checkout.email = "different_email@example.com"
-    checkout.user = customer_user
-    checkout.save(update_fields=["email", "user"])
-    assert checkout.user is not None
-    assert checkout.user.email != checkout.email
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order = Order.objects.first()
-    assert order.user_email == checkout.email
-    assert order.user.email == checkout.user.email
-
-
-def test_checkout_complete_sets_product_type_id_for_all_order_lines(
-    user_api_client,
-    checkout_ready_to_complete,
-    address,
-    address_usa,
-    shipping_method,
-    transaction_events_generator,
-    transaction_item_generator,
-    customer_user,
-):
-    # given
-    checkout = prepare_checkout_for_test(
-        checkout_ready_to_complete,
-        address,
-        address_usa,
-        shipping_method,
-        transaction_item_generator,
-        transaction_events_generator,
-        user=customer_user,
-        save_billing_address=True,
-        save_shipping_address=True,
-    )
-
-    lines, _ = fetch_checkout_lines(checkout)
-
-    variant_id_to_product_type_id_map = {
-        line.variant.id: line.product_type.id for line in lines
-    }
-
-    variables = {
-        "id": to_global_id_or_none(checkout),
-        "redirectUrl": "https://www.example.com",
-    }
-
-    # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
-
-    # then
-    content = get_graphql_content(response)
-    data = content["data"]["checkoutComplete"]
-    assert not data["errors"]
-
-    order = Order.objects.first()
-    for line in order.lines.all():
-        assert (
-            line.product_type_id == variant_id_to_product_type_id_map[line.variant_id]
-        )

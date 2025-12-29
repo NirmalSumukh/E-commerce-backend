@@ -1,3 +1,4 @@
+import React from "react";
 import { defineMessages } from "react-intl";
 
 export const messages = defineMessages({
@@ -80,11 +81,6 @@ export const inputTypeMessages = defineMessages({
     defaultMessage: "References",
     description: "references attribute type",
   },
-  singleReference: {
-    id: "OZc365",
-    defaultMessage: "Single Reference",
-    description: "single reference attribute type",
-  },
   plainText: {
     id: "HLr8KQ",
     defaultMessage: "Plain Text",
@@ -164,7 +160,7 @@ export const unitTypeMessages = defineMessages({
   },
 });
 
-const unitMessages = defineMessages({
+export const unitMessages = defineMessages({
   pint: { id: "B0PaVS", defaultMessage: "pint", description: "pint unit" },
   acreInch: {
     id: "jBu2yj",

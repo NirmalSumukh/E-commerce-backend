@@ -270,7 +270,7 @@ class Migration(migrations.Migration):
                 (
                     "quantity",
                     models.IntegerField(
-                        default=Decimal(1),
+                        default=Decimal("1"),
                         verbose_name="quantity",
                         validators=[django.core.validators.MinValueValidator(0)],
                     ),
@@ -330,6 +330,6 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterUniqueTogether(
-            name="stock", unique_together={("variant", "location")}
+            name="stock", unique_together=set([("variant", "location")])
         ),
     ]

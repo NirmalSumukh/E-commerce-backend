@@ -1,7 +1,7 @@
 import { ItemOption } from "@dashboard/components/ConditionalFilter/FilterElement/ConditionValue";
 import { UrlToken } from "@dashboard/components/ConditionalFilter/ValueProvider/UrlToken";
 
-interface InitialProductTypesState {
+export interface InitialProductTypesState {
   typeOfProduct: ItemOption[];
   configurable: ItemOption[];
 }

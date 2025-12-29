@@ -36,8 +36,6 @@ mutation AddCheckoutPromoCode($checkoutId: ID!, $promoCode: String!) {
       }
       discountName
       lines {
-        id
-        quantity
         totalPrice {
           gross {
             amount

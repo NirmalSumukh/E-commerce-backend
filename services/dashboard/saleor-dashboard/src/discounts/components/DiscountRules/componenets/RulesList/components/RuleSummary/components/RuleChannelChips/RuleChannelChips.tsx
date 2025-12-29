@@ -1,5 +1,6 @@
 import { Rule } from "@dashboard/discounts/models";
 import { Chip } from "@saleor/macaw-ui-next";
+import React from "react";
 
 interface RuleChannelChipsProps {
   channel: NonNullable<Rule["channel"]>;

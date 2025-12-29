@@ -13,12 +13,12 @@ import { PageListProps, SearchPageProps, SortPage, TabPageProps } from "@dashboa
 import { hasLimits, isLimitReached } from "@dashboard/utils/limits";
 import { warehouseAddUrl, WarehouseListUrlSortField } from "@dashboard/warehouses/urls";
 import { Box, Button, ChevronRightIcon } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import WarehouseList from "../WarehouseList";
 
-interface WarehouseListPageProps
+export interface WarehouseListPageProps
   extends PageListProps,
     SearchPageProps,
     SortPage<WarehouseListUrlSortField>,
@@ -31,7 +31,7 @@ interface WarehouseListPageProps
   hasPresetsChanged: () => boolean;
 }
 
-const WarehouseListPage = ({
+export const WarehouseListPage: React.FC<WarehouseListPageProps> = ({
   warehouses,
   currentTab,
   disabled,
@@ -49,7 +49,7 @@ const WarehouseListPage = ({
   hasPresetsChanged,
   onUpdateListSettings,
   ...listProps
-}: WarehouseListPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const [isFilterPresetOpen, setFilterPresetOpen] = useState(false);
@@ -158,6 +158,5 @@ const WarehouseListPage = ({
     </ListPageLayout>
   );
 };
-
 WarehouseListPage.displayName = "WarehouseListPage";
 export default WarehouseListPage;

@@ -1,7 +1,7 @@
 // @ts-strict-ignore
-import { createContext } from "react";
+import React from "react";
 
-export const DateContext = createContext<number>(undefined);
+export const DateContext = React.createContext<number>(undefined);
 
 const { Provider, Consumer } = DateContext;
 

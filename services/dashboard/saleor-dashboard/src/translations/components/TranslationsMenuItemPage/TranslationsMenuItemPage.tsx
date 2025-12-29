@@ -1,9 +1,8 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { LanguageCodeEnum, MenuItemTranslationFragment } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import {
@@ -15,15 +14,16 @@ import {
   languageEntityUrl,
   TranslatableEntities,
 } from "@dashboard/translations/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsMenuItemPageProps extends TranslationsEntitiesPageProps {
-  data: MenuItemTranslationFragment | null;
+export interface TranslationsMenuItemPageProps extends TranslationsEntitiesPageProps {
+  data: MenuItemTranslationFragment;
 }
 
-const TranslationsMenuItemPage = ({
+const TranslationsMenuItemPage: React.FC<TranslationsMenuItemPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -34,9 +34,8 @@ const TranslationsMenuItemPage = ({
   onDiscard,
   onEdit,
   onSubmit,
-}: TranslationsMenuItemPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -46,8 +45,8 @@ const TranslationsMenuItemPage = ({
         })}
         title={intl.formatMessage(
           {
-            id: "hM40BV",
-            defaultMessage: 'Translation structure "{menuItemName}" - {languageCode}',
+            id: "IOshTA",
+            defaultMessage: 'Translation MenuItem "{menuItemName}" - {languageCode}',
             description: "header",
           },
           {
@@ -56,11 +55,11 @@ const TranslationsMenuItemPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.menuItems, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.menuItems, translationId)
           }
         />
       </TopNav>
@@ -73,9 +72,9 @@ const TranslationsMenuItemPage = ({
           fields={[
             {
               displayName: intl.formatMessage({
-                id: "7vnKNE",
+                id: "0Vyr8h",
                 defaultMessage: "Name",
-                description: "structure item name",
+                description: "menu item name",
               }),
               name: TranslationInputFieldName.name,
               translation: data?.translation?.name || null,

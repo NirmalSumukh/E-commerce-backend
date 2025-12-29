@@ -94,10 +94,10 @@ class RequestEmailChange(BaseMutation):
             )
         try:
             validate_storefront_url(redirect_url)
-        except ValidationError as e:
+        except ValidationError as error:
             raise ValidationError(
-                {"redirect_url": e}, code=AccountErrorCode.INVALID.value
-            ) from e
+                {"redirect_url": error}, code=AccountErrorCode.INVALID.value
+            )
         channel_slug = clean_channel(
             channel, error_class=AccountErrorCode, allow_replica=False
         ).slug

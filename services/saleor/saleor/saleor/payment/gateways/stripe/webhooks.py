@@ -1,8 +1,9 @@
 import logging
-from typing import cast
+from typing import Optional, cast
 
 import stripe
 from django.core.exceptions import ValidationError
+from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import Prefetch
 from django.http import HttpResponse
 from stripe.error import SignatureVerificationError
@@ -13,7 +14,6 @@ from ....checkout.complete_checkout import complete_checkout
 from ....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from ....checkout.models import Checkout
 from ....core.transactions import transaction_with_commit_on_errors
-from ....graphql.core import SaleorContext
 from ....order.actions import order_charged, order_refunded, order_voided
 from ....order.fetch import fetch_order_info
 from ....order.models import Order
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 @transaction_with_commit_on_errors()
 def handle_webhook(
-    request: SaleorContext, gateway_config: "GatewayConfig", channel_slug: str
+    request: WSGIRequest, gateway_config: "GatewayConfig", channel_slug: str
 ):
     payload = request.body
     sig_header = request.headers["stripe-signature"]
@@ -112,16 +112,17 @@ def _channel_slug_is_different_from_payment_channel_slug(
     order = payment.order
     if checkout is not None:
         return channel_slug != checkout.channel.slug
-    if order is not None:
+    elif order is not None:
         return channel_slug != order.channel.slug
-    logger.warning(
-        "Both payment.checkout and payment.order cannot be None",
-        extra={"payment_id": payment.id},
-    )
-    return True
+    else:
+        logger.warning(
+            "Both payment.checkout and payment.order cannot be None",
+            extra={"payment_id": payment.id},
+        )
+        return True
 
 
-def _get_payment(payment_intent_id: str, with_lock=True) -> Payment | None:
+def _get_payment(payment_intent_id: str, with_lock=True) -> Optional[Payment]:
     qs = Payment.objects.prefetch_related(
         Prefetch("checkout", queryset=Checkout.objects.select_related("channel")),
         Prefetch("order", queryset=Order.objects.select_related("channel")),
@@ -131,7 +132,7 @@ def _get_payment(payment_intent_id: str, with_lock=True) -> Payment | None:
     return qs.filter(transactions__token=payment_intent_id).first()
 
 
-def _get_checkout(payment_id: int) -> Checkout | None:
+def _get_checkout(payment_id: int) -> Optional[Checkout]:
     return (
         Checkout.objects.prefetch_related("payments")
         .select_for_update(of=("self",))
@@ -222,6 +223,7 @@ def _finalize_checkout(
         logger.info(
             "Failed to complete checkout %s.", checkout.pk, extra={"error": str(e)}
         )
+        return None
 
 
 def _get_or_create_transaction(

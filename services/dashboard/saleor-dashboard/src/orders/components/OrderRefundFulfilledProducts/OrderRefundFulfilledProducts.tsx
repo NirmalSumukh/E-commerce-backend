@@ -1,15 +1,16 @@
 // @ts-strict-ignore
+import { Button } from "@dashboard/components/Button";
 import { DashboardCard } from "@dashboard/components/Card";
 import Money from "@dashboard/components/Money";
-import { QuantityInput } from "@dashboard/components/QuantityInput";
 import TableCellAvatar from "@dashboard/components/TableCellAvatar";
 import TableRowLink from "@dashboard/components/TableRowLink";
 import { OrderRefundDataQuery } from "@dashboard/graphql";
 import { FormsetChange } from "@dashboard/hooks/useFormset";
 import { renderCollection } from "@dashboard/misc";
-import { Table, TableBody, TableCell, TableHead } from "@material-ui/core";
+import { Table, TableBody, TableCell, TableHead, TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
-import { Button, Skeleton, Text } from "@saleor/macaw-ui-next";
+import { Skeleton, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { OrderRefundFormData } from "../OrderRefundPage/form";
@@ -67,7 +68,7 @@ interface OrderRefundFulfilledProductsProps {
   onSetMaximalQuantities: () => void;
 }
 
-const OrderRefundFulfilledProducts = (props: OrderRefundFulfilledProductsProps) => {
+const OrderRefundFulfilledProducts: React.FC<OrderRefundFulfilledProductsProps> = props => {
   const {
     fulfillment,
     data,
@@ -98,8 +99,6 @@ const OrderRefundFulfilledProducts = (props: OrderRefundFulfilledProductsProps) 
           className={classes.setMaximalQuantityButton}
           onClick={onSetMaximalQuantities}
           data-test-id={"set-maximal-quantity-fulfilled-button-" + fulfillment?.id}
-          variant="secondary"
-          size="small"
         >
           <FormattedMessage
             id="2W4EBM"
@@ -166,18 +165,35 @@ const OrderRefundFulfilledProducts = (props: OrderRefundFulfilledProductsProps) 
                   </TableCell>
                   <TableCell className={classes.colQuantity}>
                     {line?.quantity ? (
-                      <QuantityInput
+                      <TextField
                         disabled={disabled}
-                        className={classes.quantityInnerInputNoRemaining}
-                        data-test-id={"quantityInput" + line?.id}
-                        value={Number(selectedLineQuantity?.value || 0)}
+                        type="number"
+                        inputProps={{
+                          className: classes.quantityInnerInput,
+                          "data-test-id": "quantityInput" + line?.id,
+                          max: (line?.quantity ?? 0).toString(),
+                          min: 0,
+                          style: { textAlign: "right" },
+                        }}
+                        fullWidth
+                        value={selectedLineQuantity?.value}
                         onChange={event =>
                           onRefundedProductQuantityChange(line.id, event.target.value)
                         }
-                        max={line?.quantity}
-                        min={0}
-                        textAlign="right"
+                        InputProps={{
+                          endAdornment: line?.quantity && (
+                            <div className={classes.remainingQuantity}>/ {line?.quantity}</div>
+                          ),
+                        }}
                         error={isError}
+                        helperText={
+                          isError &&
+                          intl.formatMessage({
+                            id: "xoyCZ/",
+                            defaultMessage: "Improper value",
+                            description: "error message",
+                          })
+                        }
                       />
                     ) : (
                       <Skeleton />

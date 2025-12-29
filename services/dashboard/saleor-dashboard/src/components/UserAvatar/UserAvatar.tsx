@@ -1,5 +1,5 @@
 import { Avatar } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 interface UserAvatarProps {
   url?: string;
@@ -8,7 +8,7 @@ interface UserAvatarProps {
   style?: React.CSSProperties;
 }
 
-export const UserAvatar = ({ url, initials, ...rest }: UserAvatarProps) =>
+export const UserAvatar: React.FC<UserAvatarProps> = ({ url, initials, ...rest }) =>
   url ? (
     <Avatar.User scheme="accent1" src={url} {...rest} />
   ) : (

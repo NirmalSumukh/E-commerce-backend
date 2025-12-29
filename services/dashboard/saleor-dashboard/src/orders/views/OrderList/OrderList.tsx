@@ -3,7 +3,6 @@ import { useUser } from "@dashboard/auth";
 import ChannelPickerDialog from "@dashboard/channels/components/ChannelPickerDialog";
 import useAppChannel from "@dashboard/components/AppLayout/AppChannelContext";
 import { useConditionalFilterContext } from "@dashboard/components/ConditionalFilter";
-import { createOrderQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
 import { useShopLimitsQuery } from "@dashboard/components/Shop/queries";
@@ -24,7 +23,7 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems, mapNodeToChoice } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import { useOnboarding } from "@dashboard/welcomePage/WelcomePageOnboarding/onboardingContext";
-import { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { useIntl } from "react-intl";
 
 import OrderListPage from "../../components/OrderListPage/OrderListPage";
@@ -35,14 +34,14 @@ import {
   orderSettingsPath,
   orderUrl,
 } from "../../urls";
-import { getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { DEFAULT_SORT_KEY, getSortQueryVariables } from "./sort";
 
 interface OrderListProps {
   params: OrderListUrlQueryParams;
 }
 
-const OrderList = ({ params }: OrderListProps) => {
+export const OrderList: React.FC<OrderListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const { updateListSettings, settings } = useListSettings(ListViews.ORDER_LIST);
@@ -109,23 +108,18 @@ const OrderList = ({ params }: OrderListProps) => {
     OrderListUrlQueryParams
   >(navigate, orderListUrl, params);
   const paginationState = createPaginationState(settings.rowNumber, params);
-  const filterVariables = createOrderQueryVariables(valueProvider.value);
+  const filterVariables = getFilterVariables(params, valueProvider.value);
 
-  const queryVariables = useMemo(
+  const queryVariables = React.useMemo(
     () => ({
       ...paginationState,
-      where: filterVariables,
-      search: params.query,
+      filter: filterVariables,
       sort: getSortQueryVariables(params),
     }),
-    // This is intentional - if we change deps array, we will make query
-    // on each character change in filters, NOT when user clicks "SAVE"
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [params, settings.rowNumber, valueProvider.value],
   );
   const { data } = useOrderListQuery({
     displayLoader: true,
-    skip: valueProvider.loading,
     variables: queryVariables,
   });
   const paginationValues = usePaginator({

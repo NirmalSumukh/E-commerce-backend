@@ -1,13 +1,14 @@
 import { InstalledExtension } from "@dashboard/extensions/types";
-import { JobStatusEnum, useAppsInstallationsQuery } from "@dashboard/graphql";
+import { AppTypeEnum, JobStatusEnum, useAppsInstallationsQuery } from "@dashboard/graphql";
 import { useHasManagedAppsPermission } from "@dashboard/hooks/useHasManagedAppsPermission";
 import { fuzzySearch } from "@dashboard/misc";
 import { Box, GenericAppIcon } from "@saleor/macaw-ui-next";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { FailedInstallationActions } from "../components/FailedInstallationActions";
 import { FailedInstallationInfo } from "../components/InfoLabels/FailedInstallationInfo";
 import { InstallationPendingInfo } from "../components/InfoLabels/InstallationPendingInfo";
+import { ViewDetailsActionButton } from "../components/ViewDetailsActionButton";
 import { useActiveAppsInstallations } from "./useActiveAppsInstallations";
 import { useInstallationNotify } from "./useInstallationNotify";
 
@@ -18,7 +19,13 @@ interface UsePendingInstallationProps {
   searchQuery: string;
 }
 
-const getPendingInstallationLogo = ({ logo, name }: { logo?: string | null; name: string }) => {
+export const getPendingInstallationLogo = ({
+  logo,
+  name,
+}: {
+  logo?: string | null;
+  name: string;
+}) => {
   if (logo) {
     return <Box as="img" src={logo} alt={name} display="block" maxWidth="100%" />;
   }
@@ -82,7 +89,9 @@ export const usePendingInstallation = ({
             onDelete={() => onFailedInstallationRemove(id)}
             onRetry={() => handleAppInstallRetry(id)}
           />
-        ) : null,
+        ) : (
+          <ViewDetailsActionButton name={appName} type={AppTypeEnum.THIRDPARTY} />
+        ),
       };
     },
   );

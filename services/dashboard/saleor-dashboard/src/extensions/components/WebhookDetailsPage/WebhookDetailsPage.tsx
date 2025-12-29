@@ -4,10 +4,14 @@ import Form from "@dashboard/components/Form";
 import FormSpacer from "@dashboard/components/FormSpacer";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Savebar } from "@dashboard/components/Savebar";
+import WebhookEvents from "@dashboard/custom-apps/components/WebhookEvents";
+import WebhookInfo from "@dashboard/custom-apps/components/WebhookInfo";
+import WebhookStatus from "@dashboard/custom-apps/components/WebhookStatus";
 import {
   createAsyncEventsSelectHandler,
   createSyncEventsSelectHandler,
-} from "@dashboard/extensions/handlers";
+} from "@dashboard/custom-apps/handlers";
+import { IntrospectionNode } from "@dashboard/custom-apps/utils";
 import { ExtensionsUrls } from "@dashboard/extensions/urls";
 import {
   WebhookDetailsFragment,
@@ -20,16 +24,12 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { Box } from "@saleor/macaw-ui-next";
 import { parse, print } from "graphql";
-import { useEffect, useState } from "react";
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 
-import { IntrospectionNode } from "../../utils";
-import { PermissionAlert } from "./components/PermissionAlert/PermissionAlert";
-import { WebhookEvents } from "./components/WebhookEvents/WebhookEvents";
-import { WebhookHeaders } from "./components/WebhookHeaders/WebhookHeaders";
-import { WebhookInfo } from "./components/WebhookInfo/WebhookInfo";
-import { WebhookSubscriptionQuery } from "./components/WebhookSubscriptionQuery/WebhookSubscriptionQuery";
+import PermissionAlert from "./components/PermissionAlert";
+import WebhookHeaders from "./components/WebhookHeaders";
+import WebhookSubscriptionQuery from "./components/WebhookSubscriptionQuery";
 import { getHeaderTitle, messages } from "./messages";
 import { getWebhookFormInitialFormValues } from "./webhookForm";
 
@@ -44,7 +44,7 @@ export interface WebhookFormData {
   customHeaders: string;
 }
 
-interface WebhookDetailsPageProps {
+export interface WebhookDetailsPageProps {
   appId: string;
   appName: string;
   disabled: boolean;
@@ -55,7 +55,7 @@ interface WebhookDetailsPageProps {
   availableEvents: IntrospectionNode[];
 }
 
-export const WebhookDetailsPage = ({
+const WebhookDetailsPage: React.FC<WebhookDetailsPageProps> = ({
   appId,
   disabled,
   errors,
@@ -63,7 +63,7 @@ export const WebhookDetailsPage = ({
   saveButtonBarState,
   onSubmit,
   availableEvents,
-}: WebhookDetailsPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
 
@@ -104,7 +104,7 @@ export const WebhookDetailsPage = ({
 
   return (
     <Form confirmLeave initial={initialForm} onSubmit={handleSubmit}>
-      {({ data, submit, change, set: setValue }) => {
+      {({ data, submit, change }) => {
         const handleSyncEventsSelect = createSyncEventsSelectHandler({
           change,
           data,
@@ -124,14 +124,9 @@ export const WebhookDetailsPage = ({
           <DetailPageLayout gridTemplateColumns={1}>
             <TopNav href={backUrl} title={getHeaderTitle(intl, webhook)} />
             <DetailPageLayout.Content>
-              <Box paddingX={6}>
-                <WebhookInfo
-                  data={data}
-                  disabled={disabled}
-                  errors={errors}
-                  onChange={change}
-                  setValue={setValue}
-                />
+              <Box padding={6}>
+                <WebhookStatus data={data.isActive} disabled={disabled} onChange={change} />
+                <WebhookInfo data={data} disabled={disabled} errors={errors} onChange={change} />
               </Box>
               <FormSpacer />
               <Box>
@@ -171,3 +166,4 @@ export const WebhookDetailsPage = ({
 };
 
 WebhookDetailsPage.displayName = "WebhookDetailsPage";
+export default WebhookDetailsPage;

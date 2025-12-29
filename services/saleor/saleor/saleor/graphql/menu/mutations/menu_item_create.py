@@ -8,9 +8,9 @@ from ....page import models as page_models
 from ....permission.enums import MenuPermissions
 from ....product import models as product_models
 from ....webhook.event_types import WebhookEventAsyncType
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import MenuError
 from ...core.utils import WebhookEventInfo
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -40,7 +40,7 @@ class MenuItemCreateInput(MenuItemInput):
     )
 
 
-class MenuItemCreate(DeprecatedModelMutation):
+class MenuItemCreate(ModelMutation):
     class Arguments:
         input = MenuItemCreateInput(
             required=True,

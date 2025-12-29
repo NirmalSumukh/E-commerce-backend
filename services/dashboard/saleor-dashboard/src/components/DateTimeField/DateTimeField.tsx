@@ -7,6 +7,7 @@ import {
 import { commonMessages } from "@dashboard/intl";
 import { joinDateTime, splitDateTime } from "@dashboard/misc";
 import { Box, Input } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface DateTimeFieldProps {
@@ -17,7 +18,13 @@ interface DateTimeFieldProps {
   name: string;
 }
 
-export const DateTimeField = ({ disabled, error, name, onChange, value }: DateTimeFieldProps) => {
+export const DateTimeField: React.FC<DateTimeFieldProps> = ({
+  disabled,
+  error,
+  name,
+  onChange,
+  value,
+}) => {
   const intl = useIntl();
   const parsedValue = value ? splitDateTime(value) : { date: "", time: "" };
 

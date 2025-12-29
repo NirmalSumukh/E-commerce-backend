@@ -1,6 +1,6 @@
 import Drag from "@dashboard/icons/Drag";
 import { Box } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 import { ImagePlaceholder } from "./ImagePlaceholder";
 

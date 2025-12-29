@@ -6,6 +6,7 @@ import { sectionNames } from "@dashboard/intl";
 import { taxesMessages } from "@dashboard/taxes/messages";
 import { FetchMoreProps } from "@dashboard/types";
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ShippingMethodTaxesProps {
@@ -25,7 +26,7 @@ const useStyles = makeStyles(
   },
   { name: "ShippingMethodTaxes" },
 );
-const ShippingMethodTaxes = (props: ShippingMethodTaxesProps) => {
+const ShippingMethodTaxes: React.FC<ShippingMethodTaxesProps> = props => {
   const { value, disabled, taxClasses, taxClassDisplayName, onChange, onFetchMore } = props;
   const classes = useStyles(props);
   const intl = useIntl();

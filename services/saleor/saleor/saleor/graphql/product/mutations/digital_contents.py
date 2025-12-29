@@ -1,4 +1,5 @@
 import graphene
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from ....core.db.connection import allow_writer
@@ -6,12 +7,15 @@ from ....core.exceptions import PermissionDenied
 from ....permission.enums import ProductPermissions
 from ....product import models
 from ....product.error_codes import ProductErrorCode
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext, disallow_replica_in_context
+from ...core.context import disallow_replica_in_context
+from ...core.descriptions import ADDED_IN_38
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
-from ...core.mutations import BaseMutation, DeprecatedModelMutation
+from ...core.mutations import BaseMutation, ModelMutation
 from ...core.types import BaseInputObjectType, NonNullList, ProductError, Upload
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
+from ...plugins.dataloaders import get_plugin_manager_promise
 from ..types import DigitalContent, DigitalContentUrl, ProductVariant
 
 
@@ -22,7 +26,8 @@ class DigitalContentInput(BaseInputObjectType):
     )
     max_downloads = graphene.Int(
         description=(
-            "Determines how many times a download link can be accessed by a customer."
+            "Determines how many times a download link can be accessed by a "
+            "customer."
         ),
         required=False,
     )
@@ -39,14 +44,17 @@ class DigitalContentInput(BaseInputObjectType):
     )
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the digital content metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description=(
+            "Fields required to update the digital content metadata." + ADDED_IN_38
+        ),
         required=False,
     )
     private_metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the digital content private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description=(
+            "Fields required to update the digital content private metadata."
+            + ADDED_IN_38
+        ),
         required=False,
     )
 
@@ -135,20 +143,11 @@ class DigitalContentCreate(BaseMutation):
         digital_content.automatic_fulfillment = clean_input.get(
             "automatic_fulfillment", False
         )
-        metadata_list: list[MetadataInput] = clean_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = clean_input.pop(
-            "private_metadata", None
-        )
-
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
+        metadata_list = clean_input.pop("metadata", None)
+        private_metadata_list = clean_input.pop("private_metadata", None)
 
         cls.validate_and_update_metadata(
-            digital_content, metadata_collection, private_metadata_collection
+            digital_content, metadata_list, private_metadata_list
         )
 
         variant.digital_content = digital_content
@@ -183,6 +182,14 @@ class DigitalContentDelete(BaseMutation):
         if not cls.check_permissions(info.context):
             raise PermissionDenied(permissions=cls._meta.permissions)
 
+        if settings.ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION:
+            manager = get_plugin_manager_promise(info.context).get()
+            result = manager.perform_mutation(
+                mutation_cls=cls, root=root, info=info, data={"variant_id": variant_id}
+            )
+            if result is not None:
+                return result
+
         variant = cls.get_node_or_error(
             info, variant_id, field="id", only_type=ProductVariant
         )
@@ -208,7 +215,7 @@ class DigitalContentUpdate(BaseMutation):
         )
 
     class Meta:
-        description = "Updates digital content."
+        description = "Update digital content."
         doc_category = DOC_CATEGORY_PRODUCTS
         error_type_class = ProductError
         error_type_field = "product_errors"
@@ -273,15 +280,8 @@ class DigitalContentUpdate(BaseMutation):
         metadata_list = clean_input.pop("metadata", None)
         private_metadata_list = clean_input.pop("private_metadata", None)
 
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
         cls.validate_and_update_metadata(
-            digital_content, metadata_collection, private_metadata_collection
+            digital_content, metadata_list, private_metadata_list
         )
 
         variant.digital_content = digital_content
@@ -302,7 +302,7 @@ class DigitalContentUrlCreateInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_PRODUCTS
 
 
-class DigitalContentUrlCreate(DeprecatedModelMutation):
+class DigitalContentUrlCreate(ModelMutation):
     class Arguments:
         input = DigitalContentUrlCreateInput(
             required=True, description="Fields required to create a new url."

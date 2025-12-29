@@ -1,5 +1,5 @@
-import datetime
 import json
+from datetime import datetime
 from decimal import Decimal
 from functools import partial
 from unittest import mock
@@ -11,7 +11,9 @@ import graphene
 import pytest
 from celery.exceptions import MaxRetriesExceededError
 from celery.exceptions import Retry as CeleryTaskRetryError
+from django.contrib.sites.models import Site
 from django.core.serializers import serialize
+from django.utils import timezone
 from freezegun import freeze_time
 from kombu.asynchronous.aws.sqs.connection import AsyncSQSConnection
 from requests import RequestException
@@ -30,17 +32,12 @@ from ....core.notification.utils import get_site_context
 from ....core.notify import NotifyEventType
 from ....core.tokens import token_generator
 from ....core.utils.url import prepare_url
-from ....discount import DiscountType, DiscountValueType, RewardType, RewardValueType
+from ....discount import RewardType, RewardValueType
 from ....discount.interface import VariantPromotionRuleInfo
 from ....discount.utils.checkout import (
     create_or_update_discount_objects_from_promotion_for_checkout,
 )
-from ....graphql.discount.enums import DiscountValueTypeEnum
 from ....graphql.discount.utils import convert_migrated_sale_predicate_to_catalogue_info
-from ....graphql.order.tests.mutations.test_order_discount import ORDER_DISCOUNT_UPDATE
-from ....graphql.product.tests.mutations.test_product_create import (
-    CREATE_PRODUCT_MUTATION,
-)
 from ....payment import TransactionAction, TransactionEventType
 from ....payment.interface import TransactionActionData
 from ....payment.models import TransactionItem
@@ -133,6 +130,7 @@ def test_trigger_webhooks_for_event_calls_expected_events(
     assert urls_called == expected_target_urls
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_created(
@@ -161,6 +159,7 @@ def test_order_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_confirmed(
@@ -190,6 +189,7 @@ def test_order_confirmed(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_draft_order_created(
@@ -219,6 +219,7 @@ def test_draft_order_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_draft_order_deleted(
@@ -248,6 +249,7 @@ def test_draft_order_deleted(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_draft_order_updated(
@@ -277,6 +279,7 @@ def test_draft_order_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_customer_created(
@@ -305,6 +308,7 @@ def test_customer_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_customer_updated(
@@ -333,6 +337,7 @@ def test_customer_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_customer_metadata_updated(
@@ -361,6 +366,7 @@ def test_customer_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_fully_paid(
@@ -389,6 +395,7 @@ def test_order_fully_paid(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_paid(
@@ -422,6 +429,7 @@ def test_order_paid(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_refunded(
@@ -455,6 +463,7 @@ def test_order_refunded(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_fully_refunded(
@@ -488,6 +497,7 @@ def test_order_fully_refunded(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_collection_created(
@@ -516,6 +526,7 @@ def test_collection_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_collection_updated(
@@ -544,6 +555,7 @@ def test_collection_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_collection_deleted(
@@ -572,6 +584,7 @@ def test_collection_deleted(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_collection_metadata_updated(
@@ -601,6 +614,7 @@ def test_collection_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_created(
@@ -629,6 +643,7 @@ def test_product_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_updated(
@@ -657,6 +672,7 @@ def test_product_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_deleted(
@@ -701,6 +717,7 @@ def test_product_deleted(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_metadata_updated(
@@ -730,6 +747,7 @@ def test_product_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_created(
@@ -758,6 +776,7 @@ def test_product_variant_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_updated(
@@ -786,6 +805,7 @@ def test_product_variant_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_deleted(
@@ -814,6 +834,7 @@ def test_product_variant_deleted(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_metadata_updated(
@@ -843,6 +864,7 @@ def test_product_variant_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_out_of_stock(
@@ -873,6 +895,7 @@ def test_product_variant_out_of_stock(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_product_variant_back_in_stock(
@@ -943,6 +966,7 @@ def test_product_variant_stocks_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_updated(
@@ -972,6 +996,7 @@ def test_order_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_cancelled(
@@ -1001,6 +1026,7 @@ def test_order_cancelled(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_expired(
@@ -1030,6 +1056,7 @@ def test_order_expired(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_order_metadata_updated(
@@ -1059,6 +1086,7 @@ def test_order_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_checkout_created(
@@ -1100,7 +1128,7 @@ def test_checkout_payload_includes_promotions(
     variant = checkout_lines[0].variant
     channel_listing = variant.channel_listings.first()
 
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     rule = catalogue_promotion_without_rules.rules.create(
         name="Percentage promotion rule",
         catalogue_predicate={
@@ -1165,7 +1193,7 @@ def test_checkout_payload_includes_order_promotion_discount(
     variant = checkout_lines[0].variant
     channel_listing = variant.channel_listings.first()
 
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     rule = catalogue_promotion_without_rules.rules.create(
         name="Fixed promotion rule",
         order_predicate={
@@ -1206,6 +1234,7 @@ def test_checkout_payload_includes_order_promotion_discount(
     assert Decimal(data[0]["lines"][0]["base_price"]) == variant_price.amount
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_checkout_updated(
@@ -1269,40 +1298,7 @@ def test_checkout_fully_paid(
     )
 
 
-@freeze_time("2014-06-28 10:50")
-@mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
-@mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
-def test_checkout_fully_authorized(
-    mocked_webhook_trigger,
-    mocked_get_webhooks_for_event,
-    any_webhook,
-    settings,
-    checkout_with_items,
-):
-    # given
-    mocked_get_webhooks_for_event.return_value = [any_webhook]
-    settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
-    manager = get_plugins_manager(allow_replica=False)
-
-    # when
-    manager.checkout_fully_authorized(checkout_with_items)
-
-    # then
-    mocked_webhook_trigger.assert_called_once_with(
-        None,
-        WebhookEventAsyncType.CHECKOUT_FULLY_AUTHORIZED,
-        [any_webhook],
-        checkout_with_items,
-        None,
-        legacy_data_generator=ANY,
-        allow_replica=False,
-        queue=settings.CHECKOUT_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-    )
-    assert isinstance(
-        mocked_webhook_trigger.call_args.kwargs["legacy_data_generator"], partial
-    )
-
-
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_checkout_metadata_updated(
@@ -1332,6 +1328,7 @@ def test_checkout_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_page_created(
@@ -1356,6 +1353,7 @@ def test_page_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_page_updated(
@@ -1380,6 +1378,7 @@ def test_page_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_page_deleted(
@@ -1407,6 +1406,7 @@ def test_page_deleted(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_invoice_request(
@@ -1436,6 +1436,7 @@ def test_invoice_request(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_invoice_delete(
@@ -1465,6 +1466,7 @@ def test_invoice_delete(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_invoice_sent(
@@ -1524,6 +1526,7 @@ def test_fulfillment_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_gift_card_metadata_updated(
@@ -1553,6 +1556,7 @@ def test_gift_card_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_voucher_metadata_updated(
@@ -1582,6 +1586,7 @@ def test_voucher_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_shop_metadata_updated(
@@ -1612,6 +1617,7 @@ def test_shop_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_shipping_zone_metadata_updated(
@@ -1641,6 +1647,7 @@ def test_shipping_zone_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_warehouse_metadata_updated(
@@ -1670,6 +1677,7 @@ def test_warehouse_metadata_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_transaction_item_metadata_updated(
@@ -1713,7 +1721,9 @@ def test_notify_user(
     mocked_get_webhooks_for_event.return_value = [any_webhook]
     settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
     manager = get_plugins_manager(True, lambda: customer_user)
-    timestamp = datetime.datetime(2020, 3, 18, 12, 0, tzinfo=datetime.UTC).isoformat()
+    timestamp = timezone.make_aware(
+        datetime.strptime("2020-03-18 12:00", "%Y-%m-%d %H:%M"), timezone.utc
+    ).isoformat()
 
     redirect_url = "http://redirect.com/"
     send_account_confirmation(customer_user, redirect_url, manager, channel_USD.slug)
@@ -1794,6 +1804,7 @@ def test_create_event_payload_reference_with_error(
     assert payload.payload_file
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_sale_created(
@@ -1828,6 +1839,7 @@ def test_sale_created(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_sale_updated(
@@ -1874,6 +1886,7 @@ def test_sale_updated(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_webhooks_async")
 def test_sale_deleted(
@@ -1943,7 +1956,7 @@ def test_sale_toggle(
     )
 
 
-@mock.patch("saleor.plugins.webhook.plugin.send_webhook_request_async.apply_async")
+@mock.patch("saleor.plugins.webhook.plugin.send_webhook_request_async.delay")
 def test_event_delivery_retry(mocked_webhook_send, event_delivery, settings):
     # given
     settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
@@ -1953,11 +1966,7 @@ def test_event_delivery_retry(mocked_webhook_send, event_delivery, settings):
     manager.event_delivery_retry(event_delivery)
 
     # then
-    mocked_webhook_send.assert_called_once_with(
-        kwargs={"event_delivery_id": event_delivery.pk, "telemetry_context": ANY},
-        queue=settings.WEBHOOK_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.test",
-    )
+    mocked_webhook_send.assert_called_once_with(event_delivery.pk)
 
 
 @mock.patch(
@@ -1988,7 +1997,7 @@ def test_send_webhook_request_async_with_success_response(
     # then
     mocked_send_response.assert_called_once_with(
         event_delivery.webhook.target_url,
-        "example.com",
+        "mirumee.com",
         event_delivery.webhook.secret_key,
         event_delivery.event_type,
         event_delivery.payload.get_payload().encode("utf-8"),
@@ -2097,8 +2106,8 @@ def test_send_webhook_request_async_when_event_delivery_is_missing(
         pass
 
     # then
-    assert not mocked_clear_delivery.called
-    assert not mocked_observability.called
+    mocked_clear_delivery.assert_not_called()
+    mocked_observability.assert_not_called()
     mocked_retry.assert_called_once()
 
 
@@ -2127,7 +2136,7 @@ def test_transaction_charge_requested(
         available_actions=["capture", "void"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app.identifier,
         app=app,
     )
@@ -2154,6 +2163,7 @@ def test_transaction_charge_requested(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_transaction_request")
 def test_transaction_refund_requested(
@@ -2180,7 +2190,7 @@ def test_transaction_refund_requested(
         ],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app.identifier,
         app=app,
     )
@@ -2207,6 +2217,7 @@ def test_transaction_refund_requested(
     )
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_transaction_request")
 def test_transaction_refund_requested_missing_app_owner_updated_refundable_for_checkout(
@@ -2235,7 +2246,7 @@ def test_transaction_refund_requested_missing_app_owner_updated_refundable_for_c
         ],
         currency="USD",
         checkout_id=checkout.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app.identifier,
         app=app,
     )
@@ -2259,6 +2270,7 @@ def test_transaction_refund_requested_missing_app_owner_updated_refundable_for_c
     assert checkout.automatically_refundable is False
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_transaction_request")
 def test_transaction_cancel_requested_missing_app_owner_updated_refundable_for_checkout(
@@ -2287,7 +2299,7 @@ def test_transaction_cancel_requested_missing_app_owner_updated_refundable_for_c
         ],
         currency="USD",
         checkout_id=checkout.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app.identifier,
         app=app,
     )
@@ -2311,6 +2323,7 @@ def test_transaction_cancel_requested_missing_app_owner_updated_refundable_for_c
     assert checkout.automatically_refundable is False
 
 
+@freeze_time("1914-06-28 10:50")
 @mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
 @mock.patch("saleor.plugins.webhook.plugin.trigger_transaction_request")
 def test_transaction_cancelation_requested(
@@ -2337,7 +2350,7 @@ def test_transaction_cancelation_requested(
         ],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app.identifier,
         app=app,
     )
@@ -2399,7 +2412,7 @@ def test_send_webhook_request_async_with_request_exception(
     event_payload = event_delivery.payload
     data = event_payload.get_payload()
     webhook = event_delivery.webhook
-    domain = "example.com"
+    domain = Site.objects.get_current().domain
     message = data.encode("utf-8")
     signature = signature_for_payload(message, webhook.secret_key)
     expected_request_headers = generate_request_headers(
@@ -2462,96 +2475,3 @@ def test_is_event_active(settings, webhook, permission_manage_orders):
 
     # then
     assert is_active == expected_is_active
-
-
-@mock.patch("saleor.webhook.transport.synchronous.transport.send_webhook_request_sync")
-@mock.patch("saleor.webhook.transport.synchronous.transport.get_webhooks_for_event")
-@mock.patch(
-    "saleor.webhook.transport.synchronous.transport.generate_payload_from_subscription"
-)
-def test_trigger_webhook_sync_with_subscription_within_mutation_use_default_db(
-    mocked_generate_payload,
-    mocked_get_webhooks_for_event,
-    mocked_request,
-    draft_order,
-    app_api_client,
-    permission_manage_orders,
-    settings,
-    subscription_calculate_taxes_for_order,
-):
-    # given
-    webhook = subscription_calculate_taxes_for_order
-    settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
-    mocked_get_webhooks_for_event.return_value = [webhook]
-
-    order_discount = draft_order.discounts.create(
-        value_type=DiscountValueType.FIXED,
-        value=Decimal(10),
-        amount_value=Decimal(10),
-        currency=draft_order.currency,
-        type=DiscountType.MANUAL,
-    )
-
-    variables = {
-        "discountId": graphene.Node.to_global_id("OrderDiscount", order_discount.pk),
-        "input": {
-            "valueType": DiscountValueTypeEnum.PERCENTAGE.name,
-            "value": Decimal(50),
-        },
-    }
-
-    app_api_client.app.permissions.add(permission_manage_orders)
-
-    # when
-    app_api_client.post_graphql(ORDER_DISCOUNT_UPDATE, variables)
-
-    # then
-    mocked_generate_payload.assert_called_once()
-    assert not mocked_generate_payload.call_args[1]["request"].allow_replica
-
-
-@mock.patch(
-    "saleor.webhook.transport.asynchronous.transport.send_webhook_request_async"
-)
-@mock.patch("saleor.plugins.webhook.plugin.get_webhooks_for_event")
-@mock.patch(
-    "saleor.webhook.transport.asynchronous.transport.generate_payload_from_subscription"
-)
-def test_trigger_webhook_async_with_subscription_use_main_db(
-    mocked_generate_payload,
-    mocked_get_webhooks_for_event,
-    mocked_request,
-    staff_api_client,
-    product_type,
-    category,
-    permission_manage_products,
-    subscription_product_created_webhook,
-    settings,
-):
-    # given
-    webhook = subscription_product_created_webhook
-    settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
-    mocked_get_webhooks_for_event.return_value = [webhook]
-
-    product_type_id = graphene.Node.to_global_id("ProductType", product_type.pk)
-    category_id = graphene.Node.to_global_id("Category", category.pk)
-    product_name = "test name"
-    product_slug = "product-test-slug"
-
-    variables = {
-        "input": {
-            "productType": product_type_id,
-            "category": category_id,
-            "name": product_name,
-            "slug": product_slug,
-        }
-    }
-
-    # when
-    staff_api_client.post_graphql(
-        CREATE_PRODUCT_MUTATION, variables, permissions=[permission_manage_products]
-    )
-
-    # then
-    mocked_generate_payload.assert_called_once()
-    assert not mocked_generate_payload.call_args[1]["request"].allow_replica

@@ -95,7 +95,7 @@ def test_app_fetch_manifest(staff_api_client, staff_user, permission_manage_apps
     assert manifest["dataPrivacyUrl"] == "http://localhost:8888/app-data-privacy"
     assert manifest["homepageUrl"] == "http://localhost:8888/homepage"
     assert manifest["supportUrl"] == "http://localhost:8888/support"
-    assert {perm["code"] for perm in manifest["permissions"]} == {
+    assert set([perm["code"] for perm in manifest["permissions"]]) == {
         "MANAGE_ORDERS",
         "MANAGE_USERS",
     }
@@ -271,7 +271,7 @@ def test_app_fetch_manifest_handle_exception(
     staff_user, staff_api_client, permission_manage_apps, monkeypatch
 ):
     mocked_get = Mock()
-    mocked_get.side_effect = OSError("oops")
+    mocked_get.side_effect = Exception()
 
     monkeypatch.setattr(HTTPSession, "request", mocked_get)
     manifest_url = "http://localhost:3000/manifest-wrong-format"
@@ -438,11 +438,6 @@ def test_app_fetch_manifest_extensions_incorrect_enum_values(
         ("/app", AppExtensionTargetEnum.APP_PAGE.name, ""),
         ("/app", AppExtensionTargetEnum.APP_PAGE.name, "https://www.example.com/app"),
         ("/app", AppExtensionTargetEnum.POPUP.name, "https://www.example.com/app"),
-        (
-            "https://www.example.com/app/form",
-            AppExtensionTargetEnum.NEW_TAB.name,
-            "https://www.example.com/app",
-        ),
     ],
 )
 def test_app_fetch_manifest_extensions_correct_url(

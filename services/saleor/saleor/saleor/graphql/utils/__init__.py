@@ -2,7 +2,7 @@ import hashlib
 import logging
 import traceback
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 from uuid import UUID
 
 import graphene
@@ -61,7 +61,7 @@ def resolve_global_ids_to_primary_keys(
     ids: Iterable[str], graphene_type=None, raise_error: bool = False
 ):
     pks = []
-    invalid_ids: list[str] = []
+    invalid_ids = []
     used_type = graphene_type
 
     for graphql_id in ids:
@@ -99,12 +99,11 @@ def _resolve_graphene_type(schema, type_name):
 
 def get_nodes(
     ids,
-    graphene_type: graphene.ObjectType | str | None = None,
+    graphene_type: Union[graphene.ObjectType, str, None] = None,
     model=None,
     qs=None,
     schema=None,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    prefetch_related: Iterable[str] | None = None,
 ):
     """Return a list of nodes.
 
@@ -132,15 +131,11 @@ def get_nodes(
     elif model is not None:
         qs = model.objects.using(database_connection_name)
 
-    if prefetch_related is None:
-        prefetch_related = []
     is_object_type_with_double_id = str(graphene_type) in TYPES_WITH_DOUBLE_ID_AVAILABLE
     if is_object_type_with_double_id:
-        nodes = _get_node_for_types_with_double_id(
-            qs, pks, graphene_type, prefetch_related
-        )
+        nodes = _get_node_for_types_with_double_id(qs, pks, graphene_type)
     else:
-        nodes = list(qs.filter(pk__in=pks).prefetch_related(*prefetch_related))
+        nodes = list(qs.filter(pk__in=pks))
         nodes.sort(key=lambda e: pks.index(str(e.pk)))  # preserve order in pks
 
     if not nodes:
@@ -151,13 +146,13 @@ def get_nodes(
         old_id_field = "number" if str(graphene_type) == "Order" else "old_id"
         nodes_pk_list.extend([str(getattr(node, old_id_field)) for node in nodes])
     for pk in pks:
-        assert pk in nodes_pk_list, (
-            f"There is no node of type {graphene_type} with pk {pk}"
-        )
+        assert (
+            pk in nodes_pk_list
+        ), f"There is no node of type {graphene_type} with pk {pk}"
     return nodes
 
 
-def _get_node_for_types_with_double_id(qs, pks, graphene_type, prefetch_related):
+def _get_node_for_types_with_double_id(qs, pks, graphene_type):
     uuid_pks = []
     old_pks = []
     is_order_type = str(graphene_type) == "Order"
@@ -171,7 +166,7 @@ def _get_node_for_types_with_double_id(qs, pks, graphene_type, prefetch_related)
         lookup = Q(id__in=uuid_pks) | (Q(use_old_id=True) & Q(number__in=old_pks))
     else:
         lookup = Q(id__in=uuid_pks) | (Q(old_id__isnull=False) & Q(old_id__in=old_pks))
-    nodes = list(qs.filter(lookup).prefetch_related(*prefetch_related))
+    nodes = list(qs.filter(lookup))
     old_id_field = "number" if is_order_type else "old_id"
     return sorted(
         nodes,
@@ -201,7 +196,7 @@ def format_permissions_for_display(permissions):
     return formatted_permissions
 
 
-def get_user_or_app_from_context(context: "SaleorContext") -> App | User | None:
+def get_user_or_app_from_context(context: "SaleorContext") -> Union[App, User, None]:
     # order is important
     # app can be None but user if None then is passed as anonymous
     return context.app or context.user
@@ -213,7 +208,7 @@ def requestor_is_superuser(requestor):
 
 
 def query_identifier(document: GraphQLDocument) -> str:
-    """Generate a identifier for a GraphQL query.
+    """Generate a fingerprint for a GraphQL query.
 
     For queries identifier is sorted set of all root objects separated by `,`.
     e.g
@@ -295,7 +290,7 @@ def format_error(error, handled_exceptions, query=None):
     if query:
         exc._exc_query = query
     if isinstance(exc, handled_exceptions):
-        handled_errors_logger.debug("A query had an error", exc_info=exc)
+        handled_errors_logger.info("A query had an error", exc_info=exc)
     else:
         unhandled_errors_logger.error("A query failed unexpectedly", exc_info=exc)
 
@@ -303,7 +298,7 @@ def format_error(error, handled_exceptions, query=None):
     # the API. This prevents from leaking internals that might be included in Python
     # exceptions' error messages.
     is_allowed_err = type(exc) in ALLOWED_ERRORS or any(
-        isinstance(exc, allowed_err) for allowed_err in ALLOWED_ERRORS
+        [isinstance(exc, allowed_err) for allowed_err in ALLOWED_ERRORS]
     )
     if not is_allowed_err and not settings.DEBUG:
         result["message"] = INTERNAL_ERROR_MESSAGE

@@ -11,11 +11,6 @@ mutation OrderDraftCreate($input: DraftOrderCreateInput!) {
     order {
       id
       created
-      status
-      user {
-        id
-        email
-      }
       discounts {
         amount {
           amount
@@ -46,7 +41,6 @@ mutation OrderDraftCreate($input: DraftOrderCreateInput!) {
         ... BaseTaxedMoney
       }
       lines {
-        id
         productVariantId
         quantity
         undiscountedUnitPrice {
@@ -61,10 +55,6 @@ mutation OrderDraftCreate($input: DraftOrderCreateInput!) {
         totalPrice {
           ... BaseTaxedMoney
         }
-        unitDiscount {
-            amount
-        }
-        unitDiscountReason
       }
     }
   }

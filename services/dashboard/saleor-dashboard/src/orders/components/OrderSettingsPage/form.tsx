@@ -1,7 +1,7 @@
 import { OrderSettingsFragment, ShopOrderSettingsFragment } from "@dashboard/graphql";
 import useForm, { CommonUseFormResult, SubmitPromise } from "@dashboard/hooks/useForm";
 import useHandleFormSubmit from "@dashboard/hooks/useHandleFormSubmit";
-import * as React from "react";
+import React from "react";
 
 export interface OrderSettingsFormData {
   automaticallyConfirmAllNewOrders: boolean;
@@ -10,8 +10,8 @@ export interface OrderSettingsFormData {
   automaticallyFulfillNonShippableGiftCard: boolean;
 }
 
-type UseOrderSettingsFormResult = CommonUseFormResult<OrderSettingsFormData>;
-interface OrderSettingsFormProps {
+export type UseOrderSettingsFormResult = CommonUseFormResult<OrderSettingsFormData>;
+export interface OrderSettingsFormProps {
   children: (props: UseOrderSettingsFormResult) => React.ReactNode;
   orderSettings: OrderSettingsFragment;
   shop: ShopOrderSettingsFragment;
@@ -61,13 +61,13 @@ function useOrderSettingsForm(
   };
 }
 
-const OrderSettingsForm = ({
+const OrderSettingsForm: React.FC<OrderSettingsFormProps> = ({
   children,
   orderSettings,
   shop,
   onSubmit,
   disabled,
-}: OrderSettingsFormProps) => {
+}) => {
   const props = useOrderSettingsForm(orderSettings, shop, onSubmit, disabled);
 
   return <form onSubmit={props.submit}>{children(props)}</form>;

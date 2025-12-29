@@ -1,4 +1,5 @@
 import { Box, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 
 interface TooltipContainerProps {
   clearTooltip: () => void;
@@ -11,7 +12,11 @@ interface TooltipContainerProps {
   };
 }
 
-export const TooltipContainer = ({ title, bounds, clearTooltip }: TooltipContainerProps) => {
+export const TooltipContainer: React.FC<TooltipContainerProps> = ({
+  title,
+  bounds,
+  clearTooltip,
+}) => {
   if (!bounds || !title) {
     return null;
   }

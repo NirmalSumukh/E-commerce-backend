@@ -34,7 +34,7 @@ export const getExpiryPeriodTerminationDate = (
   }
 };
 
-const getGiftCardExpiryError = (intl: IntlShape): IMessage => ({
+export const getGiftCardExpiryError = (intl: IntlShape): IMessage => ({
   title: intl.formatMessage(giftCardUpdateFormMessages.giftCardInvalidExpiryDateHeader),
   text: intl.formatMessage(giftCardUpdateFormMessages.giftCardInvalidExpiryDateContent),
   status: "error",

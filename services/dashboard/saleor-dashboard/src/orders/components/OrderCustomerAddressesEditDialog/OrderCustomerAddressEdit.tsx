@@ -9,7 +9,7 @@ import { FormChange } from "@dashboard/hooks/useForm";
 import { getById } from "@dashboard/misc";
 import { FormControlLabel, Radio, RadioGroup } from "@material-ui/core";
 import { Box, Option, Skeleton } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { AddressInputOptionEnum } from "./form";
@@ -33,7 +33,7 @@ export interface OrderCustomerAddressEditProps {
   showCard?: boolean;
 }
 
-const OrderCustomerAddressEdit = (props: OrderCustomerAddressEditProps) => {
+const OrderCustomerAddressEdit: React.FC<OrderCustomerAddressEditProps> = props => {
   const {
     loading,
     customerAddresses,

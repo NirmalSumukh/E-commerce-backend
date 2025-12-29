@@ -2,19 +2,19 @@ import { defineMessages } from "react-intl";
 
 export const giftCardsListHeaderMenuItemsMessages = defineMessages({
   settings: {
-    id: "yhq0gU",
+    id: "F69lwk",
     defaultMessage: "Settings",
-    description: "settings structure item",
+    description: "settings menu item",
   },
   bulkIssue: {
-    id: "sDMNfc",
+    id: "9hab/1",
     defaultMessage: "Bulk Issue",
-    description: "bulk issue structure item",
+    description: "bulk issue menu item",
   },
   exportCodes: {
-    id: "JJ3PCA",
+    id: "exvX+Z",
     defaultMessage: "Export card codes",
-    description: "export card codes structure item",
+    description: "export card codes menu item",
   },
   issueButtonLabel: {
     id: "RfPJ1E",

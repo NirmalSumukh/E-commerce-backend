@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import cast
+from typing import Optional, cast
 
 from . import TransactionEventType
 from .models import TransactionEvent, TransactionItem
@@ -10,24 +10,24 @@ from .models import TransactionEvent, TransactionItem
 
 @dataclass
 class BaseEvent:
-    request: TransactionEvent | None = None
-    success: TransactionEvent | None = None
-    failure: TransactionEvent | None = None
+    request: Optional[TransactionEvent] = None
+    success: Optional[TransactionEvent] = None
+    failure: Optional[TransactionEvent] = None
 
 
 @dataclass
 class AuthorizationEvents(BaseEvent):
-    adjustment: TransactionEvent | None = None
+    adjustment: Optional[TransactionEvent] = None
 
 
 @dataclass
 class ChargeEvents(BaseEvent):
-    back: TransactionEvent | None = None
+    back: Optional[TransactionEvent] = None
 
 
 @dataclass
 class RefundEvents(BaseEvent):
-    reverse: TransactionEvent | None = None
+    reverse: Optional[TransactionEvent] = None
 
 
 @dataclass
@@ -62,9 +62,9 @@ class ActionEventMap:
 
 
 def _should_increase_pending_amount(
-    request: TransactionEvent | None,
-    success: TransactionEvent | None,
-    failure: TransactionEvent | None,
+    request: Optional[TransactionEvent],
+    success: Optional[TransactionEvent],
+    failure: Optional[TransactionEvent],
 ) -> bool:
     if request:
         # the pending amount should be increased only when we don't
@@ -75,7 +75,7 @@ def _should_increase_pending_amount(
 
 
 def _should_increse_amount(
-    success: TransactionEvent | None, failure: TransactionEvent | None
+    success: Optional[TransactionEvent], failure: Optional[TransactionEvent]
 ) -> bool:
     if success and failure:
         # in case of having success and failure events for the same psp reference
@@ -90,12 +90,12 @@ def _should_increse_amount(
 
 def _recalculate_base_amounts(
     transaction: TransactionItem,
-    request: TransactionEvent | None,
-    success: TransactionEvent | None,
-    failure: TransactionEvent | None,
+    request: Optional[TransactionEvent],
+    success: Optional[TransactionEvent],
+    failure: Optional[TransactionEvent],
     pending_amount_field_name: str,
     amount_field_name: str,
-    previous_amount_field_name: str | None,
+    previous_amount_field_name: Optional[str],
 ):
     if _should_increase_pending_amount(request, success, failure):
         request = cast(TransactionEvent, request)
@@ -215,7 +215,7 @@ def _get_authorize_events(events: Iterable[TransactionEvent]) -> list[Transactio
     authorize_events: list[TransactionEvent] = [
         event for event in events if event.type in AUTHORIZATION_EVENTS
     ]
-    auth_adjustment_event: TransactionEvent | None = next(
+    auth_adjustment_event: Optional[TransactionEvent] = next(
         (
             event
             for event in reversed(authorize_events)
@@ -315,15 +315,15 @@ def _initilize_action_map(events: Iterable[TransactionEvent]) -> ActionEventMap:
 
 
 def _set_transaction_amounts_to_zero(transaction: TransactionItem):
-    transaction.authorized_value = Decimal(0)
-    transaction.charged_value = Decimal(0)
-    transaction.refunded_value = Decimal(0)
-    transaction.canceled_value = Decimal(0)
+    transaction.authorized_value = Decimal("0")
+    transaction.charged_value = Decimal("0")
+    transaction.refunded_value = Decimal("0")
+    transaction.canceled_value = Decimal("0")
 
-    transaction.authorize_pending_value = Decimal(0)
-    transaction.charge_pending_value = Decimal(0)
-    transaction.refund_pending_value = Decimal(0)
-    transaction.cancel_pending_value = Decimal(0)
+    transaction.authorize_pending_value = Decimal("0")
+    transaction.charge_pending_value = Decimal("0")
+    transaction.refund_pending_value = Decimal("0")
+    transaction.cancel_pending_value = Decimal("0")
 
 
 def calculate_transaction_amount_based_on_events(transaction: TransactionItem):
@@ -378,9 +378,9 @@ def recalculate_transaction_amounts(transaction: TransactionItem, save: bool = T
     """
     calculate_transaction_amount_based_on_events(transaction)
 
-    transaction.authorized_value = max(transaction.authorized_value, Decimal(0))
+    transaction.authorized_value = max(transaction.authorized_value, Decimal("0"))
     transaction.authorize_pending_value = max(
-        transaction.authorize_pending_value, Decimal(0)
+        transaction.authorize_pending_value, Decimal("0")
     )
 
     if save:

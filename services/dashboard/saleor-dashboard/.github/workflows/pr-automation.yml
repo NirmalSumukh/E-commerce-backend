@@ -2,7 +2,7 @@ name: PR automation
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
     inputs:
       shards:
@@ -10,25 +10,20 @@ on:
         description: "Number of shards to use for parallel testing"
         required: false
         default: 2 # This is the default only for manually (re-)triggered runs. Default for runs triggered by pull requests is configured via `jobs.initialize-cloud.generate-shard-matrix.env.CONCURRENCY`.
-      API_URL:
-        type: string
-        description: "Custom API URL to use instead of cloud-generated one (optional)"
-        required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   initialize-cloud:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'test deployment') }}
     runs-on: ubuntu-22.04
     outputs:
       POOL_NAME: ${{ steps.cloud_variables.outputs.POOL_NAME }}
       POOL_INSTANCE: ${{ steps.cloud_variables.outputs.POOL_INSTANCE }}
       BASE_URL: ${{ steps.cloud_variables.outputs.BASE_URL }}
       BASE_URL_DOMAIN: ${{ steps.cloud_variables.outputs.BASE_URL_DOMAIN }}
-      API_URL: ${{ inputs.API_URL || steps.cloud_variables.outputs.API_URL }}
+      API_URL: ${{ steps.cloud_variables.outputs.API_URL }}
       BACKUP_ID: ${{ steps.cloud_variables.outputs.BACKUP_ID }}
       BACKUP_VER: ${{ steps.cloud_variables.outputs.BACKUP_VER }}
       BACKUP_NAME: ${{ steps.cloud_variables.outputs.BACKUP_NAME }}
@@ -62,7 +57,7 @@ jobs:
           STRATEGY: reload
           CLI_TOKEN: ${{ env.STAGING_TOKEN }}
           BASE_URL: ${{ steps.cloud_variables.outputs.BASE_URL }}
-          API_URL: ${{ inputs.API_URL || steps.cloud_variables.outputs.API_URL }}
+          API_URL: ${{ steps.cloud_variables.outputs.API_URL }}
           POOL_NAME: ${{ steps.cloud_variables.outputs.POOL_NAME }}
           POOL_INSTANCE: ${{ steps.cloud_variables.outputs.POOL_INSTANCE }}
           BACKUP_ID: ${{ steps.cloud_variables.outputs.BACKUP_ID }}
@@ -92,9 +87,9 @@ jobs:
     runs-on: ubuntu-22.04
     needs: initialize-cloud
     permissions:
-      deployments: write
       id-token: write # needed by aws-actions/configure-aws-credentials
       contents: read
+      deployments: write
     steps:
       - uses: actions/checkout@v4
 
@@ -228,8 +223,6 @@ jobs:
           DASHBOARD_VERSION: ${{ needs.initialize-cloud.outputs.RUN_SLUG }}
           BRANCH_NAME: ${{ github.ref}}
           SALEOR_CLOUD_SERVICE: ${{ needs.initialize-cloud.outputs.SALEOR_CLOUD_SERVICE }}
-          BUILD_NUMBER: ${{ github.run_id }}
-          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   merge-reports:
     if: "!cancelled() && contains(github.event.pull_request.labels.*.name, 'run pw-e2e')"
@@ -239,17 +232,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Load secrets
-        uses: 1password/load-secrets-action@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2.0.0
-        id: load-secrets
-        with:
-          # Export loaded secrets as environment variables
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          SLACK_WEBHOOK_URL: "op://Continuous Integration/CTRF_SLACK_REPORT/password"
-
       - name: Merge playwright reports
         uses: ./.github/actions/merge-pw-reports
         with:
           PASSWORD_FOR_DECODING_ARTIFACT: ${{ secrets.TESTS_RESULT_PASSWORD }}
+
+      - name: Create flaky report
+        uses: ./.github/actions/flaky-tests-report
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push flaky report
+        uses: ./.github/actions/push-flaky-test-report
+        with:
+          VAULT_URL: ${{ secrets.VAULT_URL }}
+          VAULT_JWT: ${{ secrets.VAULT_JWT }}

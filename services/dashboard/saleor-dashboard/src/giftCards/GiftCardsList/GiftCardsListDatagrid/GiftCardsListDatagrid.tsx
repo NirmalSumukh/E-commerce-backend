@@ -5,7 +5,7 @@ import {
   DatagridChangeStateContext,
   useDatagridChangeState,
 } from "@dashboard/components/Datagrid/hooks/useDatagridChange";
-import { TablePagination } from "@dashboard/components/TablePagination";
+import TablePagination from "@dashboard/components/TablePagination";
 import { commonTooltipMessages } from "@dashboard/components/TooltipTableCellHeader/messages";
 import { giftCardListUrl, giftCardUrl } from "@dashboard/giftCards/urls";
 import { getPrevLocationState } from "@dashboard/hooks/useBackLinkWithState";
@@ -14,7 +14,7 @@ import usePaginator from "@dashboard/hooks/usePaginator";
 import { Item } from "@glideapps/glide-data-grid";
 import { Box, useTheme } from "@saleor/macaw-ui-next";
 import isEqual from "lodash/isEqual";
-import { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useLocation } from "react-router";
 

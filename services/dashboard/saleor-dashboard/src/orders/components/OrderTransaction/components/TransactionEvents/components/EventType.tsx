@@ -4,6 +4,7 @@ import { transactionEventTypeMap } from "@dashboard/orders/messages";
 import { TransactionEventType } from "@dashboard/orders/types";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, InfoIcon, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface EventTypeProps {

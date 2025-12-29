@@ -15,6 +15,7 @@ from .....permission.auth_filters import AuthorizationFilters
 from .....webhook.event_types import WebhookEventAsyncType
 from ....channel.utils import clean_channel
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_315, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.mutations import BaseMutation
 from ....core.types import SendConfirmationEmailError
@@ -28,16 +29,19 @@ class SendConfirmationEmail(BaseMutation):
         redirect_url = graphene.String(
             required=True,
             description=(
-                "Base of frontend URL that will be needed to create confirmation URL."
+                "Base of frontend URL that will be needed to create confirmation "
+                "URL."
             ),
         )
         channel = graphene.String(
             required=True,
-            description="Slug of a channel which will be used for notify user.",
+            description=("Slug of a channel which will be used for notify user."),
         )
 
     class Meta:
-        description = "Sends a notification confirmation."
+        description = (
+            "Sends a notification confirmation." + ADDED_IN_315 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_USERS
         error_type_class = SendConfirmationEmailError
         permissions = (AuthorizationFilters.AUTHENTICATED_USER,)
@@ -80,11 +84,11 @@ class SendConfirmationEmail(BaseMutation):
 
         try:
             validate_storefront_url(redirect_url)
-        except ValidationError as e:
+        except ValidationError as error:
             raise ValidationError(
-                {"redirect_url": e},
+                {"redirect_url": error},
                 code=SendConfirmationEmailErrorCode.INVALID.value,
-            ) from e
+            )
 
         return user
 

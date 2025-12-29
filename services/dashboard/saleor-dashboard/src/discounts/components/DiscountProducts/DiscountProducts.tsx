@@ -13,6 +13,7 @@ import { productUrl } from "@dashboard/products/urls";
 import { TableBody, TableCell, TableFooter } from "@material-ui/core";
 import { DeleteIcon, IconButton } from "@saleor/macaw-ui";
 import { Button, Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { maybe, renderCollection } from "../../../misc";
@@ -20,14 +21,14 @@ import { ListActions, ListProps } from "../../../types";
 import { messages } from "./messages";
 import { useStyles } from "./styles";
 
-interface SaleProductsProps extends ListProps, ListActions {
+export interface SaleProductsProps extends ListProps, ListActions {
   products: SearchProductFragment[];
   onProductAssign: () => void;
   onProductUnassign: (id: string) => void;
 }
 
 const numberOfColumns = 5;
-const DiscountProducts = (props: SaleProductsProps) => {
+const DiscountProducts: React.FC<SaleProductsProps> = props => {
   const {
     products,
     disabled,
@@ -140,10 +141,7 @@ const DiscountProducts = (props: SaleProductsProps) => {
                           onProductUnassign(product.id);
                         }}
                       >
-                        <DeleteIcon
-                          onPointerEnterCapture={undefined}
-                          onPointerLeaveCapture={undefined}
-                        />
+                        <DeleteIcon />
                       </IconButton>
                     </TableButtonWrapper>
                   </TableCell>

@@ -11,6 +11,7 @@ import { ChannelError, getFormChannelError, getFormChannelErrors } from "@dashbo
 import getShippingErrorMessage from "@dashboard/utils/errors/shipping";
 import { TableBody, TableCell } from "@material-ui/core";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStyles } from "./styles";
@@ -20,7 +21,7 @@ interface Value {
   minValue: string;
   price: string;
 }
-interface OrderValueProps {
+export interface OrderValueProps {
   channels: ChannelShippingData[];
   errors: ShippingChannelsErrorFragment[];
   disabled: boolean;
@@ -31,14 +32,14 @@ interface OrderValueProps {
 
 const numberOfColumns = 3;
 
-const OrderValue = ({
+export const OrderValue: React.FC<OrderValueProps> = ({
   channels,
   errors,
   orderValueRestricted,
   disabled,
   onChannelsChange,
   onChange,
-}: OrderValueProps) => {
+}) => {
   const classes = useStyles({});
   const intl = useIntl();
   const formErrors = getFormChannelErrors(

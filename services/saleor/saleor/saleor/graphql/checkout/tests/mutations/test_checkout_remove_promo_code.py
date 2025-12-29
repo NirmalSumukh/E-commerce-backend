@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -234,7 +234,7 @@ def test_checkout_remove_voucher_code_with_inactive_channel(
     checkout_updated_webhook_mock, api_client, checkout_with_voucher
 ):
     # given
-    checkout_with_voucher.price_expiration = timezone.now() + datetime.timedelta(days=2)
+    checkout_with_voucher.price_expiration = timezone.now() + timedelta(days=2)
     checkout_with_voucher.save(update_fields=["price_expiration"])
     previous_checkout_last_change = checkout_with_voucher.last_change
 
@@ -361,7 +361,7 @@ def test_checkout_remove_promo_code_invalid_promo_code(
     checkout_updated_webhook_mock, api_client, checkout_with_item
 ):
     # given
-    checkout_with_item.price_expiration = timezone.now() + datetime.timedelta(days=2)
+    checkout_with_item.price_expiration = timezone.now() + timedelta(days=2)
     checkout_with_item.save(update_fields=["price_expiration"])
     previous_checkout_last_change = checkout_with_item.last_change
     variables = {
@@ -439,7 +439,7 @@ def test_checkout_remove_voucher_code_by_id_wrong_voucher(
     # given
     assert checkout_with_voucher.voucher_code is not None
     checkout_with_voucher.gift_cards.add(gift_card)
-    checkout_with_voucher.price_expiration = timezone.now() + datetime.timedelta(days=2)
+    checkout_with_voucher.price_expiration = timezone.now() + timedelta(days=2)
     checkout_with_voucher.save(update_fields=["price_expiration"])
     previous_checkout_last_change = checkout_with_voucher.last_change
 
@@ -633,7 +633,7 @@ def test_checkout_remove_voucher_code_invalidates_price(
     checkout_updated_webhook_mock, api_client, checkout_with_item, voucher
 ):
     # given
-    checkout_with_item.price_expiration = timezone.now() + datetime.timedelta(days=2)
+    checkout_with_item.price_expiration = timezone.now() + timedelta(days=2)
     checkout_with_item.voucher_code = voucher.code
     checkout_with_item.save(update_fields=["voucher_code", "price_expiration"])
     manager = get_plugins_manager(allow_replica=False)
@@ -671,7 +671,7 @@ def test_checkout_remove_voucher_code_order_promotion_discount_applied(
 ):
     # given
     checkout = checkout_with_voucher
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     order_promotion_rule.reward_value = reward_value
     order_promotion_rule.reward_value_type = RewardValueType.FIXED
     order_promotion_rule.save(update_fields=["reward_value", "reward_value_type"])
@@ -803,7 +803,6 @@ def test_checkout_remove_triggers_webhooks(
     settings,
     api_client,
     checkout_with_voucher,
-    address,
 ):
     # given
     mocked_send_webhook_using_scheme_method.return_value = WebhookResponse(content="")
@@ -814,12 +813,6 @@ def test_checkout_remove_triggers_webhooks(
         shipping_filter_webhook,
         checkout_updated_webhook,
     ) = setup_checkout_webhooks(WebhookEventAsyncType.CHECKOUT_UPDATED)
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout_with_voucher.shipping_address = address
-    checkout_with_voucher.billing_address = address
-
-    checkout_with_voucher.save()
 
     variables = {
         "id": to_global_id_or_none(checkout_with_voucher),
@@ -871,8 +864,8 @@ def test_checkout_remove_voucher_code_voucher_inactive(
     previous_checkout_last_change = checkout_with_voucher.last_change
     voucher_code = checkout_with_voucher.voucher_code
     voucher = VoucherCode.objects.get(code=voucher_code).voucher
-    voucher.start_date = timezone.now() - datetime.timedelta(days=3)
-    voucher.end_date = timezone.now() - datetime.timedelta(days=1)
+    voucher.start_date = timezone.now() - timedelta(days=3)
+    voucher.end_date = timezone.now() - timedelta(days=1)
     voucher.save(update_fields=["start_date", "end_date"])
 
     variables = {

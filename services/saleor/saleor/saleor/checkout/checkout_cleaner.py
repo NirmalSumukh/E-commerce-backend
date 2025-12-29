@@ -1,6 +1,6 @@
-import datetime
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from datetime import date
+from typing import TYPE_CHECKING, Optional, Union
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 
 def clean_checkout_shipping(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
-    error_code: (
-        type[CheckoutErrorCode]
-        | type[PaymentErrorCode]
-        | type[OrderCreateFromCheckoutErrorCode]
-    ),
+    lines: Iterable["CheckoutLineInfo"],
+    error_code: Union[
+        type[CheckoutErrorCode],
+        type[PaymentErrorCode],
+        type[OrderCreateFromCheckoutErrorCode],
+    ],
 ):
-    delivery_method_info = checkout_info.get_delivery_method_info()
+    delivery_method_info = checkout_info.delivery_method_info
 
     if is_shipping_required(lines):
         if not delivery_method_info.delivery_method:
@@ -65,11 +65,11 @@ def clean_checkout_shipping(
 
 def clean_billing_address(
     checkout_info: "CheckoutInfo",
-    error_code: (
-        type[CheckoutErrorCode]
-        | type[PaymentErrorCode]
-        | type[OrderCreateFromCheckoutErrorCode]
-    ),
+    error_code: Union[
+        type[CheckoutErrorCode],
+        type[PaymentErrorCode],
+        type[OrderCreateFromCheckoutErrorCode],
+    ],
 ):
     if not checkout_info.billing_address:
         raise ValidationError(
@@ -85,9 +85,9 @@ def clean_billing_address(
 def clean_checkout_payment(
     manager: PluginsManager,
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
     error_code: type[CheckoutErrorCode],
-    last_payment: payment_models.Payment | None,
+    last_payment: Optional[payment_models.Payment],
 ):
     clean_billing_address(checkout_info, error_code)
     if not is_fully_paid(manager, checkout_info, lines):
@@ -110,7 +110,7 @@ def validate_checkout_email(checkout: models.Checkout):
 
 def _validate_gift_cards(checkout: Checkout):
     """Check if all gift cards assigned to checkout are available."""
-    today = datetime.datetime.now(tz=datetime.UTC).date()
+    today = date.today()
     all_gift_cards = GiftCard.objects.filter(checkouts=checkout.token).count()
     active_gift_cards = (
         GiftCard.objects.active(date=today).filter(checkouts=checkout.token).count()
@@ -122,7 +122,7 @@ def _validate_gift_cards(checkout: Checkout):
 
 def validate_checkout(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
     unavailable_variant_pks: Iterable[int],
     manager: "PluginsManager",
 ):
@@ -180,8 +180,8 @@ def validate_checkout(
     # can raise TaxError
     try:
         manager.preprocess_order_creation(checkout_info, lines)
-    except TaxError as e:
+    except TaxError as tax_error:
         raise ValidationError(
-            f"Unable to calculate taxes - {str(e)}",
+            f"Unable to calculate taxes - {str(tax_error)}",
             code=OrderCreateFromCheckoutErrorCode.TAX_ERROR.value,
-        ) from e
+        )

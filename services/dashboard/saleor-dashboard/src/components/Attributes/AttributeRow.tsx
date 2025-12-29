@@ -1,6 +1,8 @@
 // @ts-strict-ignore
 import { inputTypeMessages } from "@dashboard/attributes/components/AttributeDetails/messages";
 import { BasicAttributeRow } from "@dashboard/components/Attributes/BasicAttributeRow";
+import ExtendedAttributeRow from "@dashboard/components/Attributes/ExtendedAttributeRow";
+import { attributeRowMessages } from "@dashboard/components/Attributes/messages";
 import { SwatchRow } from "@dashboard/components/Attributes/SwatchRow";
 import {
   booleanAttrValueToValue,
@@ -19,14 +21,14 @@ import RichTextEditor from "@dashboard/components/RichTextEditor";
 import SortableChipsField from "@dashboard/components/SortableChipsField";
 import { AttributeInputTypeEnum } from "@dashboard/graphql";
 import { Box, Input, Select, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { Combobox, Multiselect } from "../Combobox";
 import { DateTimeField } from "../DateTimeField";
-import { SingleReferenceField } from "./SingleReferenceField";
 import { AttributeRowProps } from "./types";
 
-const AttributeRow = ({
+const AttributeRow: React.FC<AttributeRowProps> = ({
   attribute,
   attributeValues,
   disabled,
@@ -42,24 +44,18 @@ const AttributeRow = ({
   fetchMoreAttributeValues,
   onAttributeSelectBlur,
   richTextGetters,
-}: AttributeRowProps) => {
+}) => {
   const intl = useIntl();
 
   switch (attribute.data.inputType) {
-    case AttributeInputTypeEnum.SINGLE_REFERENCE:
-      return (
-        <SingleReferenceField
-          attribute={attribute}
-          disabled={disabled}
-          loading={loading}
-          error={error}
-          onReferencesAddClick={onReferencesAddClick}
-          onReferencesRemove={onReferencesRemove}
-        />
-      );
     case AttributeInputTypeEnum.REFERENCE:
       return (
-        <BasicAttributeRow label={attribute.label}>
+        <ExtendedAttributeRow
+          label={attribute.label}
+          selectLabel={intl.formatMessage(attributeRowMessages.reference)}
+          onSelect={() => onReferencesAddClick(attribute)}
+          disabled={disabled}
+        >
           <SortableChipsField
             values={getReferenceDisplayValue(attribute)}
             onValueDelete={value =>
@@ -72,10 +68,8 @@ const AttributeRow = ({
             loading={loading}
             error={!!error}
             helperText={getErrorMessage(error, intl)}
-            onAdd={() => onReferencesAddClick(attribute)}
-            disabled={disabled}
           />
-        </BasicAttributeRow>
+        </ExtendedAttributeRow>
       );
     case AttributeInputTypeEnum.FILE:
       return (

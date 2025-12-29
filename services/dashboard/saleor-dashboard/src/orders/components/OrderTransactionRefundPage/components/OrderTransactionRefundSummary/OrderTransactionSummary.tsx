@@ -1,7 +1,8 @@
 import { DashboardCard } from "@dashboard/components/Card";
 import Money from "@dashboard/components/Money";
 import { IMoney } from "@dashboard/utils/intl";
-import { Box, BoxProps, Checkbox, Input, Skeleton, Text, Tooltip } from "@saleor/macaw-ui-next";
+import { Box, Checkbox, Input, Skeleton, Text, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { Control, FieldError, useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -11,7 +12,7 @@ import {
 } from "../../OrderTransactionRefundPage";
 import { orderTransactionRefundSummaryMessages as messages } from "./messages";
 
-interface OrderTransactionSummaryProps extends BoxProps {
+interface OrderTransactionSummaryProps {
   amountError?: OrderTransactionRefundError | FieldError;
   control: Control<OrderTransactionRefundPageFormData, any>;
   selectedProductsValue: number;
@@ -20,37 +21,13 @@ interface OrderTransactionSummaryProps extends BoxProps {
   currency: string | undefined;
 }
 
-// For usage in grid that exceeds padding for full background line
-// Negative spacing offsets the parent container's padding (paddingLeft={3}, padding={4})
-const FullWidthLine = () => {
-  return (
-    <Box gridColumn="full" position="relative">
-      <Box
-        borderBottomStyle="solid"
-        borderBottomWidth={1}
-        borderColor="default1"
-        position="absolute"
-        style={{
-          // Counteracts paddingLeft={3} (12px) from parent Box at line 67
-          left: "calc(var(--mu-spacing-3) * -1)",
-          // Counteracts padding={4} right side (16px) from parent Box at line 67
-          right: "calc(var(--mu-spacing-4) * -1)",
-          bottom: 0,
-          height: "1px",
-        }}
-      />
-    </Box>
-  );
-};
-
-export const OrderTransactionSummary = ({
+export const OrderTransactionSummary: React.FC<OrderTransactionSummaryProps> = ({
   amountError,
   control,
   selectedProductsValue,
   canRefundShipping,
   shippingCost,
   currency,
-  ...props
 }: OrderTransactionSummaryProps) => {
   const { field: shippingField } = useController({
     name: "includeShipping",
@@ -62,46 +39,54 @@ export const OrderTransactionSummary = ({
   });
 
   return (
-    <DashboardCard {...props}>
-      <DashboardCard.Header>
-        <DashboardCard.Title>
-          <FormattedMessage {...messages.amount} />
-        </DashboardCard.Title>
-      </DashboardCard.Header>
+    <DashboardCard>
       <DashboardCard.Content display="flex" flexDirection="column" gap={5}>
+        <DashboardCard.Header>
+          <DashboardCard.Title paddingX={0}>
+            <FormattedMessage {...messages.amount} />
+          </DashboardCard.Title>
+        </DashboardCard.Header>
         <Text as="p">
           <FormattedMessage {...messages.amountDescription} />
         </Text>
-        <Box backgroundColor="default2" borderRadius={3} padding={4} paddingLeft={3}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          backgroundColor="default2"
+          paddingX={3}
+          borderRadius={3}
+        >
           <Box
-            display="grid"
-            columnGap={2}
-            rowGap={4}
-            __gridTemplateColumns="auto 1fr auto"
+            display="flex"
+            justifyContent="space-between"
             alignItems="center"
+            borderBottomStyle="solid"
+            borderBottomWidth={1}
+            borderColor="default1"
+            paddingY={4}
           >
-            {/* Selected products row - no checkbox */}
-            <Text gridColumnStart="2" size={3}>
+            <Text size={3}>
               <FormattedMessage {...messages.selectedProducts} />
             </Text>
-            <Box display="flex" justifyContent="flex-end">
-              {currency ? (
-                <Money money={{ currency, amount: selectedProductsValue }} />
-              ) : (
-                <Box display="flex" width={20}>
-                  <Skeleton />
-                </Box>
-              )}
-            </Box>
-
-            <FullWidthLine />
-
+            {currency ? (
+              <Money money={{ currency, amount: selectedProductsValue }} />
+            ) : (
+              <Box display="flex" width={20}>
+                <Skeleton />
+              </Box>
+            )}
+          </Box>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            borderBottomStyle="solid"
+            borderBottomWidth={1}
+            borderColor="default1"
+            paddingY={4}
+          >
             {canRefundShipping ? (
-              <Checkbox
-                display="contents"
-                checked={shippingField.value}
-                onCheckedChange={shippingField.onChange}
-              >
+              <Checkbox checked={shippingField.value} onCheckedChange={shippingField.onChange}>
                 <Text size={3}>
                   <FormattedMessage {...messages.shipping} />
                 </Text>
@@ -110,7 +95,6 @@ export const OrderTransactionSummary = ({
               <Tooltip>
                 <Tooltip.Trigger>
                   <Checkbox
-                    display="contents"
                     disabled
                     checked={shippingField.value}
                     onCheckedChange={shippingField.onChange}
@@ -127,20 +111,21 @@ export const OrderTransactionSummary = ({
                 </Tooltip.Content>
               </Tooltip>
             )}
-            <Box display="flex" justifyContent="flex-end">
-              {shippingCost ? (
-                <Money money={shippingCost} />
-              ) : (
-                <Box display="flex" width={20}>
-                  <Skeleton />
-                </Box>
-              )}
-            </Box>
-
-            <FullWidthLine />
-
-            {/* Total row */}
-            <Text gridColumnStart="2" size={5}>
+            {shippingCost ? (
+              <Money money={shippingCost} />
+            ) : (
+              <Box display="flex" width={20}>
+                <Skeleton />
+              </Box>
+            )}
+          </Box>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            paddingTop={4}
+            paddingBottom={amountError ? 2 : 4}
+          >
+            <Text size={5} display="flex" alignItems="center">
               <FormattedMessage {...messages.totalAmount} />
             </Text>
             <Input
@@ -152,18 +137,14 @@ export const OrderTransactionSummary = ({
               __width={100}
               endAdornment={currency}
             />
-
-            {/* Error message */}
-            {!!amountError && (
-              <>
-                <Box gridColumnStart="2" textAlign="right">
-                  <Text color="critical1" size={1}>
-                    {amountError.message}
-                  </Text>
-                </Box>
-              </>
-            )}
           </Box>
+          {!!amountError && (
+            <Box textAlign="right" paddingBottom={4}>
+              <Text color="critical1" size={1}>
+                {amountError.message}
+              </Text>
+            </Box>
+          )}
         </Box>
       </DashboardCard.Content>
     </DashboardCard>

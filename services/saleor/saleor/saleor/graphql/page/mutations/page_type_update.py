@@ -5,11 +5,10 @@ from django.core.exceptions import ValidationError
 
 from ....page import models
 from ....page.error_codes import PageErrorCode
-from ....page.utils import mark_pages_search_vector_as_dirty_in_batches
 from ....permission.enums import PageTypePermissions
 from ...core import ResolveInfo
 from ...core.doc_category import DOC_CATEGORY_PAGES
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import NonNullList, PageError
 from ...core.validators import validate_slug_and_generate_if_needed
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -21,14 +20,14 @@ from .page_type_create import PageTypeCreateInput, PageTypeMixin
 class PageTypeUpdateInput(PageTypeCreateInput):
     remove_attributes = NonNullList(
         graphene.ID,
-        description="List of attribute IDs to be unassigned from the page type.",
+        description="List of attribute IDs to be assigned to the page type.",
     )
 
     class Meta:
         doc_category = DOC_CATEGORY_PAGES
 
 
-class PageTypeUpdate(PageTypeMixin, DeprecatedModelMutation):
+class PageTypeUpdate(PageTypeMixin, ModelMutation):
     class Arguments:
         id = graphene.ID(description="ID of the page type to update.")
         input = PageTypeUpdateInput(
@@ -36,7 +35,7 @@ class PageTypeUpdate(PageTypeMixin, DeprecatedModelMutation):
         )
 
     class Meta:
-        description = "Updates page type."
+        description = "Update page type."
         model = models.PageType
         object_type = PageType
         permissions = (PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES,)
@@ -59,7 +58,7 @@ class PageTypeUpdate(PageTypeMixin, DeprecatedModelMutation):
                 instance, "name", cleaned_input
             )
         except ValidationError as error:
-            error.code = PageErrorCode.REQUIRED.value
+            error.code = PageErrorCode.REQUIRED
             errors["slug"].append(error)
 
         add_attributes = cleaned_input.get("add_attributes")
@@ -87,17 +86,3 @@ class PageTypeUpdate(PageTypeMixin, DeprecatedModelMutation):
     def post_save_action(cls, info: ResolveInfo, instance, cleaned_input):
         manager = get_plugin_manager_promise(info.context).get()
         cls.call_event(manager.page_type_updated, instance)
-        # Mark pages for search index update if page type structure or identification changed
-        should_update_search_index = (
-            cleaned_input.get("remove_attributes")
-            or "name" in cleaned_input
-            or "slug" in cleaned_input
-        )
-
-        if should_update_search_index:
-            page_ids = list(
-                models.Page.objects.filter(page_type=instance).values_list(
-                    "pk", flat=True
-                )
-            )
-            mark_pages_search_vector_as_dirty_in_batches(page_ids)

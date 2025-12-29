@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
 from prices import Money, TaxedMoney
@@ -50,7 +50,7 @@ def base_order_total(
 
     All discounts are included in this price.
     """
-    subtotal, shipping_price = calculate_prices(
+    subtotal, shipping_price = apply_order_discounts(
         order,
         lines,
         assign_prices=False,
@@ -168,7 +168,7 @@ def propagate_order_discount_on_order_prices(
     return subtotal, shipping_price
 
 
-def calculate_prices(
+def apply_order_discounts(
     order: "Order",
     lines: Iterable["OrderLine"],
     assign_prices=True,
@@ -270,7 +270,7 @@ def get_total_price_with_subtotal_discount_for_order_line(
     lines: Iterable["OrderLine"],
     base_subtotal: Money,
     subtotal_discount: Money,
-) -> Money | None:
+) -> Optional[Money]:
     for order_line, total_price in propagate_order_discount_on_order_lines_prices(
         lines, base_subtotal, subtotal_discount
     ):

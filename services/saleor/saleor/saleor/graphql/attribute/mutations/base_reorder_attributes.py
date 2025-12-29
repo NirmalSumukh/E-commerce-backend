@@ -57,7 +57,7 @@ class BaseReorderAttributesMutation(BaseMutation):
 
         operations = {
             attribute.pk: sort_order
-            for attribute, sort_order in zip(attributes_m2m, sort_orders, strict=False)
+            for attribute, sort_order in zip(attributes_m2m, sort_orders)
         }
 
         return operations
@@ -87,9 +87,9 @@ class BaseReorderAttributeValuesMutation(BaseMutation):
 
         try:
             operations = cls.prepare_operations(moves, values_m2m)
-        except ValidationError as e:
-            e.code = error_code_enum.NOT_FOUND.value
-            raise ValidationError({"moves": e}) from e
+        except ValidationError as error:
+            error.code = error_code_enum.NOT_FOUND.value
+            raise ValidationError({"moves": error})
 
         with traced_atomic_transaction():
             perform_reordering(values_m2m, operations)
@@ -112,7 +112,7 @@ class BaseReorderAttributeValuesMutation(BaseMutation):
             attribute_assignment = instance.attributes.prefetch_related("values").get(
                 assignment__attribute_id=attribute_pk
             )
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             raise ValidationError(
                 {
                     "attribute_id": ValidationError(
@@ -121,7 +121,7 @@ class BaseReorderAttributeValuesMutation(BaseMutation):
                         code=error_code_enum.NOT_FOUND.value,
                     )
                 }
-            ) from e
+            )
         return attribute_assignment
 
     @classmethod
@@ -163,8 +163,7 @@ class BaseReorderAttributeValuesMutation(BaseMutation):
         )  # preserve order in pks
 
         operations = {
-            value.pk: sort_order
-            for value, sort_order in zip(values_m2m, sort_orders, strict=False)
+            value.pk: sort_order for value, sort_order in zip(values_m2m, sort_orders)
         }
 
         return operations

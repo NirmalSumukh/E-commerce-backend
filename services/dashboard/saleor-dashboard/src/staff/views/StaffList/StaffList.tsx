@@ -5,6 +5,7 @@ import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
 import { useShopLimitsQuery } from "@dashboard/components/Shop/queries";
 import { DEFAULT_INITIAL_SEARCH_DATA } from "@dashboard/config";
+import { useFlag } from "@dashboard/featureFlags";
 import { useStaffListQuery, useStaffMemberAddMutation } from "@dashboard/graphql";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
 import useListSettings from "@dashboard/hooks/useListSettings";
@@ -25,7 +26,7 @@ import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import { getAppMountUriForRedirect } from "@dashboard/utils/urls";
 import { useOnboarding } from "@dashboard/welcomePage/WelcomePageOnboarding/onboardingContext";
-import { useMemo } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 import urlJoin from "url-join";
 
@@ -37,27 +38,35 @@ import {
   StaffListUrlQueryParams,
   staffMemberDetailsUrl,
 } from "../../urls";
-import { getFilterOpts, getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterOpts, getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { getSortQueryVariables } from "./sort";
 
 interface StaffListProps {
   params: StaffListUrlQueryParams;
 }
 
-const StaffList = ({ params }: StaffListProps) => {
+export const StaffList: React.FC<StaffListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const { updateListSettings, settings } = useListSettings(ListViews.STAFF_MEMBERS_LIST);
   const intl = useIntl();
   const { markOnboardingStepAsCompleted } = useOnboarding();
+  const { enabled: isStaffMembersFilteringEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
   const filters = createStaffMembersQueryVariables(valueProvider.value);
 
   usePaginationReset(staffListUrl, params, settings.rowNumber);
 
   const paginationState = createPaginationState(settings.rowNumber, params);
-
-  const newQueryVariables = useMemo(
+  const queryVariables = React.useMemo(
+    () => ({
+      ...paginationState,
+      filter: getFilterVariables(params),
+      sort: getSortQueryVariables(params),
+    }),
+    [params, settings.rowNumber],
+  );
+  const newQueryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: {
@@ -70,7 +79,7 @@ const StaffList = ({ params }: StaffListProps) => {
   );
   const { data: staffQueryData, loading } = useStaffListQuery({
     displayLoader: true,
-    variables: newQueryVariables,
+    variables: isStaffMembersFilteringEnabled ? newQueryVariables : queryVariables,
   });
   const limitOpts = useShopLimitsQuery({
     variables: {

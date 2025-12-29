@@ -1,23 +1,28 @@
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 import graphene
 from django.db.models import Q
 from graphene import relay
-from promise import Promise
 
 from ...core.exceptions import PermissionDenied
-from ...graphql.core.descriptions import ADDED_IN_322
-from ...payment import PaymentMethodType, models
+from ...payment import models
 from ...payment.interface import PaymentMethodData
 from ...permission.enums import OrderPermissions
 from ..account.dataloaders import UserByUserIdLoader
 from ..app.dataloaders import ActiveAppsByAppIdentifierLoader, AppByIdLoader
-from ..channel.dataloaders.by_transaction import ChannelByTransactionIdLoader
 from ..checkout.dataloaders import CheckoutByTokenLoader
 from ..core import ResolveInfo
 from ..core.connection import CountableConnection
-from ..core.context import ChannelContext, SyncWebhookControlContext
+from ..core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_34,
+    ADDED_IN_36,
+    ADDED_IN_313,
+    ADDED_IN_314,
+    ADDED_IN_315,
+    PREVIEW_FEATURE,
+)
 from ..core.doc_category import DOC_CATEGORY_PAYMENTS
 from ..core.fields import JSONString, PermissionsField
 from ..core.scalars import JSON, DateTime
@@ -28,8 +33,6 @@ from ..meta.permissions import public_payment_permissions
 from ..meta.resolvers import resolve_metadata
 from ..meta.types import MetadataItem, ObjectWithMetadata
 from ..order.dataloaders import OrderByIdLoader
-from ..page.dataloaders import PageByIdLoader
-from ..page.types import Page
 from ..utils import get_user_or_app_from_context
 from .dataloaders import (
     TransactionByPaymentIdLoader,
@@ -66,9 +69,7 @@ class Transaction(ModelObjectType[models.Transaction]):
     )
     error = graphene.String(description="Error associated with transaction, if any.")
     gateway_response = JSONString(
-        deprecation_reason="This field is a part of a legacy Payments API. Please use apps instead.",
-        required=True,
-        description="Response returned by payment gateway.",
+        required=True, description="Response returned by payment gateway."
     )
     amount = graphene.Field(Money, description="Total amount of the transaction.")
 
@@ -125,6 +126,7 @@ class PaymentSource(BaseObjectType):
         required=True,
         description=(
             "List of public metadata items."
+            + ADDED_IN_31
             + "\n\nCan be accessed without permissions."
         ),
     )
@@ -202,10 +204,10 @@ class Payment(ModelObjectType[models.Payment]):
     )
     partial = graphene.Boolean(
         required=True,
-        description="Informs whether this is a partial payment.",
+        description="Informs whether this is a partial payment." + ADDED_IN_314,
     )
     psp_reference = graphene.String(
-        required=False, description="PSP reference of the payment."
+        required=False, description="PSP reference of the payment." + ADDED_IN_314
     )
 
     class Meta:
@@ -282,37 +284,10 @@ class Payment(ModelObjectType[models.Payment]):
             raise PermissionDenied(permissions=permissions)
         return resolve_metadata(root.metadata)
 
-    @staticmethod
-    def resolve_order(root: models.Payment, info):
-        if not root.order_id:
-            return None
-
-        def _wrap_with_webhook_sync_control(order):
-            if not order:
-                return None
-            return SyncWebhookControlContext(node=order)
-
-        return (
-            OrderByIdLoader(info.context)
-            .load(root.order_id)
-            .then(_wrap_with_webhook_sync_control)
-        )
-
-    @staticmethod
     def resolve_checkout(root: models.Payment, info):
         if not root.checkout_id:
             return None
-
-        def _wrap_with_webhook_sync_control(checkout):
-            if not checkout:
-                return None
-            return SyncWebhookControlContext(node=checkout)
-
-        return (
-            CheckoutByTokenLoader(info.context)
-            .load(root.checkout_id)
-            .then(_wrap_with_webhook_sync_control)
-        )
+        return CheckoutByTokenLoader(info.context).load(root.checkout_id)
 
 
 class PaymentCountableConnection(CountableConnection):
@@ -341,41 +316,36 @@ class TransactionEvent(ModelObjectType[models.TransactionEvent]):
         description="Date and time at which a transaction event was created.",
     )
     psp_reference = graphene.String(
-        description="PSP reference of transaction.", required=True
+        description="PSP reference of transaction." + ADDED_IN_313, required=True
     )
     message = graphene.String(
-        description="Message related to the transaction's event.",
+        description="Message related to the transaction's event." + ADDED_IN_313,
         required=True,
-    )
-    reason_reference = graphene.Field(
-        Page,
-        required=False,
-        description="Reason model of the transaction refund." + ADDED_IN_322,
     )
     external_url = graphene.String(
         description=(
             "The url that will allow to redirect user to "
-            "payment provider page with transaction details."
+            "payment provider page with transaction details." + ADDED_IN_313
         ),
         required=True,
     )
     amount = graphene.Field(
         Money,
         required=True,
-        description="The amount related to this event.",
+        description="The amount related to this event." + ADDED_IN_313,
     )
     type = graphene.Field(
         TransactionEventTypeEnum,
-        description="The type of action related to this event.",
+        description="The type of action related to this event." + ADDED_IN_313,
     )
 
     created_by = graphene.Field(
         "saleor.graphql.core.types.user_or_app.UserOrApp",
-        description="User or App that created the transaction event.",
+        description=("User or App that created the transaction event." + ADDED_IN_313),
     )
 
     idempotency_key = graphene.String(
-        description="Idempotency key assigned to the event.",
+        description="Idempotency key assigned to the event." + ADDED_IN_314,
         required=False,
     )
 
@@ -422,7 +392,6 @@ class TransactionEvent(ModelObjectType[models.TransactionEvent]):
                     .load(root.app_identifier)
                     .then(get_first_app_by_identifier)
                 )
-            return None
 
         if root.app_id:
             return AppByIdLoader(info.context).load(root.app_id).then(get_active_app)
@@ -438,109 +407,10 @@ class TransactionEvent(ModelObjectType[models.TransactionEvent]):
             return UserByUserIdLoader(info.context).load(root.user_id)
         return None
 
-    @staticmethod
-    def resolve_reason_reference(root: models.TransactionEvent, info):
-        if not root.reason_reference_id:
-            return None
-
-        def wrap_page_with_context(data):
-            page, channel = data
-
-            if not page:
-                return None
-
-            return ChannelContext(node=page, channel_slug=channel.slug)
-
-        page_promise = PageByIdLoader(info.context).load(root.reason_reference_id)
-        channel_promise = ChannelByTransactionIdLoader(info.context).load(
-            root.transaction_id
-        )
-
-        return Promise.all(
-            [
-                page_promise,
-                channel_promise,
-            ]
-        ).then(wrap_page_with_context)
-
-
-class PaymentMethodDetails(graphene.Interface):
-    name = graphene.String(required=True, description="Name of the payment method.")
-
-    class Meta:
-        description = (
-            "Represents a payment method used for a transaction." + ADDED_IN_322
-        )
-
-    @classmethod
-    def resolve_type(cls, instance, info: graphene.ResolveInfo):
-        if instance.payment_method_type == PaymentMethodType.CARD:
-            return CardPaymentMethodDetails
-        return OtherPaymentMethodDetails
-
-    @staticmethod
-    def resolve_name(root: models.TransactionItem, _info):
-        return root.payment_method_name or ""
-
-
-class CardPaymentMethodDetails(BaseObjectType):
-    name = graphene.String(required=True, description="Name of the payment method.")
-    brand = graphene.String(description="Card brand.", required=False)
-    first_digits = graphene.String(
-        description="First 4 digits of the card number.", required=False
-    )
-    last_digits = graphene.String(
-        description="Last 4 digits of the card number.", required=False
-    )
-    exp_month = graphene.Int(
-        description="Two-digit number representing the card’s expiration month.",
-        required=False,
-    )
-    exp_year = graphene.Int(
-        description="Four-digit number representing the card’s expiration year.",
-        required=False,
-    )
-
-    class Meta:
-        description = (
-            "Represents a card payment method used for a transaction." + ADDED_IN_322
-        )
-        interfaces = [PaymentMethodDetails]
-
-    @staticmethod
-    def resolve_brand(root: models.TransactionItem, _info):
-        return root.cc_brand
-
-    @staticmethod
-    def resolve_first_digits(root: models.TransactionItem, _info):
-        return root.cc_first_digits
-
-    @staticmethod
-    def resolve_last_digits(root: models.TransactionItem, _info):
-        return root.cc_last_digits
-
-    @staticmethod
-    def resolve_exp_month(root: models.TransactionItem, _info):
-        return root.cc_exp_month
-
-    @staticmethod
-    def resolve_exp_year(root: models.TransactionItem, _info):
-        return root.cc_exp_year
-
-
-class OtherPaymentMethodDetails(BaseObjectType):
-    name = graphene.String(required=True, description="Name of the payment method.")
-
-    class Meta:
-        description = (
-            "Represents a payment method used for a transaction." + ADDED_IN_322
-        )
-        interfaces = [PaymentMethodDetails]
-
 
 class TransactionItem(ModelObjectType[models.TransactionItem]):
     token = graphene.Field(
-        UUIDScalar, description="The transaction token.", required=True
+        UUIDScalar, description="The transaction token." + ADDED_IN_314, required=True
     )
     created_at = DateTime(
         required=True,
@@ -565,6 +435,7 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
         required=True,
         description=(
             "Total amount of ongoing authorization requests for the transaction."
+            + ADDED_IN_313
         ),
     )
     refunded_amount = graphene.Field(
@@ -573,18 +444,24 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
     refund_pending_amount = graphene.Field(
         Money,
         required=True,
-        description="Total amount of ongoing refund requests for the transaction.",
+        description=(
+            "Total amount of ongoing refund requests for the transaction."
+            + ADDED_IN_313
+        ),
     )
 
     canceled_amount = graphene.Field(
         Money,
         required=True,
-        description="Total amount canceled for this payment.",
+        description="Total amount canceled for this payment." + ADDED_IN_313,
     )
     cancel_pending_amount = graphene.Field(
         Money,
         required=True,
-        description="Total amount of ongoing cancel requests for the transaction.",
+        description=(
+            "Total amount of ongoing cancel requests for the transaction."
+            + ADDED_IN_313
+        ),
     )
     charged_amount = graphene.Field(
         Money, description="Total amount charged for this payment.", required=True
@@ -592,61 +469,50 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
     charge_pending_amount = graphene.Field(
         Money,
         required=True,
-        description="Total amount of ongoing charge requests for the transaction.",
+        description=(
+            "Total amount of ongoing charge requests for the transaction."
+            + ADDED_IN_313
+        ),
     )
-    name = graphene.String(description="Name of the transaction.", required=True)
+    name = graphene.String(
+        description="Name of the transaction." + ADDED_IN_313, required=True
+    )
     message = graphene.String(
-        description="Message related to the transaction.", required=True
+        description="Message related to the transaction." + ADDED_IN_313, required=True
     )
 
     psp_reference = graphene.String(
-        description="PSP reference of transaction.", required=True
+        description="PSP reference of transaction." + ADDED_IN_313, required=True
     )
     order = graphene.Field(
         "saleor.graphql.order.types.Order",
-        description="The related order.",
+        description="The related order." + ADDED_IN_36,
     )
     checkout = graphene.Field(
         "saleor.graphql.checkout.types.Checkout",
-        description="The related checkout.",
+        description="The related checkout." + ADDED_IN_314,
     )
     events = NonNullList(
         TransactionEvent, required=True, description="List of all transaction's events."
     )
     created_by = graphene.Field(
         "saleor.graphql.core.types.user_or_app.UserOrApp",
-        description="User or App that created the transaction.",
+        description=("User or App that created the transaction." + ADDED_IN_313),
     )
     external_url = graphene.String(
         description=(
             "The url that will allow to redirect user to "
-            "payment provider page with transaction details."
+            "payment provider page with transaction details." + ADDED_IN_313
         ),
         required=True,
     )
 
-    payment_method_details = graphene.Field(
-        PaymentMethodDetails,
-        description="The payment method used for this transaction." + ADDED_IN_322,
-    )
-
-    reason = graphene.String(description="Reason of the refund." + ADDED_IN_322)
-    reason_reference = graphene.Field(
-        Page,
-        required=False,
-        description="Reason `Page` (Model) for refund." + ADDED_IN_322,
-    )
-
     class Meta:
-        description = "Represents a payment transaction."
+        description = (
+            "Represents a payment transaction." + ADDED_IN_34 + PREVIEW_FEATURE
+        )
         interfaces = [relay.Node, ObjectWithMetadata]
         model = models.TransactionItem
-
-    @staticmethod
-    def resolve_payment_method_details(root: models.TransactionItem, info):
-        if not root.payment_method_type:
-            return None
-        return root
 
     @staticmethod
     def resolve_id(root: models.TransactionItem, _info: ResolveInfo):
@@ -691,34 +557,14 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
     @staticmethod
     def resolve_order(root: models.TransactionItem, info):
         if not root.order_id:
-            return None
-
-        def _wrap_with_webhook_sync_control(order):
-            if not order:
-                return None
-            return SyncWebhookControlContext(node=order)
-
-        return (
-            OrderByIdLoader(info.context)
-            .load(root.order_id)
-            .then(_wrap_with_webhook_sync_control)
-        )
+            return
+        return OrderByIdLoader(info.context).load(root.order_id)
 
     @staticmethod
     def resolve_checkout(root: models.TransactionItem, info):
         if not root.checkout_id:
-            return None
-
-        def _wrap_with_webhook_sync_control(checkout):
-            if not checkout:
-                return None
-            return SyncWebhookControlContext(node=checkout)
-
-        return (
-            CheckoutByTokenLoader(info.context)
-            .load(root.checkout_id)
-            .then(_wrap_with_webhook_sync_control)
-        )
+            return
+        return CheckoutByTokenLoader(info.context).load(root.checkout_id)
 
     @staticmethod
     def resolve_events(root: models.TransactionItem, info):
@@ -750,7 +596,6 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
                     .load(root.app_identifier)
                     .then(get_first_app_by_identifier)
                 )
-            return None
 
         if root.app_id:
             return AppByIdLoader(info.context).load(root.app_id).then(get_active_app)
@@ -787,7 +632,7 @@ class TransactionItem(ModelObjectType[models.TransactionItem]):
         return root.message or ""
 
     @classmethod
-    def get_node(cls, _: Any, id: str) -> models.TransactionItem | None:
+    def get_node(cls, _: Any, id: str) -> Optional[models.TransactionItem]:
         model = cls._meta.model
         lookup = Q(token=id)
         try:
@@ -876,7 +721,7 @@ class StoredPaymentMethod(BaseObjectType):
     class Meta:
         description = (
             "Represents a payment method stored for user (tokenized) in payment "
-            "gateway."
+            "gateway." + ADDED_IN_315 + PREVIEW_FEATURE
         )
         doc_category = DOC_CATEGORY_PAYMENTS
 

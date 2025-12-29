@@ -14,7 +14,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import { extractMutationErrors } from "@dashboard/misc";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { mapCountriesToChoices } from "@dashboard/utils/maps";
-import { useState } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { AddressTypeInput } from "../../types";
@@ -50,7 +50,7 @@ const initialForm: CustomerCreatePageFormData & AddressTypeInput = {
   streetAddress2: "",
 };
 
-interface CustomerCreatePageProps {
+export interface CustomerCreatePageProps {
   countries: CustomerCreateDataQuery["shop"]["countries"];
   disabled: boolean;
   errors: AccountErrorFragment[];
@@ -58,7 +58,7 @@ interface CustomerCreatePageProps {
   onSubmit: (data: CustomerCreatePageSubmitData) => SubmitPromise;
 }
 
-const CustomerCreatePage = ({
+const CustomerCreatePage: React.FC<CustomerCreatePageProps> = ({
   countries,
   disabled,
   errors: apiErrors,
@@ -67,7 +67,7 @@ const CustomerCreatePage = ({
 }: CustomerCreatePageProps) => {
   const intl = useIntl();
   const navigate = useNavigator();
-  const [countryDisplayName, setCountryDisplayName] = useState("");
+  const [countryDisplayName, setCountryDisplayName] = React.useState("");
   const countryChoices = mapCountriesToChoices(countries);
   const { errors: validationErrors, submit: handleSubmitWithAddress } = useAddressValidation<
     CustomerCreatePageFormData,

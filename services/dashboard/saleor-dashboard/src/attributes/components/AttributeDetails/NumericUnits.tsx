@@ -1,11 +1,12 @@
 import { AttributePageFormData } from "@dashboard/attributes/components/AttributePage";
+import ControlledCheckbox from "@dashboard/components/ControlledCheckbox";
 import { Select } from "@dashboard/components/Select";
 import { MeasurementUnitsEnum } from "@dashboard/graphql";
 import { UseFormResult } from "@dashboard/hooks/useForm";
 import { commonMessages } from "@dashboard/intl";
 import { makeStyles } from "@saleor/macaw-ui";
-import { Box, Checkbox, Option, Text } from "@saleor/macaw-ui-next";
-import { useEffect, useMemo, useState } from "react";
+import { Box, Option } from "@saleor/macaw-ui-next";
+import React, { useEffect, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 
 import * as M from "./messages";
@@ -38,14 +39,14 @@ interface NumericUnitsProps
   disabled: boolean;
 }
 
-export const NumericUnits = ({
+export const NumericUnits: React.FC<NumericUnitsProps> = ({
   data,
   disabled,
   errors,
   set,
   setError,
   clearErrors,
-}: NumericUnitsProps) => {
+}) => {
   const { formatMessage } = useIntl();
   const classes = useStyles();
   const [unitData, setUnitData] = useState<UnitData>({
@@ -114,17 +115,14 @@ export const NumericUnits = ({
   return (
     <div>
       <div className={classes.hr} />
-
-      <Checkbox
+      <ControlledCheckbox
         data-test-id="numeric-with-unit"
         name="selectUnit"
+        label={formatMessage(M.messages.selectUnit)}
         checked={data.unit !== null}
-        onCheckedChange={checked => setUnitData({ unit: checked ? undefined : null })}
+        onChange={({ target }) => setUnitData({ unit: target.value ? undefined : null })}
         disabled={disabled}
-        marginY={2}
-      >
-        <Text fontSize={3}>{formatMessage(M.messages.selectUnit)}</Text>
-      </Checkbox>
+      />
       {data.unit !== null && (
         <Box display="flex" gap={4} justifyContent="space-between">
           <Box width="100%">
@@ -180,7 +178,7 @@ export const NumericUnits = ({
                 }))
               }
               value={unit as string}
-              options={(type && system ? (unitChoices?.[system]?.[type] ?? []) : []) as Option[]}
+              options={(type && system ? unitChoices?.[system]?.[type] ?? [] : []) as Option[]}
             />
           </Box>
         </Box>

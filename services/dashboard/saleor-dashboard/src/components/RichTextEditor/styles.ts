@@ -77,9 +77,13 @@ const useStyles = makeStyles(
         },
         "& .ce-popover": {
           backgroundColor: vars.colors.background.default1,
+          position: "absolute",
+          top: 0,
+          left: "-186px",
         },
-        "& .ce-popover__items": {
-          overflowY: "hidden",
+        "& .ce-settings": {
+          position: "absolute",
+          left: "-56px",
         },
         "& .ce-popover__item": {
           ...hover,
@@ -88,6 +92,7 @@ const useStyles = makeStyles(
           color: vars.colors.text.default1,
           backgroundColor: vars.colors.background.default1,
         },
+
         "& .codex-editor__loader": {
           height: "30px",
         },

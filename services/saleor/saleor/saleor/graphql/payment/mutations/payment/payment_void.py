@@ -40,7 +40,5 @@ class PaymentVoid(BaseMutation):
             gateway.void(payment, manager, channel_slug=channel_slug)
             payment.refresh_from_db()
         except PaymentError as e:
-            raise ValidationError(
-                str(e), code=PaymentErrorCode.PAYMENT_ERROR.value
-            ) from e
+            raise ValidationError(str(e), code=PaymentErrorCode.PAYMENT_ERROR.value)
         return PaymentVoid(payment=payment)

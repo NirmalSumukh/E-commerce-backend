@@ -6,6 +6,7 @@ import {
 import useGiftCardActivateToggle from "@dashboard/giftCards/GiftCardUpdate/GiftCardUpdatePageHeader/hooks/useGiftCardActivateToggle";
 import { ExtendedGiftCard } from "@dashboard/giftCards/GiftCardUpdate/providers/GiftCardDetailsProvider/types";
 import { CustomerGiftCardFragment } from "@dashboard/graphql";
+import * as React from "react";
 import { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -19,7 +20,9 @@ interface CustomerGiftCardsCardListItemProps {
   giftCard: ExtendedGiftCard<CustomerGiftCardFragment>;
 }
 
-const CustomerGiftCardsCardListItem = ({ giftCard }: CustomerGiftCardsCardListItemProps) => {
+const CustomerGiftCardsCardListItem: React.FC<CustomerGiftCardsCardListItemProps> = ({
+  giftCard,
+}) => {
   const intl = useIntl();
   const classes = useListWrapperStyles();
   const [openDeleteGiftCard, setOpenDeleteGiftCard] = useState(false);

@@ -1,6 +1,6 @@
 import pytest
 
-from ....plugins.sendgrid.plugin import DeprecatedSendgridEmailPlugin
+from ....plugins.sendgrid.plugin import SendgridEmailPlugin
 from ...manager import get_plugins_manager
 
 
@@ -27,12 +27,10 @@ def sendgrid_email_plugin(settings, channel_USD):
         send_gift_card_template_id=None,
         api_key=None,
     ):
-        settings.PLUGINS = [
-            "saleor.plugins.sendgrid.plugin.DeprecatedSendgridEmailPlugin"
-        ]
+        settings.PLUGINS = ["saleor.plugins.sendgrid.plugin.SendgridEmailPlugin"]
         manager = get_plugins_manager(allow_replica=False)
         manager.save_plugin_configuration(
-            DeprecatedSendgridEmailPlugin.PLUGIN_ID,
+            SendgridEmailPlugin.PLUGIN_ID,
             channel_USD.slug,
             {
                 "active": active,

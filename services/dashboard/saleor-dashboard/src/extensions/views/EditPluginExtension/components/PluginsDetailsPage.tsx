@@ -1,5 +1,6 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+import CardSpacer from "@dashboard/components/CardSpacer";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import Form from "@dashboard/components/Form";
 import Grid from "@dashboard/components/Grid";
@@ -7,7 +8,7 @@ import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Savebar } from "@dashboard/components/Savebar";
 import { ExtensionsUrls } from "@dashboard/extensions/urls";
 import {
-  ConfigurationItemFragment,
+  ConfigurationItemInput,
   PluginConfigurationExtendedFragment,
   PluginErrorFragment,
   PluginsDetailsFragment,
@@ -15,21 +16,21 @@ import {
 import { ChangeEvent, SubmitPromise } from "@dashboard/hooks/useForm";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { getStringOrPlaceholder } from "@dashboard/misc";
-import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { isSecretField } from "../utils";
 import { PluginAuthorization } from "./PluginAuthorization";
 import { PluginDetailsChannelsCard } from "./PluginDetailsChannelsCard";
 import { PluginInfo } from "./PluginInfo";
-import { PluginSettings } from "./PluginSettings/PluginSettings";
+import { PluginSettings } from "./PluginSettings";
 
 export interface PluginDetailsPageFormData {
   active: boolean;
-  configuration: ConfigurationItemFragment[];
+  configuration: ConfigurationItemInput[];
 }
 
-interface PluginsDetailsPageProps {
+export interface PluginsDetailsPageProps {
   disabled: boolean;
   errors: PluginErrorFragment[];
   plugin?: PluginsDetailsFragment;
@@ -41,7 +42,7 @@ interface PluginsDetailsPageProps {
   setSelectedChannelId: (channelId: string) => void;
 }
 
-export const PluginsDetailsPage = ({
+export const PluginsDetailsPage: React.FC<PluginsDetailsPageProps> = ({
   disabled,
   errors,
   plugin,
@@ -51,7 +52,7 @@ export const PluginsDetailsPage = ({
   onSubmit,
   selectedConfig,
   setSelectedChannelId,
-}: PluginsDetailsPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const initialFormData: PluginDetailsPageFormData = {
@@ -92,14 +93,14 @@ export const PluginsDetailsPage = ({
         };
 
         return (
-          <DetailPageLayout gridTemplateColumns={1} testId="plugin-details">
+          <DetailPageLayout gridTemplateColumns={1}>
             <TopNav
               href={ExtensionsUrls.resolveInstalledExtensionsUrl()}
               title={intl.formatMessage(
                 {
-                  id: "ak62Oe",
-                  defaultMessage: "{pluginName} details",
-                  description: "plugin details page header",
+                  id: "EtGDeK",
+                  defaultMessage: "{pluginName} Details",
+                  description: "header",
                 },
                 {
                   pluginName: getStringOrPlaceholder(plugin?.name),
@@ -115,20 +116,20 @@ export const PluginsDetailsPage = ({
                     setSelectedChannelId={setSelectedChannelId}
                   />
                 </div>
-                <Box paddingBottom={2}>
+                <div>
                   <PluginInfo
                     data={data}
                     description={plugin?.description || ""}
                     errors={errors}
                     name={plugin?.name || ""}
                     onChange={onChange}
-                    disabled={disabled}
                   />
-                  <Box marginTop={{ mobile: 2, desktop: 4 }} />
+                  <CardSpacer />
                   {data.configuration && (
                     <div>
                       <PluginSettings
                         data={data}
+                        fields={selectedConfig?.configuration || []}
                         errors={errors}
                         disabled={disabled}
                         onChange={onChange}
@@ -136,15 +137,18 @@ export const PluginsDetailsPage = ({
                       {selectedConfig?.configuration.some(field =>
                         isSecretField(selectedConfig?.configuration, field.name),
                       ) && (
-                        <PluginAuthorization
-                          fields={selectedConfig.configuration}
-                          onClear={onClear}
-                          onEdit={onEdit}
-                        />
+                        <>
+                          <CardSpacer />
+                          <PluginAuthorization
+                            fields={selectedConfig.configuration}
+                            onClear={onClear}
+                            onEdit={onEdit}
+                          />
+                        </>
                       )}
                     </div>
                   )}
-                </Box>
+                </div>
               </Grid>
               <Savebar>
                 <Savebar.Spacer />

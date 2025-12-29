@@ -5,13 +5,16 @@ from ...menu import models
 from ...permission.enums import PagePermissions
 from ...permission.utils import has_one_of_permissions
 from ...product.models import ALL_PRODUCTS_PERMISSIONS
-from ..channel.dataloaders.by_self import ChannelBySlugLoader
+from ..channel.dataloaders import ChannelBySlugLoader
+from ..channel.types import (
+    ChannelContext,
+    ChannelContextType,
+    ChannelContextTypeWithMetadata,
+)
 from ..core import ResolveInfo
 from ..core.connection import CountableConnection
-from ..core.context import ChannelContext
 from ..core.doc_category import DOC_CATEGORY_MENU
 from ..core.types import NonNullList
-from ..core.types.context import ChannelContextType
 from ..meta.types import ObjectWithMetadata
 from ..page.dataloaders import PageByIdLoader
 from ..page.types import Page
@@ -32,7 +35,7 @@ from .dataloaders import (
 )
 
 
-class Menu(ChannelContextType[models.Menu]):
+class Menu(ChannelContextTypeWithMetadata[models.Menu]):
     id = graphene.GlobalID(required=True, description="The ID of the menu.")
     name = graphene.String(required=True, description="The name of the menu.")
     slug = graphene.String(required=True, description="Slug of the menu.")
@@ -66,7 +69,7 @@ class MenuCountableConnection(CountableConnection):
         node = Menu
 
 
-class MenuItem(ChannelContextType[models.MenuItem]):
+class MenuItem(ChannelContextTypeWithMetadata[models.MenuItem]):
     id = graphene.GlobalID(required=True, description="The ID of the menu item.")
     name = graphene.String(required=True, description="The name of the menu item.")
     menu = graphene.Field(
@@ -153,11 +156,11 @@ class MenuItem(ChannelContextType[models.MenuItem]):
                 CollectionByIdLoader(info.context)
                 .load(root.node.collection_id)
                 .then(
-                    lambda collection: (
-                        ChannelContext(node=collection, channel_slug=root.channel_slug)
-                        if collection
-                        else None
+                    lambda collection: ChannelContext(
+                        node=collection, channel_slug=root.channel_slug
                     )
+                    if collection
+                    else None
                 )
             )
 
@@ -181,11 +184,11 @@ class MenuItem(ChannelContextType[models.MenuItem]):
                     CollectionByIdLoader(info.context)
                     .load(root.node.collection_id)
                     .then(
-                        lambda collection: (
-                            ChannelContext(node=collection, channel_slug=channel_slug)
-                            if collection
-                            else None
+                        lambda collection: ChannelContext(
+                            node=collection, channel_slug=channel_slug
                         )
+                        if collection
+                        else None
                     )
                 )
 
@@ -224,16 +227,14 @@ class MenuItem(ChannelContextType[models.MenuItem]):
                 and requestor.is_active
                 and requestor.has_perm(PagePermissions.MANAGE_PAGES)
             )
-
-            def resolve_page_with_channel(page):
-                if requestor_has_access_to_all or page.is_visible:
-                    return ChannelContext(node=page, channel_slug=root.channel_slug)
-                return None
-
             return (
                 PageByIdLoader(info.context)
                 .load(root.node.page_id)
-                .then(resolve_page_with_channel)
+                .then(
+                    lambda page: page
+                    if requestor_has_access_to_all or page.is_visible
+                    else None
+                )
             )
         return None
 

@@ -29,7 +29,7 @@ import {
   SearchIcon,
 } from "@saleor/macaw-ui";
 import { Box, Skeleton } from "@saleor/macaw-ui-next";
-import { Fragment, useMemo, useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import TaxInput from "../../components/TaxInput";
@@ -37,7 +37,7 @@ import TaxCountriesForm from "./form";
 import { useStyles } from "./styles";
 import TaxCountriesMenu from "./TaxCountriesMenu";
 
-interface TaxCountriesPageProps {
+export interface TaxCountriesPageProps {
   countryTaxesData: TaxCountryConfigurationFragment[] | undefined;
   selectedCountryId: string;
   handleTabChange: (tab: string) => void;
@@ -48,7 +48,7 @@ interface TaxCountriesPageProps {
   disabled: boolean;
 }
 
-const TaxCountriesPage = (props: TaxCountriesPageProps) => {
+export const TaxCountriesPage: React.FC<TaxCountriesPageProps> = props => {
   const {
     countryTaxesData,
     selectedCountryId,
@@ -62,8 +62,8 @@ const TaxCountriesPage = (props: TaxCountriesPageProps) => {
   const intl = useIntl();
   const classes = useStyles();
   const navigate = useNavigator();
-  const [query, setQuery] = useState("");
-  const currentCountry = useMemo(
+  const [query, setQuery] = React.useState("");
+  const currentCountry = React.useMemo(
     () => countryTaxesData?.find(country => country.country.code === selectedCountryId),
     [selectedCountryId, countryTaxesData],
   );
@@ -134,10 +134,7 @@ const TaxCountriesPage = (props: TaxCountriesPageProps) => {
                             InputProps={{
                               startAdornment: (
                                 <InputAdornment position="start">
-                                  <SearchIcon
-                                    onPointerEnterCapture={undefined}
-                                    onPointerLeaveCapture={undefined}
-                                  />
+                                  <SearchIcon />
                                 </InputAdornment>
                               ),
                             }}
@@ -157,7 +154,7 @@ const TaxCountriesPage = (props: TaxCountriesPageProps) => {
                           </ListHeader>
                           <Divider />
                           {filteredRates?.map((rate, rateIndex) => (
-                            <Fragment key={rate.id}>
+                            <React.Fragment key={rate.id}>
                               <ListItem
                                 hover={false}
                                 className={classes.noDivider}
@@ -173,7 +170,7 @@ const TaxCountriesPage = (props: TaxCountriesPageProps) => {
                                 </ListItemCell>
                               </ListItem>
                               {!isLastElement(filteredRates, rateIndex) && <Divider />}
-                            </Fragment>
+                            </React.Fragment>
                           )) ?? <Skeleton />}
                         </List>
                       </>

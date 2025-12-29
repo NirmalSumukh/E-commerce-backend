@@ -9,6 +9,7 @@ import useNotifier from "@dashboard/hooks/useNotifier";
 import { DialogProps } from "@dashboard/types";
 import commonErrorMessages from "@dashboard/utils/errors/common";
 import { Input, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { giftCardsListTableMessages as tableMessages } from "../../GiftCardsList/messages";
@@ -17,11 +18,11 @@ import { getGiftCardErrorMessage } from "../messages";
 import useGiftCardDetails from "../providers/GiftCardDetailsProvider/hooks/useGiftCardDetails";
 import { giftCardUpdateBalanceDialogMessages as messages } from "./messages";
 
-interface GiftCardBalanceUpdateFormData {
+export interface GiftCardBalanceUpdateFormData {
   balanceAmount: number;
 }
 
-const GiftCardUpdateBalanceDialog = ({ open, onClose }: DialogProps) => {
+const GiftCardUpdateBalanceDialog: React.FC<DialogProps> = ({ open, onClose }) => {
   const intl = useIntl();
   const notify = useNotifier();
   const { canSeeCreatedBy } = useGiftCardPermissions();

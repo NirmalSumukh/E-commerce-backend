@@ -1,5 +1,6 @@
 import { CircularProgress } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 
 const useStyles = makeStyles(
   {
@@ -12,7 +13,7 @@ const useStyles = makeStyles(
   },
   { name: "LoginLoading" },
 );
-const LoginLoading = (props: {}) => {
+const LoginLoading: React.FC = props => {
   const classes = useStyles(props);
 
   return (

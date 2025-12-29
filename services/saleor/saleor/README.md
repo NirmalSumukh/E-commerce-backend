@@ -1,8 +1,7 @@
 <div align="center" width="100px">
-
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/76e3079f-696a-4fcd-8658-89739647090b">
-   <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/8477d643-a905-4c63-8ed3-03d0976f6fc3">
+   <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/4006792/214640818-fd4de9e6-bdee-47f0-ae66-e69ee9ec84bb.png">
+   <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/4006792/214636328-8e4f83e8-66cb-4114-a3d8-473eb908b9c3.png">
    <img width="200" alt="saleor-commerce-logo" src="https://user-images.githubusercontent.com/4006792/214636328-8e4f83e8-66cb-4114-a3d8-473eb908b9c3.png">
 
  </picture>
@@ -19,21 +18,14 @@
 <br>
 
 <div align="center">
- Get to know Saleor: <br>
-  <a href="https://saleor.typeform.com/talk-with-us?utm_source=github&utm_medium=readme&utm_campaign=repo_saleor">Talk to a human</a>
-  <span> | </span>
-  <a href="https://cloud.saleor.io/signup?utm_source=github&utm_medium=readme&utm_campaign=repo_saleor">Talk to the API</a>
-</div>
-
-<br>
-
-<div align="center">
   Join our community: <br>
   <a href="https://saleor.io/">Website</a>
   <span> | </span>
   <a href="https://twitter.com/getsaleor">Twitter</a>
   <span> | </span>
-  <a href="https://saleor.io/discord">Discord</a>
+  <a href="https://github.com/saleor/saleor/discussions">GitHub Discussions</a>
+  <span> | </span>
+  <a href="https://discord.gg/H52JTZAtSH">Discord</a>
 </div>
 
 <div align="center">
@@ -45,31 +37,25 @@
 <br>
 
 <div align="center">
-  <a href="https://codecov.io/gh/saleor/saleor" >
-    <img src="https://codecov.io/gh/saleor/saleor/graph/badge.svg?token=qkNcTJ4TmI" alt="Coverage"/>
+  <a href="http://codecov.io/github/saleor/saleor?branch=master">
+    <img src="http://codecov.io/github/saleor/saleor/coverage.svg?branch=master" alt="Codecov" />
   </a>
   <a href="https://docs.saleor.io/">
     <img src="https://img.shields.io/badge/docs-docs.saleor.io-brightgreen.svg" alt="Documentation" />
   </a>
-  <a href="https://github.com/astral-sh/ruff">
-    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Linted by Ruff">
+  <a href="https://github.com/python/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
   </a>
- <a href="https://saleor.io/discord">
-   <img src="https://img.shields.io/discord/864066819866624010"  alt="Discord" >
- </a>
 </div>
 
 ## Table of Contents
 
 - [What makes Saleor special?](#what-makes-saleor-special)
-- [Why API-only Architecture?](#why-api-only-architecture)
 - [Features](#features)
 - [Installation](#installation)
 - [Documentation](#documentation)
-- [Saleor Platform](#saleor-platform)
-- [Storefront](#storefront)
-- [Dashboard](#dashboard)
 - [Contributing](#contributing)
+- [Your feedback](#your-feedback)
 - [License](#license)
 
 ## What makes Saleor special?
@@ -84,31 +70,30 @@
 
 - **Cloud native** - battle tested on global brands.
 
-- **Native-multichannel** - Per [channel](https://docs.saleor.io/developer/channels/overview) control of pricing, currencies, stock, product, and more.
+- **Native-multichannel** - Per [channel](https://docs.saleor.io/docs/3.x/developer/channels) control of pricing, currencies, stock, product, and more.
+
 
 ## Why API-only Architecture?
 
-Saleor's API-first extensibility provides powerful tools for developers to extend backend using [webhooks](https://docs.saleor.io/developer/extending/webhooks/overview), attributes, [metadata](https://docs.saleor.io/api-usage/metadata), [apps](https://docs.saleor.io/developer/extending/apps/overview), [subscription queries](https://docs.saleor.io/developer/extending/webhooks/subscription-webhook-payloads), [API extensions](https://docs.saleor.io/developer/extending/webhooks/synchronous-events/overview), [dashboard iframes](https://docs.saleor.io/developer/extending/apps/overview).
+Saleor's API-first extensibility provides powerful tools for developers to extend backend using [webhooks](https://docs.saleor.io/docs/3.x/developer/extending/webhooks/overview), attributes, [metadata](https://docs.saleor.io/docs/3.x/api-usage/metadata), [apps](https://docs.saleor.io/docs/3.x/developer/extending/apps/overview), [subscription queries](https://docs.saleor.io/docs/3.x/developer/extending/webhooks/subscription-webhook-payloads), [API extensions](https://docs.saleor.io/docs/3.x/developer/extending/webhooks/synchronous-events/overview), [dashboard iframes](https://docs.saleor.io/docs/3.x/developer/extending/apps/overview).
 
 Compared to traditional plugin architectures (monoliths) it provides the following benefits:
 
-- There is less downtime as apps are deployed independently.
-- Reliability and performance - custom logic is separated from the core.
-- Simplified upgrade paths - eliminates incompatibility conflicts between extensions.
-- Technology-agnostic - works with any technology, stack, or language.
-- Parallel development - easier to collaborate than with a monolithic core.
-- Simplified debugging - easier to narrow down bugs in independent services.
-- Scalability - extensions and apps can be scaled independently.
+* There is less downtime as apps are deployed independently.
+* Reliability and performance - custom logic is separated from the core.
+* Simplified upgrade paths - eliminates incompatibility conflicts between extensions.
+* Technology-agnostic - works with any technology, stack, or language.
+* Parallel development - easier to collaborate than with a monolithic core.
+* Simplified debugging - easier to narrow down bugs in independent services.
+* Scalability - extensions and apps can be scaled independently.
 
 ### What are the tradeoffs?
-
 If you are a single developer working with a small business that doesn't have high traffic or a critical need for 24/7 availability, using a service-oriented approach might feel more complex compared to the traditional WordPress or Magento approach that provides a language-specific framework, runtime, database schema, aspect-oriented programming, and other tools to a quick start.
 
 However, if you deploy on a daily basis, reliability and uptime is critical,
 you need to collaborate with other developers, or you have non-trivial requirements you might be in the right place.
 
 ## Features
-
 - **Enterprise ready**: Secure, scalable, and stable. Battle-tested by big brands
 - **Dashboard**: User-friendly, fast, and productive. (Decoupled project [repo](https://github.com/saleor/saleor-dashboard) )
 - **Global by design** Multi-currency, multi-language, multi-warehouse, tutti multi!
@@ -124,23 +109,23 @@ you need to collaborate with other developers, or you have non-trivial requireme
 - **SEO**: Unlimited SEO freedom with headless architecture.
 - **Apps**: Extend dashboard via iframe with any web stack.
 
+
 ![Saleor Dashboard - Modern UI for managing your e-commerce](https://user-images.githubusercontent.com/9268745/224249510-d3c7658e-6d5c-42c5-b4fb-93eaf65a5335.png)
 
 ## Installation
 
-[See the Saleor docs](https://docs.saleor.io/setup/docker-compose) for step-by-step installation and deployment instructions. For local development without Docker, follow our [Contributing Guide](./CONTRIBUTING.md).
+[See the Saleor docs](https://docs.saleor.io/docs/3.x/developer/installation) for step-by-step installation and deployment instructions.
 
 Note:
 The `main` branch is the development version of Saleor and it may be unstable. To use the latest stable version, download it from the [Releases](https://github.com/saleor/saleor/releases/) page or switch to a release tag.
 
 The current production-ready version is 3.x and you should use this version for all three components:
 
-- Saleor: <https://github.com/saleor/saleor/releases/>
-- Dashboard: <https://github.com/saleor/saleor-dashboard/releases/>
-- Storefront: <https://github.com/saleor/react-storefront/releases/>
+- Saleor: https://github.com/saleor/saleor/releases/
+- Dashboard: https://github.com/saleor/saleor-dashboard/releases/
+- Storefront: https://github.com/saleor/react-storefront/releases/
 
 ### Saleor Cloud
-
 The fastest way to develop with Saleor is by using developer accounts in [Saleor Cloud](https://cloud.saleor.io).
 
 Register [here](https://cloud.saleor.io/register) or install our [CLI tool](https://github.com/saleor/saleor-cli):
@@ -181,11 +166,11 @@ For the dashboard, go to the [saleor-dashboard](https://github.com/saleor/saleor
 
 ## Contributing
 
-We love your contributions and do our best to provide you with mentorship and support. If you are looking for an issue to tackle, take a look at issues labeled [`Good first issue`](https://github.com/saleor/saleor/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22+) and [`Help wanted`](https://github.com/saleor/saleor/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22).
+We love your contributions and do our best to provide you with mentorship and support. If you are looking for an issue to tackle, take a look at issues labeled [`Good first issue`](https://github.com/saleor/saleor/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22+)
 
-If nothing grabs your attention, check [our roadmap](https://saleor.io/roadmap) or [start a Discord discussion](https://saleor.io/discord) about a feature you'd like to see. Make sure to read our [Contribution Guidelines](http://docs.saleor.io/developer/community/contributing) before opening a PR or issue.
+If nothing grabs your attention, check [our roadmap](https://github.com/orgs/saleor/projects/3/views/4) or come up with your feature. Just drop us a line or [open an issue](https://github.com/saleor/saleor/issues/new) and we’ll work out how to handle it.
 
-Get more details (e.g., how to run Saleor on your local machine) in our [Contributing Guide](./CONTRIBUTING.md).
+Get more details in our [Contributing Guide](https://docs.saleor.io/docs/developer/community/contributing).
 
 ## License
 
@@ -193,4 +178,4 @@ Disclaimer: Everything you see here is open and free to use as long as you compl
 
 #### Crafted with ❤️ by [Saleor Commerce](https://saleor.io)
 
-<hello@saleor.io>
+hello@saleor.io

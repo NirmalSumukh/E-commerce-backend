@@ -25,12 +25,12 @@ export const usePageAPIProvider = (): FilterAPIProvider => {
     throw new Error(`Unknown filter element: "${rowType}"`);
   };
 
-  const fetchAttributeOptions = async () => {
+  const fetchLeftOptions = async () => {
     return [];
   };
 
   return {
     fetchRightOptions,
-    fetchAttributeOptions,
+    fetchLeftOptions,
   };
 };

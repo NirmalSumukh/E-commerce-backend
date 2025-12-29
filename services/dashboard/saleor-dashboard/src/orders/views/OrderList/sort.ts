@@ -1,10 +1,11 @@
+// @ts-strict-ignore
 import { OrderSortField } from "@dashboard/graphql";
 import { OrderListUrlSortField } from "@dashboard/orders/urls";
 import { createGetSortQueryVariables } from "@dashboard/utils/sort";
 
 export const DEFAULT_SORT_KEY = OrderListUrlSortField.number;
 
-function getSortQueryField(sort: OrderListUrlSortField): OrderSortField | undefined {
+export function getSortQueryField(sort: OrderListUrlSortField): OrderSortField {
   switch (sort) {
     case OrderListUrlSortField.number:
       return OrderSortField.NUMBER;

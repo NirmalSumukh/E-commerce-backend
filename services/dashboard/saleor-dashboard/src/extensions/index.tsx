@@ -1,32 +1,32 @@
+import { AppPaths } from "@dashboard/apps/urls";
 import SectionRoute from "@dashboard/auth/components/SectionRoute";
 import { Route } from "@dashboard/components/Router";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
+import { CustomAppDetailsUrlQueryParams } from "@dashboard/custom-apps/urls";
 import {
-  AppDetailsUrlQueryParams,
-  CustomAppDetailsUrlQueryParams,
   ExtensionInstallQueryParams,
   ExtensionsPaths,
   PluginUrlQueryParams,
 } from "@dashboard/extensions/urls";
-import { ExploreExtensions } from "@dashboard/extensions/views/ExploreExtensions/ExploreExtensions";
-import { InstallCustomExtension } from "@dashboard/extensions/views/InstallCustomExtension/InstallCustomExtension";
-import { InstalledExtensions } from "@dashboard/extensions/views/InstalledExtensions/InstalledExtensions";
+import { ExploreExtensions } from "@dashboard/extensions/views/ExploreExtensions";
+import { InstallCustomExtension } from "@dashboard/extensions/views/InstallCustomExtension";
+import { InstalledExtensions } from "@dashboard/extensions/views/InstalledExtensions";
+import { useFlag } from "@dashboard/featureFlags";
 import { PermissionEnum } from "@dashboard/graphql";
+import useNavigator from "@dashboard/hooks/useNavigator";
 import { sectionNames } from "@dashboard/intl";
 import NotFound from "@dashboard/NotFound";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
 import { useCustomAppToken } from "./hooks/useCustomAppToken";
-import { AddCustomExtension } from "./views/AddCustomExtension/AddCustomExtension";
-import { AddCustomExtensionWebhook } from "./views/AddCustomExtensionWebhook/AddCustomExtensionWebhook";
+import { AddCustomExtension } from "./views/AddCustomExtension";
+import { AddCustomExtensionWebhook } from "./views/AddCustomExtensionWebhook";
 import { EditCustomExtension } from "./views/EditCustomExtension";
-import { EditCustomExtensionWebhook } from "./views/EditCustomExtensionWebhook/EditCustomExtensionWebhook";
-import { EditManifestExtension } from "./views/EditManifestExtension/AppManageView";
-import { EditManifestExtensionPermissions } from "./views/EditManifestExtensionPermissions/EditManifestExtensionPermissions";
-import { EditPluginExtension } from "./views/EditPluginExtension/EditPluginExtension";
-import { ViewManifestExtensionIframe } from "./views/ViewManifestExtension/ViewManifestExtensionIframe";
+import { EditCustomExtensionWebhook } from "./views/EditCustomExtensionWebhook";
+import { EditPluginExtension } from "./views/EditPluginExtension";
 
 const ExploreExtensionsView = () => {
   return <ExploreExtensions />;
@@ -68,21 +68,6 @@ const EditCustomExtensionView = ({
   );
 };
 
-const EditManifestExtensionView = ({ match }: RouteComponentProps<{ id: string }>) => {
-  const qs = parseQs(location.search.substr(1));
-  const params: AppDetailsUrlQueryParams = qs;
-
-  return <EditManifestExtension id={decodeURIComponent(match.params.id)} params={params} />;
-};
-
-const ViewManifestExtensionIframeView = ({ match }: RouteComponentProps<{ id: string }>) => {
-  return <ViewManifestExtensionIframe id={decodeURIComponent(match.params.id)} />;
-};
-
-const EditManifestExtensionPermissionsView = ({ match }: RouteComponentProps<{ id: string }>) => {
-  return <EditManifestExtensionPermissions id={decodeURIComponent(match.params.id)} />;
-};
-
 const EditPluginExtensionView = ({ match }: RouteComponentProps<{ id: string }>) => {
   const qs = parseQs(location.search.substr(1));
   const params: PluginUrlQueryParams = qs;
@@ -105,7 +90,9 @@ const AddCustomExtensionWebhookView = ({ match }: RouteComponentProps<{ appId?: 
   return <AddCustomExtensionWebhook appId={decodeURIComponent(appId)} />;
 };
 
-const EditCustomExtensionWebhookView = ({ match }: RouteComponentProps<{ id?: string }>) => {
+const EditCustomExtensionWebhookView: React.FC<RouteComponentProps<{ id?: string }>> = ({
+  match,
+}) => {
   const id = match.params.id;
 
   if (!id) {
@@ -117,8 +104,16 @@ const EditCustomExtensionWebhookView = ({ match }: RouteComponentProps<{ id?: st
 
 export const ExtensionsSection = () => {
   const intl = useIntl();
+  const navigate = useNavigator();
+  const { enabled: isExtensionsEnabled } = useFlag("extensions");
 
   const { customAppToken, setCustomAppToken } = useCustomAppToken();
+
+  if (!isExtensionsEnabled) {
+    navigate(AppPaths.appListPath, { replace: true });
+
+    return <>Redirecting...</>;
+  }
 
   return (
     <>
@@ -136,24 +131,6 @@ export const ExtensionsSection = () => {
           path={ExtensionsPaths.installCustomExtension}
           component={InstallCustomExtensionView}
         />
-
-        {/* -- Manifest app routes -- */}
-        <Route
-          exact
-          path={ExtensionsPaths.resolveEditManifestExtension(":id")}
-          component={EditManifestExtensionView}
-        />
-        <Route
-          exact
-          path={ExtensionsPaths.resolveAppRequestPermissionsPath(":id")}
-          component={EditManifestExtensionPermissionsView}
-        />
-        <Route
-          path={ExtensionsPaths.resolveViewManifestExtension(":id")}
-          component={ViewManifestExtensionIframeView}
-        />
-
-        {/* -- Plugin routes -- */}
 
         <Route
           exact
@@ -179,17 +156,15 @@ export const ExtensionsSection = () => {
           )}
         />
 
-        <SectionRoute
+        <Route
           exact
           path={ExtensionsPaths.resolveAddCustomExtensionWebhook(":appId")}
           component={AddCustomExtensionWebhookView}
-          permissions={[PermissionEnum.MANAGE_APPS]}
         />
-        <SectionRoute
+        <Route
           exact
           path={ExtensionsPaths.resolveEditCustomExtensionWebhook(":appId", ":id")}
           component={EditCustomExtensionWebhookView}
-          permissions={[PermissionEnum.MANAGE_APPS]}
         />
         <Route component={NotFound} />
       </Switch>

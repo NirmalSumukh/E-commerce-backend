@@ -1,4 +1,5 @@
 import { AppWebhookDeliveriesQuery } from "@dashboard/graphql";
+import React from "react";
 
 import { EventDeliveryItem } from "./EventDeliveryItem";
 
@@ -12,7 +13,7 @@ interface EventDeliveriesListProps {
   eventDeliveries: EventDelivery[];
 }
 
-export const EventDeliveriesList = ({ eventDeliveries }: EventDeliveriesListProps) => (
+export const EventDeliveriesList: React.FC<EventDeliveriesListProps> = ({ eventDeliveries }) => (
   <>
     {eventDeliveries.map((ed, index) => {
       const { createdAt, id } = ed.node;

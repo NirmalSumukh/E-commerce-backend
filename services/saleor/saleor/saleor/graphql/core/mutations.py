@@ -3,10 +3,11 @@ import secrets
 from collections.abc import Collection, Iterable
 from enum import Enum
 from itertools import chain
-from typing import Any, TypeVar, cast, overload
+from typing import Any, Optional, TypeVar, Union, cast, overload
 from uuid import UUID
 
 import graphene
+from django.conf import settings
 from django.core.exceptions import (
     NON_FIELD_ERRORS,
     ImproperlyConfigured,
@@ -21,10 +22,9 @@ from graphene.types.mutation import MutationOptions
 from graphql.error import GraphQLError
 
 from ...core.db.connection import allow_writer
+from ...core.error_codes import MetadataErrorCode
 from ...core.exceptions import PermissionDenied
-from ...core.utils import metadata_manager
 from ...core.utils.events import call_event
-from ...core.utils.update_mutation_manager import InstanceTracker
 from ...permission.auth_filters import AuthorizationFilters
 from ...permission.enums import BasePermissionEnum
 from ...permission.utils import (
@@ -36,12 +36,13 @@ from ..account.utils import get_user_accessible_channels
 from ..app.dataloaders import get_app_promise
 from ..core.doc_category import DOC_CATEGORY_MAP
 from ..core.validators import validate_one_of_args_is_in_mutation
-from ..meta.inputs import MetadataInput
 from ..meta.permissions import PRIVATE_META_PERMISSION_MAP, PUBLIC_META_PERMISSION_MAP
+from ..payment.utils import metadata_contains_empty_key
+from ..plugins.dataloaders import get_plugin_manager_promise
 from ..utils import get_nodes, resolve_global_ids_to_primary_keys
 from . import ResolveInfo
 from .context import disallow_replica_in_context, setup_context_user
-from .enums import MetadataErrorCode
+from .descriptions import DEPRECATED_IN_3X_FIELD
 from .types import (
     TYPES_WITH_DOUBLE_ID_AVAILABLE,
     File,
@@ -116,9 +117,9 @@ def validation_error_to_error_type(
     return err_list
 
 
-def attach_error_params(error, params: dict | None, error_class_fields: set):
+def attach_error_params(error, params: Optional[dict], error_class_fields: set):
     if not params:
-        return
+        return {}
     # If some of the params key overlap with error class fields
     # attach param value to the error
     error_fields_in_params = set(params.keys()) & error_class_fields
@@ -159,7 +160,7 @@ class BaseMutation(graphene.Mutation):
         auto_permission_message=True,
         description=None,
         doc_category=None,
-        permissions: Collection[BasePermissionEnum] | None = None,
+        permissions: Optional[Collection[BasePermissionEnum]] = None,
         _meta=None,
         error_type_class=None,
         error_type_field=None,
@@ -167,7 +168,7 @@ class BaseMutation(graphene.Mutation):
         support_meta_field=False,
         support_private_meta_field=False,
         auto_webhook_events_message: bool = True,
-        webhook_events_info: list[WebhookEventInfo] | None = None,
+        webhook_events_info: Optional[list[WebhookEventInfo]] = None,
         exclude=None,
         **options,
     ):
@@ -210,7 +211,7 @@ class BaseMutation(graphene.Mutation):
         )
 
         if error_type_field:
-            deprecated_msg = "Use `errors` field instead."
+            deprecated_msg = f"{DEPRECATED_IN_3X_FIELD} Use `errors` field instead."
             cls._meta.fields.update(
                 get_error_fields(
                     error_type_class,
@@ -230,9 +231,9 @@ class BaseMutation(graphene.Mutation):
         cls,
         info: ResolveInfo,
         graphene_type: type[ModelObjectType[MT]],
-        pk: int | str,
-        qs: QuerySet[MT] | None = None,
-    ) -> MT | None:
+        pk: Union[int, str],
+        qs=None,
+    ) -> Optional[MT]:
         """Attempt to resolve a node from the given internal ID.
 
         Whether by using the provided query set object or by calling type's get_node().
@@ -260,7 +261,7 @@ class BaseMutation(graphene.Mutation):
     def get_global_id_or_error(
         cls,
         id: str,
-        only_type: ObjectType | str | None = None,
+        only_type: Union[ObjectType, str, None] = None,
         field: str = "id",
     ):
         try:
@@ -268,7 +269,7 @@ class BaseMutation(graphene.Mutation):
         except GraphQLError as e:
             raise ValidationError(
                 {field: ValidationError(str(e), code="graphql_error")}
-            ) from e
+            )
         return pk
 
     @overload
@@ -289,13 +290,13 @@ class BaseMutation(graphene.Mutation):
     def get_node_or_error(
         cls,
         info: ResolveInfo,
-        node_id: str | None,
+        node_id: Optional[str],
         *,
         field: str = "id",
         only_type: type[ModelObjectType[MT]],
         qs: Any = None,
         code: str = "not_found",
-    ) -> MT | None: ...
+    ) -> Optional[MT]: ...
 
     @overload
     @classmethod
@@ -328,25 +329,25 @@ class BaseMutation(graphene.Mutation):
     def get_node_or_error(
         cls,
         info: ResolveInfo,
-        node_id: str | None,
+        node_id: Optional[str],
         *,
         field: str = "id",
         only_type: Any = None,
         qs: Any = None,
         code: str = "not_found",
-    ) -> Model | None: ...
+    ) -> Optional[Model]: ...
 
     @classmethod
     def get_node_or_error(
         cls,
         info: ResolveInfo,
-        node_id: str | None,
+        node_id: Optional[str],
         *,
         field: str = "id",
-        only_type: type[ObjectType] | None = None,
-        qs: QuerySet | None = None,
+        only_type: Optional[type[ObjectType]] = None,
+        qs: Optional[QuerySet] = None,
         code: str = "not_found",
-    ) -> Model | None:
+    ) -> Optional[Model]:
         if not node_id:
             # FIXME: this is weird behavior and we should drop it
             # the function now has three possible outcomes:
@@ -367,7 +368,7 @@ class BaseMutation(graphene.Mutation):
         except (AssertionError, GraphQLError) as e:
             raise ValidationError(
                 {field: ValidationError(str(e), code="graphql_error")}
-            ) from e
+            )
         else:
             if node is None:
                 raise ValidationError(
@@ -383,7 +384,7 @@ class BaseMutation(graphene.Mutation):
     def get_global_ids_or_error(
         cls,
         ids: Iterable[str],
-        only_type: ObjectType | str | None = None,
+        only_type: Union[ObjectType, str, None] = None,
         field: str = "ids",
     ):
         try:
@@ -393,7 +394,7 @@ class BaseMutation(graphene.Mutation):
         except GraphQLError as e:
             raise ValidationError(
                 {field: ValidationError(str(e), code="graphql_error")}
-            ) from e
+            )
         return pks
 
     @overload
@@ -405,7 +406,7 @@ class BaseMutation(graphene.Mutation):
     @overload
     @classmethod
     def get_nodes_or_error(
-        cls, ids, field, only_type: ObjectType | None = None, qs=None, schema=None
+        cls, ids, field, only_type: Optional[ObjectType] = None, qs=None, schema=None
     ) -> list[Model]: ...
 
     @classmethod
@@ -415,7 +416,7 @@ class BaseMutation(graphene.Mutation):
         except GraphQLError as e:
             raise ValidationError(
                 {field: ValidationError(str(e), code="graphql_error")}
-            ) from e
+            )
         return instances
 
     @staticmethod
@@ -520,6 +521,14 @@ class BaseMutation(graphene.Mutation):
         if not cls.check_permissions(info.context, data=data):
             raise PermissionDenied(permissions=cls._meta.permissions)
 
+        if settings.ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION:
+            manager = get_plugin_manager_promise(info.context).get()
+            result = manager.perform_mutation(
+                mutation_cls=cls, root=root, info=info, data=data
+            )
+            if result is not None:
+                return result
+
         try:
             response = cls.perform_mutation(root, info, **data)
             if response.errors is None:
@@ -549,20 +558,38 @@ class BaseMutation(graphene.Mutation):
         return call_event(func_obj, *func_args, **kwargs)
 
     @classmethod
+    def update_metadata(cls, instance, meta_data_list: list, is_private: bool = False):
+        if is_private:
+            instance.store_value_in_private_metadata(
+                {data.key: data.value for data in meta_data_list}
+            )
+        else:
+            instance.store_value_in_metadata(
+                {data.key: data.value for data in meta_data_list}
+            )
+
+    @classmethod
+    def validate_metadata_keys(cls, metadata_list: list[dict]):
+        if metadata_contains_empty_key(metadata_list):
+            raise ValidationError(
+                {
+                    "input": ValidationError(
+                        "Metadata key cannot be empty.",
+                        code=MetadataErrorCode.REQUIRED.value,
+                    )
+                }
+            )
+
+    @classmethod
     def validate_and_update_metadata(
-        cls,
-        instance,
-        metadata_list: metadata_manager.MetadataItemCollection,
-        private_metadata_list: metadata_manager.MetadataItemCollection,
+        cls, instance, metadata_list, private_metadata_list
     ):
-        if cls._meta.support_meta_field and metadata_list.items:
-            metadata_manager.store_on_instance(
-                metadata_list, instance, metadata_manager.MetadataType.PUBLIC
-            )
-        if cls._meta.support_private_meta_field and private_metadata_list.items:
-            metadata_manager.store_on_instance(
-                private_metadata_list, instance, metadata_manager.MetadataType.PRIVATE
-            )
+        if cls._meta.support_meta_field and metadata_list is not None:
+            cls.validate_metadata_keys(metadata_list)
+            cls.update_metadata(instance, metadata_list)
+        if cls._meta.support_private_meta_field and private_metadata_list is not None:
+            cls.validate_metadata_keys(private_metadata_list)
+            cls.update_metadata(instance, private_metadata_list, is_private=True)
 
     @classmethod
     def check_metadata_permissions(cls, info: ResolveInfo, object_id, private=False):
@@ -580,7 +607,7 @@ class BaseMutation(graphene.Mutation):
 
     @classmethod
     def check_channel_permissions(
-        cls, info: ResolveInfo, channel_ids: Iterable[UUID | int]
+        cls, info: ResolveInfo, channel_ids: Iterable[Union[UUID, int]]
     ):
         # App has access to all channels
         if get_app_promise(info.context).get():
@@ -593,31 +620,6 @@ class BaseMutation(graphene.Mutation):
             raise PermissionDenied(
                 message="You don't have access to some objects' channel."
             )
-
-    @classmethod
-    def create_metadata_from_graphql_input(
-        cls, metadata_list: list[MetadataInput] | None, *, error_field_name: str
-    ) -> metadata_manager.MetadataItemCollection:
-        """Wrap the creation of metadata and raises ValidationError.
-
-        It maps inner error to proper layer.
-
-        In case of metadata - we need to pass error_field_name, because it can be nested in the other path than "metadata" or "privateMetadata"
-        Error code is hardcoded here - only empty key is validated. If we add more validation rules, this must be refactored
-        To inject / resolve errors matching validator
-
-        """
-        try:
-            return metadata_manager.create_from_graphql_input(metadata_list)
-        except metadata_manager.MetadataEmptyKeyError:
-            raise ValidationError(
-                {
-                    error_field_name: ValidationError(
-                        "Metadata key cannot be empty.",
-                        code=MetadataErrorCode.REQUIRED.value,
-                    )
-                }
-            ) from None
 
 
 def is_list_of_ids(field) -> bool:
@@ -643,23 +645,17 @@ def is_upload_field(field) -> bool:
     return field.type == Upload
 
 
-class DeprecatedModelMutation(BaseMutation):
-    """Deprecated.
-
-    To avoid inheriting too much behavior, we should inhertit from BaseMutation instead
-    """
-
+class ModelMutation(BaseMutation):
     class Meta:
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls,
         arguments=None,
         model=None,
         return_field_name=None,
         object_type=None,
-        instance_tracker_fields=None,
         _meta=None,
         **options,
     ):
@@ -677,13 +673,9 @@ class DeprecatedModelMutation(BaseMutation):
         if arguments is None:
             arguments = {}
 
-        if instance_tracker_fields is None:
-            instance_tracker_fields = []
-
         _meta.model = model
         _meta.object_type = object_type
         _meta.return_field_name = return_field_name
-        _meta.instance_tracker_fields = instance_tracker_fields
         super().__init_subclass_with_meta__(_meta=_meta, **options)
 
         model_type = cls.get_type_for_model()
@@ -692,9 +684,7 @@ class DeprecatedModelMutation(BaseMutation):
                 f"GraphQL type for model {cls._meta.model.__name__} could not be "
                 f"resolved for {cls.__name__}"
             )
-        fields = {}
-        if not cls._meta.fields.get(return_field_name):
-            fields[return_field_name] = graphene.Field(model_type)
+        fields = {return_field_name: graphene.Field(model_type)}
 
         cls._update_mutation_arguments_and_fields(arguments=arguments, fields=fields)
 
@@ -736,7 +726,7 @@ class DeprecatedModelMutation(BaseMutation):
                 # handle uploaded files
                 elif value is not None and is_upload_field(field_item):
                     value = info.context.FILES.get(value)
-                    cleaned_input[field_name] = value  # type: ignore[assignment]
+                    cleaned_input[field_name] = value
 
                 # handle other fields
                 else:
@@ -758,14 +748,7 @@ class DeprecatedModelMutation(BaseMutation):
         return cls(**{cls._meta.return_field_name: instance, "errors": []})
 
     @classmethod
-    def save(
-        cls,
-        _info: ResolveInfo,
-        instance,
-        _cleaned_input,
-        /,
-        instance_tracker: InstanceTracker | None = None,
-    ):
+    def save(cls, _info: ResolveInfo, instance, _cleaned_input, /):
         instance.save()
 
     @classmethod
@@ -817,35 +800,16 @@ class DeprecatedModelMutation(BaseMutation):
         that this is an "update" mutation. Otherwise, a new instance is
         created based on the model associated with this mutation.
         """
-        instance_tracker = None
         instance = cls.get_instance(info, **data)
-        if cls._meta.instance_tracker_fields:
-            instance_tracker = InstanceTracker(
-                instance, cls._meta.instance_tracker_fields
-            )
-
         data = data.get("input")
         cleaned_input = cls.clean_input(info, instance, data)
-
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
-
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
         instance = cls.construct_instance(instance, cleaned_input)
 
-        cls.validate_and_update_metadata(
-            instance, metadata_collection, private_metadata_collection
-        )
+        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
         cls.clean_instance(info, instance)
-        cls.save(info, instance, cleaned_input, instance_tracker)
+        cls.save(info, instance, cleaned_input)
         cls._save_m2m(info, instance, cleaned_input)
 
         # add to cleaned_input popped metadata to allow running post save events
@@ -859,7 +823,7 @@ class DeprecatedModelMutation(BaseMutation):
         return cls.success_response(instance)
 
 
-class ModelWithExtRefMutation(DeprecatedModelMutation):
+class ModelWithExtRefMutation(ModelMutation):
     class Meta:
         abstract = True
 
@@ -887,10 +851,9 @@ class ModelWithExtRefMutation(DeprecatedModelMutation):
         if object_id:
             model_type = cls.get_type_for_model()
             return cls.get_node_or_error(info, object_id, only_type=model_type, qs=qs)
-        return None
 
 
-class ModelWithRestrictedChannelAccessMutation(DeprecatedModelMutation):
+class ModelWithRestrictedChannelAccessMutation(ModelMutation):
     class Meta:
         abstract = True
 
@@ -908,22 +871,11 @@ class ModelWithRestrictedChannelAccessMutation(DeprecatedModelMutation):
         cls.check_channel_permissions(info, [channel_id])
         data = data.get("input")
         cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
         instance = cls.construct_instance(instance, cleaned_input)
 
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
-        cls.validate_and_update_metadata(
-            instance, metadata_collection, private_metadata_collection
-        )
+        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
         cls.clean_instance(info, instance)
         cls.save(info, instance, cleaned_input)
         cls._save_m2m(info, instance, cleaned_input)
@@ -931,12 +883,12 @@ class ModelWithRestrictedChannelAccessMutation(DeprecatedModelMutation):
         return cls.success_response(instance)
 
     @classmethod
-    def get_instance_channel_id(cls, instance, **data) -> UUID | int:
+    def get_instance_channel_id(cls, instance, **data) -> Union[UUID, int]:
         """Retrieve the instance channel id for channel permission accessible check."""
         raise NotImplementedError()
 
 
-class ModelDeleteMutation(DeprecatedModelMutation):
+class ModelDeleteMutation(ModelMutation):
     class Meta:
         abstract = True
 
@@ -990,7 +942,7 @@ class ModelDeleteWithRestrictedChannelAccessMutation(ModelDeleteMutation):
         return cls.success_response(instance)
 
     @classmethod
-    def get_instance_channel_id(cls, instance) -> UUID | int:
+    def get_instance_channel_id(cls, instance) -> Union[UUID, int]:
         """Retrieve the instance channel id for channel permission accessible check."""
         raise NotImplementedError()
 
@@ -1004,7 +956,7 @@ class BaseBulkMutation(BaseMutation):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls, model=None, object_type=None, _meta=None, **kwargs
     ):
         if not model:
@@ -1044,7 +996,7 @@ class BaseBulkMutation(BaseMutation):
     def clean_input(cls, info: ResolveInfo, instances, ids):
         clean_instance_ids = []
         errors_dict: dict[str, list[ValidationError]] = {}
-        for instance, node_id in zip(instances, ids, strict=False):
+        for instance, node_id in zip(instances, ids):
             instance_errors = []
 
             # catch individual validation errors to raise them later as
@@ -1073,7 +1025,7 @@ class BaseBulkMutation(BaseMutation):
     @classmethod
     def perform_mutation(  # type: ignore[override]
         cls, _root, info: ResolveInfo, /, *, ids, **data
-    ) -> tuple[int, ValidationError | None]:
+    ) -> tuple[int, Optional[ValidationError]]:
         """Perform a mutation that deletes a list of model instances."""
         # Allow to pass empty list for dummy mutation
         if not ids:
@@ -1113,6 +1065,14 @@ class BaseBulkMutation(BaseMutation):
         if not cls.check_permissions(info.context):
             raise PermissionDenied(permissions=cls._meta.permissions)
 
+        if settings.ENABLE_DEPRECATED_MANAGER_PERFORM_MUTATION:
+            manager = get_plugin_manager_promise(info.context).get()
+            result = manager.perform_mutation(
+                mutation_cls=cls, root=root, info=info, data=data
+            )
+            if result is not None:
+                return result
+
         count, errors = cls.perform_mutation(root, info, **data)
         if errors:
             return cls.handle_errors(errors, count=count)
@@ -1136,7 +1096,7 @@ class BaseBulkWithRestrictedChannelAccessMutation(BaseBulkMutation):
     @classmethod
     def perform_mutation(  # type: ignore[override]
         cls, _root, info: ResolveInfo, /, *, ids, **data
-    ) -> tuple[int, ValidationError | None]:
+    ) -> tuple[int, Optional[ValidationError]]:
         """Perform a mutation that deletes a list of model instances."""
         # Allow to pass empty list for dummy mutation
         if not ids:
@@ -1171,7 +1131,7 @@ class BaseBulkWithRestrictedChannelAccessMutation(BaseBulkMutation):
         return count, errors
 
     @classmethod
-    def get_channel_ids(cls, instances) -> Iterable[UUID | int]:
+    def get_channel_ids(cls, instances) -> Iterable[Union[UUID, int]]:
         """Get the instances channel ids for channel permission accessible check."""
         raise NotImplementedError()
 

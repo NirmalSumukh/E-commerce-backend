@@ -5,9 +5,9 @@ import pytest
 from django.utils import timezone
 from prices import Money
 
-from .....checkout.utils import assign_external_shipping_to_checkout
+from .....checkout.utils import set_external_shipping
 from .....shipping.interface import ShippingMethodData
-from .....webhook.transport.shipping_helpers import to_shipping_app_id
+from .....webhook.transport.shipping import to_shipping_app_id
 from ....tests.utils import get_graphql_content
 
 
@@ -180,7 +180,7 @@ def test_user_checkout_details_with_external_shipping_method(
 
     checkout = customer_checkout
     checkout.shipping_method = None
-    assign_external_shipping_to_checkout(checkout, external_shipping_method)
+    set_external_shipping(checkout, external_shipping_method)
     checkout.save()
     mock_send_request.return_value = mock_json_response
     query = """

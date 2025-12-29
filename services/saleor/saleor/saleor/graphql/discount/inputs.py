@@ -5,10 +5,12 @@ from ..core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ..core.scalars import JSON, PositiveDecimal
 from ..core.types import BaseInputObjectType, NonNullList
 from ..discount.filters import DiscountedObjectWhereInput
-from ..product.filters.category import CategoryWhereInput
-from ..product.filters.collection import CollectionWhereInput
-from ..product.filters.product import ProductWhereInput
-from ..product.filters.product_variant import ProductVariantWhereInput
+from ..product.filters import (
+    CategoryWhereInput,
+    CollectionWhereInput,
+    ProductVariantWhereInput,
+    ProductWhereInput,
+)
 from .enums import RewardTypeEnum, RewardValueTypeEnum
 
 
@@ -23,7 +25,7 @@ class PredicateInputObjectType(BaseInputObjectType):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(cls, _meta=None, **options):  # type: ignore[override]
+    def __init_subclass_with_meta__(cls, _meta=None, **options):
         super().__init_subclass_with_meta__(_meta=_meta, **options)
         cls._meta.fields.update(
             {

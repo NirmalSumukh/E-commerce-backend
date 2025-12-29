@@ -1,10 +1,11 @@
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { buttonMessages } from "@dashboard/intl";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import ActionDialog from "../ActionDialog";
 
-interface DeleteFilterTabDialogProps {
+export interface DeleteFilterTabDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   tabName: string;
@@ -12,13 +13,13 @@ interface DeleteFilterTabDialogProps {
   onSubmit: () => void;
 }
 
-const DeleteFilterTabDialog = ({
+const DeleteFilterTabDialog: React.FC<DeleteFilterTabDialogProps> = ({
   confirmButtonState,
   onClose,
   onSubmit,
   open,
   tabName,
-}: DeleteFilterTabDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

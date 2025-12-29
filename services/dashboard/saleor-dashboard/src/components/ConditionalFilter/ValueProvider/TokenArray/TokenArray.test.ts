@@ -1,8 +1,14 @@
 import { InitialProductStateResponse } from "../../API/initialState/product/InitialProductStateResponse";
 import { TokenArray } from ".";
-import { emptyFetchingParams } from "./fetchingParams";
+import { FetchingParams } from "./fetchingParams";
 
-const productParams = emptyFetchingParams;
+const productParams = {
+  category: [],
+  collection: [],
+  channel: [],
+  productType: [],
+  attribute: {},
+} as FetchingParams;
 
 describe("ConditionalFilter / ValueProvider / TokenArray", () => {
   it("should parse empty product params", () => {
@@ -18,7 +24,6 @@ describe("ConditionalFilter / ValueProvider / TokenArray", () => {
       channel: [],
       productType: [],
       attribute: {},
-      attributeReference: {},
     });
   });
   it("should parse product params with values", () => {
@@ -50,7 +55,6 @@ describe("ConditionalFilter / ValueProvider / TokenArray", () => {
       channel: ["channel-pln"],
       collection: ["featured-products"],
       productType: ["beer"],
-      attributeReference: {},
     });
   });
   it("should create filter container from a given response", () => {

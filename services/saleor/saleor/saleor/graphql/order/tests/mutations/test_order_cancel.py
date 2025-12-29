@@ -152,6 +152,7 @@ def test_order_cancel_skip_trigger_webhooks(
     permission_group_manage_orders,
     order_with_lines,
     settings,
+    django_capture_on_commit_callbacks,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -173,7 +174,8 @@ def test_order_cancel_skip_trigger_webhooks(
     variables = {"id": order_id}
 
     # when
-    response = staff_api_client.post_graphql(MUTATION_ORDER_CANCEL, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(MUTATION_ORDER_CANCEL, variables)
 
     # then
     content = get_graphql_content(response)
@@ -205,9 +207,11 @@ def test_order_cancel_skip_trigger_webhooks(
     mocked_send_webhook_request_async.assert_has_calls(
         [
             call(
-                kwargs={"event_delivery_id": delivery.id, "telemetry_context": ANY},
+                kwargs={"event_delivery_id": delivery.id},
                 queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-                MessageGroupId="example.com:saleor.app.additional",
+                bind=True,
+                retry_backoff=10,
+                retry_kwargs={"max_retries": 5},
             )
             for delivery in order_deliveries
         ],

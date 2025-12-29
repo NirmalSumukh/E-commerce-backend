@@ -1,4 +1,5 @@
 from functools import partial, wraps
+from typing import Optional
 
 from django.utils.functional import LazyObject
 from promise import Promise
@@ -10,14 +11,14 @@ from ...core import SaleorContext
 from .app import AppByTokenLoader
 
 
-def promise_app(context: SaleorContext) -> Promise[App | None]:
+def promise_app(context: SaleorContext) -> Promise[Optional[App]]:
     auth_token = get_token_from_request(context)
     if not auth_token or len(auth_token) != 30:
         return Promise.resolve(None)
     return AppByTokenLoader(context).load(auth_token)
 
 
-def get_app_promise(context: SaleorContext) -> Promise[App | None]:
+def get_app_promise(context: SaleorContext) -> Promise[Optional[App]]:
     if hasattr(context, "app"):
         app = context.app
         if isinstance(app, LazyObject):

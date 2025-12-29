@@ -10,13 +10,13 @@ import useNotifier from "@dashboard/hooks/useNotifier";
 import { getDefaultNotifierSuccessErrorData } from "@dashboard/hooks/useNotifier/utils";
 import { getById } from "@dashboard/misc";
 import { OrderDiscountCommonInput } from "@dashboard/orders/components/OrderDiscountCommonModal/types";
-import { createContext, useContext, useState } from "react";
-import * as React from "react";
+import React, { createContext, useContext, useState } from "react";
 import { useIntl } from "react-intl";
 
 import {
   GetOrderLineDiscountContextConsumerProps,
   OrderDiscountConsumerCommonProps,
+  OrderLineDiscountConsumerProps,
   OrderLineDiscountData,
 } from "./types";
 import { getOrderLineDiscount, getParsedDiscountData, useDiscountDialog } from "./utils";
@@ -37,7 +37,8 @@ interface DiscountProviderProps {
   order: OrderDetailsFragment;
 }
 
-const OrderLineDiscountContext = createContext<GetOrderLineDiscountContextConsumerProps>(null);
+export const OrderLineDiscountContext =
+  createContext<GetOrderLineDiscountContextConsumerProps>(null);
 
 export const useOrderLineDiscountContext = () => {
   const context = useContext(OrderLineDiscountContext);
@@ -49,7 +50,7 @@ export const useOrderLineDiscountContext = () => {
   return context;
 };
 
-export const OrderLineDiscountProvider = ({ children, order }: DiscountProviderProps) => {
+export const OrderLineDiscountProvider: React.FC<DiscountProviderProps> = ({ children, order }) => {
   const intl = useIntl();
   const notify = useNotifier();
   const { isDialogOpen, openDialog, closeDialog } = useDiscountDialog();
@@ -111,3 +112,12 @@ export const OrderLineDiscountProvider = ({ children, order }: DiscountProviderP
     </OrderLineDiscountContext.Provider>
   );
 };
+
+export const OrderLineDiscountConsumer: React.FC<OrderLineDiscountConsumerProps> = ({
+  children,
+  orderLineId,
+}) => (
+  <OrderLineDiscountContext.Consumer>
+    {(getValues: GetOrderLineDiscountContextConsumerProps) => children(getValues(orderLineId))}
+  </OrderLineDiscountContext.Consumer>
+);

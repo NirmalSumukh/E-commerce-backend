@@ -1,10 +1,11 @@
+import { AppUrls } from "@dashboard/apps/urls";
 import Link from "@dashboard/components/Link";
 import { messages } from "@dashboard/extensions/messages";
-import { ExtensionsUrls } from "@dashboard/extensions/urls";
 import { Box, Button, ExternalLinkIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
-import { AppInstallButton } from "../AppInstallButton/AppInstallButton";
+import { AppInstallButton } from "../AppInstallButton";
 
 interface AppActionsProps {
   isInstalled: boolean;
@@ -25,15 +26,15 @@ export const AppActions = ({
 
   if (isInstalled && disabled && id) {
     return (
-      <Link href={ExtensionsUrls.resolveEditManifestExtensionUrl(id)}>
-        <Button variant="secondary">{intl.formatMessage(messages.manageExtension)}</Button>
+      <Link href={AppUrls.resolveAppDetailsUrl(id)}>
+        <Button variant="secondary">{intl.formatMessage(messages.manageApp)}</Button>
       </Link>
     );
   }
 
   if (isInstalled && id) {
     return (
-      <Link href={ExtensionsUrls.resolveViewManifestExtensionUrl(id)}>
+      <Link href={AppUrls.resolveAppUrl(id)}>
         <Button variant="secondary">{intl.formatMessage(messages.viewDetails)}</Button>
       </Link>
     );

@@ -7,6 +7,7 @@ import {
 import useNotifier from "@dashboard/hooks/useNotifier";
 import OrderSendRefundPage from "@dashboard/orders/components/OrderSendRefundPage";
 import { getTransactionCreateErrorMessage } from "@dashboard/utils/errors/transaction";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 interface OrderSendRefund {
@@ -20,7 +21,7 @@ const messages = defineMessages({
     description: "order send refund, manual transaction refund was created",
   },
 });
-const OrderSendRefund = ({ orderId }: OrderSendRefund) => {
+const OrderSendRefund: React.FC<OrderSendRefund> = ({ orderId }) => {
   const intl = useIntl();
   const notify = useNotifier();
   const { data, loading } = useOrderDetailsQuery({

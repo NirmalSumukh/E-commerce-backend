@@ -10,8 +10,7 @@ import { getFieldError } from "@dashboard/utils/errors";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, Checkbox, RadioGroup, Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { useState } from "react";
-import * as React from "react";
+import React, { useState } from "react";
 import { useIntl } from "react-intl";
 
 import { DashboardCard } from "../Card";
@@ -72,12 +71,12 @@ interface Message {
   setAvailabilityDateLabel?: string;
 }
 
-interface DateFields {
+export interface DateFields {
   publishedAt: string;
   availableForPurchaseAt?: string;
 }
 
-interface VisibilityCardProps {
+export interface VisibilityCardProps {
   children?: React.ReactNode;
   data: DateFields & {
     availableForPurchaseAt?: string;
@@ -91,7 +90,7 @@ interface VisibilityCardProps {
   onChange: (event: ChangeEvent) => void;
 }
 
-const VisibilityCard = (props: VisibilityCardProps) => {
+export const VisibilityCard: React.FC<VisibilityCardProps> = props => {
   const {
     children,
     data: {
@@ -213,8 +212,6 @@ const VisibilityCard = (props: VisibilityCardProps) => {
                     },
                   })
                 }
-                //eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore todo
                 error={getFieldError(errors, "isPublishedAt")}
                 fullWidth
               />
@@ -335,6 +332,5 @@ const VisibilityCard = (props: VisibilityCardProps) => {
     </DashboardCard>
   );
 };
-
 VisibilityCard.displayName = "VisibilityCard";
 export default VisibilityCard;

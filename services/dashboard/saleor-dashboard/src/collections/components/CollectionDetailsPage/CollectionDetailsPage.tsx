@@ -1,20 +1,13 @@
 // @ts-strict-ignore
-import { AppWidgets } from "@dashboard/apps/components/AppWidgets/AppWidgets";
-import { useUser } from "@dashboard/auth";
-import { hasPermission } from "@dashboard/auth/misc";
 import { ChannelCollectionData } from "@dashboard/channels/utils";
 import { collectionListPath, CollectionUrlQueryParams } from "@dashboard/collections/urls";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import CardSpacer from "@dashboard/components/CardSpacer";
 import ChannelsAvailabilityCard from "@dashboard/components/ChannelsAvailabilityCard";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Metadata } from "@dashboard/components/Metadata/Metadata";
 import { Savebar } from "@dashboard/components/Savebar";
 import { SeoForm } from "@dashboard/components/SeoForm";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import { getExtensionsItemsForCollectionDetails } from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import {
   CollectionChannelListingErrorFragment,
   CollectionDetailsQuery,
@@ -24,10 +17,7 @@ import {
 import { useBackLinkWithState } from "@dashboard/hooks/useBackLinkWithState";
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import useNavigator from "@dashboard/hooks/useNavigator";
-import { TranslationsButton } from "@dashboard/translations/components/TranslationsButton/TranslationsButton";
-import { languageEntityUrl, TranslatableEntities } from "@dashboard/translations/urls";
-import { useCachedLocales } from "@dashboard/translations/useCachedLocales";
-import { Box, Divider } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ChannelProps, PageListProps } from "../../../types";
@@ -36,7 +26,7 @@ import { CollectionImage } from "../CollectionImage/CollectionImage";
 import CollectionProducts from "../CollectionProducts/CollectionProducts";
 import CollectionUpdateForm, { CollectionUpdateData } from "./form";
 
-interface CollectionDetailsPageProps extends PageListProps, ChannelProps {
+export interface CollectionDetailsPageProps extends PageListProps, ChannelProps {
   channelsCount: number;
   channelsErrors: CollectionChannelListingErrorFragment[];
   collection: CollectionDetailsQuery["collection"];
@@ -52,7 +42,7 @@ interface CollectionDetailsPageProps extends PageListProps, ChannelProps {
   params: CollectionUrlQueryParams;
 }
 
-const CollectionDetailsPage = ({
+const CollectionDetailsPage: React.FC<CollectionDetailsPageProps> = ({
   channelsCount,
   channelsErrors,
   collection,
@@ -69,22 +59,11 @@ const CollectionDetailsPage = ({
   ...collectionProductsProps
 }: CollectionDetailsPageProps) => {
   const intl = useIntl();
-  const { lastUsedLocaleOrFallback } = useCachedLocales();
   const navigate = useNavigator();
-  const { user } = useUser();
-  const canTranslate = user && hasPermission(PermissionEnum.MANAGE_TRANSLATIONS, user);
 
   const collectionListBackLink = useBackLinkWithState({
     path: collectionListPath,
   });
-
-  const { COLLECTION_DETAILS_MORE_ACTIONS, COLLECTION_DETAILS_WIDGETS } = useExtensions(
-    extensionMountPoints.COLLECTION_DETAILS,
-  );
-  const extensionMenuItems = getExtensionsItemsForCollectionDetails(
-    COLLECTION_DETAILS_MORE_ACTIONS,
-    collection?.id,
-  );
 
   return (
     <CollectionUpdateForm
@@ -96,26 +75,7 @@ const CollectionDetailsPage = ({
     >
       {({ change, data, handlers, submit, isSaveDisabled }) => (
         <DetailPageLayout>
-          <TopNav href={collectionListBackLink} title={collection?.name}>
-            {canTranslate && (
-              <TranslationsButton
-                onClick={() =>
-                  navigate(
-                    languageEntityUrl(
-                      lastUsedLocaleOrFallback,
-                      TranslatableEntities.collections,
-                      collection.id,
-                    ),
-                  )
-                }
-              />
-            )}
-            {extensionMenuItems.length > 0 && (
-              <Box marginLeft={3}>
-                <TopNav.Menu items={[...extensionMenuItems]} dataTestId="menu" />
-              </Box>
-            )}
-          </TopNav>
+          <TopNav href={collectionListBackLink} title={collection?.name} />
           <DetailPageLayout.Content>
             <CollectionDetails data={data} disabled={disabled} errors={errors} onChange={change} />
             <CollectionImage
@@ -174,16 +134,6 @@ const CollectionDetailsPage = ({
                 openModal={openChannelsModal}
               />
             </div>
-            {COLLECTION_DETAILS_WIDGETS.length > 0 && collection?.id && (
-              <>
-                <CardSpacer />
-                <Divider />
-                <AppWidgets
-                  extensions={COLLECTION_DETAILS_WIDGETS}
-                  params={{ collectionId: collection.id }}
-                />
-              </>
-            )}
           </DetailPageLayout.RightSidebar>
           <Savebar>
             <Savebar.DeleteButton onClick={onCollectionRemove} />

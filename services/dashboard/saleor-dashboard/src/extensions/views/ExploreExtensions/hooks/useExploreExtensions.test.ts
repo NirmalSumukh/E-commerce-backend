@@ -1,5 +1,4 @@
-import { useUserPermissions } from "@dashboard/auth/hooks/useUserPermissions";
-import { PermissionEnum, useInstalledAppsQuery, usePluginsQuery } from "@dashboard/graphql";
+import { useInstalledAppsQuery } from "@dashboard/graphql";
 import { renderHook } from "@testing-library/react-hooks";
 
 import { useAppStoreExtensions } from "./useAppStoreExtensions";
@@ -15,22 +14,9 @@ jest.mock("@dashboard/graphql", () => ({
       },
     },
   })),
-  usePluginsQuery: jest.fn(() => ({
-    data: {
-      plugins: {
-        edges: [],
-      },
-    },
-  })),
 }));
 
-jest.mock("@dashboard/auth/hooks/useUserPermissions");
-jest.mock("@dashboard/featureFlags", () => ({
-  ...(jest.requireActual("@dashboard/featureFlags") as object),
-  useFlag: jest.fn(() => ({ enabled: true })),
-}));
-
-const mockedAppStoreExtensionsAppsOnly = {
+const mockedAppStoreExtensions = {
   payments: {
     title: "Payments",
     items: [
@@ -45,69 +31,6 @@ const mockedAppStoreExtensionsAppsOnly = {
         type: "APP",
         name: "Adyen",
         manifestUrl: "http://example-1.com/api/manifest",
-      },
-    ],
-  },
-  cms: {
-    title: "CMS",
-    items: [
-      {
-        id: "app-id-3",
-        type: "APP",
-        name: "Strapi",
-        manifestUrl: "http://example-2.com/api/manifest",
-      },
-    ],
-  },
-  taxes: {
-    title: "Taxes",
-    items: [
-      {
-        id: "app-id-4",
-        type: "APP",
-        name: "TaxJar",
-        manifestUrl: "http://example-3.com/api/manifest",
-      },
-    ],
-  },
-  automation: { title: "Automation", items: [] },
-};
-
-const mockedAppStoreExtensionsWithPlugins = {
-  payments: {
-    title: "Payments",
-    items: [
-      {
-        id: "app-id-1",
-        type: "APP",
-        name: "Stripe",
-        manifestUrl: "http://example.com/api/manifest",
-      },
-      {
-        id: "app-id-2",
-        type: "APP",
-        name: "Adyen",
-        manifestUrl: "http://example-1.com/api/manifest",
-      },
-      {
-        id: "plugin-id-1",
-        type: "PLUGIN",
-        name: "Plugin Global Active",
-      },
-      {
-        id: "plugin-id-2",
-        type: "PLUGIN",
-        name: "Plugin Global Inactive",
-      },
-      {
-        id: "plugin-id-3",
-        type: "PLUGIN",
-        name: "Plugin Channel Active",
-      },
-      {
-        id: "plugin-id-4",
-        type: "PLUGIN",
-        name: "Plugin Channel Inactive",
       },
     ],
   },
@@ -137,12 +60,6 @@ const mockedAppStoreExtensionsWithPlugins = {
 };
 
 describe("Extension / hooks / useExploreExtensions", () => {
-  const pluginsQueryMock = usePluginsQuery as jest.Mock;
-
-  afterEach(() => {
-    pluginsQueryMock.mockClear();
-  });
-
   it("should return loading state when fetching data", () => {
     // Arrange
     (useAppStoreExtensions as jest.Mock).mockReturnValue({
@@ -167,10 +84,10 @@ describe("Extension / hooks / useExploreExtensions", () => {
     expect(result.current.extensions).toEqual({});
   });
 
-  it("should return extensions data for installed apps ", () => {
+  it("should return extensions data when fetched", () => {
     // Arrange
     (useAppStoreExtensions as jest.Mock).mockReturnValue({
-      data: mockedAppStoreExtensionsAppsOnly,
+      data: mockedAppStoreExtensions,
       loading: false,
       error: null,
     });
@@ -267,107 +184,5 @@ describe("Extension / hooks / useExploreExtensions", () => {
         ],
       },
     });
-  });
-
-  it("should correctly set 'installed' for PLUGIN extensions based on plugin active state (global and channel)", () => {
-    // Arrange
-    (useAppStoreExtensions as jest.Mock).mockReturnValue({
-      data: mockedAppStoreExtensionsWithPlugins,
-      loading: false,
-      error: null,
-    });
-    (useInstalledAppsQuery as jest.Mock).mockReturnValue({
-      data: {
-        apps: {
-          edges: [],
-        },
-      },
-    });
-    (usePluginsQuery as jest.Mock).mockReturnValue({
-      data: {
-        plugins: {
-          edges: [
-            {
-              node: {
-                id: "plugin-id-1",
-                globalConfiguration: { active: true },
-                channelConfigurations: null,
-              },
-            },
-            {
-              node: {
-                id: "plugin-id-2",
-                globalConfiguration: { active: false },
-                channelConfigurations: null,
-              },
-            },
-            {
-              node: {
-                id: "plugin-id-3",
-                globalConfiguration: null,
-                channelConfigurations: [
-                  { channel: { id: "channel-1" }, active: true },
-                  { channel: { id: "channel-2" }, active: false },
-                ],
-              },
-            },
-            {
-              node: {
-                id: "plugin-id-4",
-                globalConfiguration: null,
-                channelConfigurations: [
-                  { channel: { id: "channel-1" }, active: false },
-                  { channel: { id: "channel-2" }, active: false },
-                ],
-              },
-            },
-          ],
-        },
-      },
-    });
-
-    // Act
-    const { result } = renderHook(() => useExploreExtensions());
-
-    // Assert
-    const pluginExtensions = result.current.extensions.payments.items.filter(
-      ext => ext.type === "PLUGIN",
-    );
-
-    expect(pluginExtensions).toEqual([
-      expect.objectContaining({ id: "plugin-id-1", installed: true }), // global active
-      expect.objectContaining({ id: "plugin-id-2", installed: false }), // global inactive
-      expect.objectContaining({ id: "plugin-id-3", installed: true }), // channel active
-      expect.objectContaining({ id: "plugin-id-4", installed: false }), // channel inactive
-    ]);
-  });
-
-  it("should not fetch plugins if user does not have MANAGE_PLUGINS permission", () => {
-    // Arrange
-    (useUserPermissions as jest.Mock).mockReturnValue([
-      { __typename: "UserPermission", code: PermissionEnum.MANAGE_USERS, name: "Manage users" },
-    ]);
-    (useAppStoreExtensions as jest.Mock).mockReturnValue({
-      data: mockedAppStoreExtensionsWithPlugins,
-      loading: false,
-      error: null,
-    });
-    (useInstalledAppsQuery as jest.Mock).mockReturnValue({
-      data: {
-        apps: {
-          edges: [],
-        },
-      },
-    });
-
-    // Act
-    renderHook(() => useExploreExtensions());
-
-    // Assert
-    expect(pluginsQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        skip: true,
-      }),
-    );
   });
 });

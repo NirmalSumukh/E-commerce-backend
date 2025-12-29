@@ -16,12 +16,13 @@ import { DialogProps } from "@dashboard/types";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { mapCountriesToChoices } from "@dashboard/utils/maps";
 import { TextField } from "@material-ui/core";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface ShippingZoneAddWarehouseDialogSubmitData extends AddressTypeInput {
+export interface ShippingZoneAddWarehouseDialogSubmitData extends AddressTypeInput {
   name: string;
 }
-interface ShippingZoneAddWarehouseDialogProps extends DialogProps {
+export interface ShippingZoneAddWarehouseDialogProps extends DialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   countries: CountryWithCodeFragment[];
   disabled: boolean;
@@ -44,7 +45,7 @@ const initialForm: ShippingZoneAddWarehouseDialogSubmitData = {
   streetAddress2: "",
 };
 
-const ShippingZoneAddWarehouseDialog = ({
+const ShippingZoneAddWarehouseDialog: React.FC<ShippingZoneAddWarehouseDialogProps> = ({
   confirmButtonState,
   countries,
   disabled,
@@ -52,7 +53,7 @@ const ShippingZoneAddWarehouseDialog = ({
   open,
   onClose,
   onSubmit,
-}: ShippingZoneAddWarehouseDialogProps) => {
+}) => {
   const [countryDisplayName, setCountryDisplayName] = useStateFromProps("");
   const { errors: validationErrors, submit: handleSubmit } = useAddressValidation(onSubmit);
   const errors = useModalDialogErrors([...apiErrors, ...validationErrors], open);

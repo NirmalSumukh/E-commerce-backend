@@ -35,11 +35,6 @@ export const orderDraftListStaticColumnsAdapter = (
       title: intl.formatMessage(columnsMessages.total),
       width: 200,
     },
-    {
-      id: "channel",
-      title: intl.formatMessage(columnsMessages.channel),
-      width: 200,
-    },
   ].map(column => ({
     ...column,
     icon: getColumnSortDirectionIcon(sort, column.id),
@@ -75,8 +70,6 @@ export const createGetCellContent =
           cursor: "pointer",
           readonly: true,
         });
-      case "channel":
-        return readonlyTextCell(rowData.channel?.name ?? "-");
       default:
         return readonlyTextCell("");
     }

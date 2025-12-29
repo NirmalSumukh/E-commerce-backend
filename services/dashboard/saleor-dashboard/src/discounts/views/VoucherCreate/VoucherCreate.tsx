@@ -22,6 +22,7 @@ import { useCollectionWithTotalProductsSearch } from "@dashboard/searches/useCol
 import useProductSearch from "@dashboard/searches/useProductSearch";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
 import createMetadataCreateHandler from "@dashboard/utils/handlers/metadataCreateHandler";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import VoucherCreatePage from "../../components/VoucherCreatePage";
@@ -38,7 +39,7 @@ interface VoucherCreateProps {
   params: VoucherCreateUrlQueryParams;
 }
 
-const VoucherCreateView = ({ params }: VoucherCreateProps) => {
+export const VoucherCreateView: React.FC<VoucherCreateProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -173,5 +174,4 @@ const VoucherCreateView = ({ params }: VoucherCreateProps) => {
     </>
   );
 };
-
 export default VoucherCreateView;

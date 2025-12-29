@@ -9,7 +9,7 @@ import {
 } from "@dashboard/graphql";
 import { getProductErrorMessage } from "@dashboard/utils/errors";
 import getPageErrorMessage from "@dashboard/utils/errors/page";
-import { getEntityUrl } from "@dashboard/utils/maps";
+import { OutputData } from "@editorjs/editorjs";
 import { Option } from "@saleor/macaw-ui-next";
 import { IntlShape } from "react-intl";
 
@@ -19,6 +19,12 @@ export function getSingleChoices(values: AttributeValueFragment[]): Option[] {
     value: value.slug,
   }));
 }
+
+export const getRichTextData = (attribute: AttributeInput): OutputData => {
+  const data = attribute.data.selectedValues?.[0]?.richText;
+
+  return data ? JSON.parse(data) : {};
+};
 
 export function getFileChoice(attribute: AttributeInput): FileChoiceType {
   const attributeValue = attribute.value?.length > 0 && attribute.value[0];
@@ -45,39 +51,42 @@ export function getReferenceDisplayValue(attribute: AttributeInput): SortableChi
     return [];
   }
 
-  return attribute.data.references.map(referenceData => {
+  return attribute.value.map(attributeValue => {
+    const definedAttributeValue = attribute.data.values.find(
+      definedValue => definedValue.reference === attributeValue,
+    );
+
+    // If value has been previously assigned, use it's data
+    if (definedAttributeValue) {
+      return {
+        label: definedAttributeValue.name,
+        value: definedAttributeValue.reference,
+      };
+    }
+
+    const definedAttributeReference = attribute.data.references?.find(
+      reference => reference.value === attributeValue,
+    );
+
+    // If value has not been yet assigned, use data of reference
+    if (definedAttributeReference) {
+      return definedAttributeReference;
+    }
+
+    // If value has not been yet assigned and data
+    // is no longer available, use metadata
+    if (attribute.metadata) {
+      return {
+        label: attribute.metadata.find(metadata => metadata.value === attributeValue)?.label,
+        value: attributeValue,
+      };
+    }
+
     return {
-      label: referenceData.label,
-      value: referenceData.value,
-      url: getEntityUrl({
-        entityType: attribute.data.entityType,
-        entityId: referenceData.value,
-      }),
+      label: attributeValue,
+      value: attributeValue,
     };
   });
-}
-
-export function getSingleReferenceDisplayValue(
-  attribute: AttributeInput,
-): SortableChipsFieldValueType {
-  if (!attribute.value || attribute.value.length === 0) {
-    return null;
-  }
-
-  const reference = attribute?.data?.references?.[0];
-
-  if (reference) {
-    return {
-      label: reference.label,
-      value: reference.value,
-      url: getEntityUrl({
-        entityType: attribute.data.entityType,
-        entityId: reference.value,
-      }),
-    };
-  }
-
-  return null;
 }
 
 export function getMultiChoices(values: AttributeValueFragment[]): Option[] {

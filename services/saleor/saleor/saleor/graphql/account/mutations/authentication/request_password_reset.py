@@ -1,19 +1,23 @@
+from urllib.parse import urlencode
+
 import graphene
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .....account.error_codes import AccountErrorCode
-from .....account.tasks import trigger_send_password_reset_notification
-from .....account.utils import RequestorAwareContext, retrieve_user_by_email
-from .....core.utils.url import validate_storefront_url
+from .....account.notifications import send_password_reset_notification
+from .....account.utils import retrieve_user_by_email
+from .....core.tokens import token_generator
+from .....core.utils.url import prepare_url, validate_storefront_url
 from .....webhook.event_types import WebhookEventAsyncType
-from ....channel.utils import clean_channel
+from ....channel.utils import clean_channel, validate_channel
 from ....core import ResolveInfo
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.mutations import BaseMutation
 from ....core.types import AccountError
 from ....core.utils import WebhookEventInfo
+from ....plugins.dataloaders import get_plugin_manager_promise
 
 
 class RequestPasswordReset(BaseMutation):
@@ -31,9 +35,8 @@ class RequestPasswordReset(BaseMutation):
         )
         channel = graphene.String(
             description=(
-                "Slug of a channel which will be used to notify the user. "
-                "It is needed for customers, if not provided, the notification may not happen. "
-                "Please note that mutation will not fail if the channel is not provided. "
+                "Slug of a channel which will be used for notify user. Optional when "
+                "only one channel exists."
             )
         )
 
@@ -60,21 +63,46 @@ class RequestPasswordReset(BaseMutation):
         ]
 
     @classmethod
-    def clean_user(cls, email, redirect_url):
+    def clean_user(cls, email, redirect_url, info: ResolveInfo):
         try:
             validate_storefront_url(redirect_url)
-        except ValidationError as e:
+        except ValidationError as error:
             raise ValidationError(
-                {"redirect_url": e}, code=AccountErrorCode.INVALID.value
-            ) from e
+                {"redirect_url": error}, code=AccountErrorCode.INVALID.value
+            )
 
         user = retrieve_user_by_email(email)
-        if user and user.last_password_reset_request:
-            delta = timezone.now() - user.last_password_reset_request
+        if not user:
+            raise ValidationError(
+                {
+                    "email": ValidationError(
+                        "User with this email doesn't exist",
+                        code=AccountErrorCode.NOT_FOUND.value,
+                    )
+                }
+            )
+
+        if not user.is_active:
+            raise ValidationError(
+                {
+                    "email": ValidationError(
+                        "User with this email is inactive",
+                        code=AccountErrorCode.INACTIVE.value,
+                    )
+                }
+            )
+
+        if password_reset_time := user.last_password_reset_request:
+            delta = timezone.now() - password_reset_time
             if delta.total_seconds() < settings.RESET_PASSWORD_LOCK_TIME:
-                user = None
-        elif user and not user.is_active:
-            user = None
+                raise ValidationError(
+                    {
+                        "email": ValidationError(
+                            "Password reset already requested",
+                            code=AccountErrorCode.PASSWORD_RESET_ALREADY_REQUESTED.value,
+                        )
+                    }
+                )
 
         return user
 
@@ -82,25 +110,46 @@ class RequestPasswordReset(BaseMutation):
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
         email = data["email"]
         redirect_url = data["redirect_url"]
-        user = cls.clean_user(email, redirect_url)
-        channel = data.get("channel")
+        user = cls.clean_user(email, redirect_url, info)
+        channel_slug = data.get("channel")
+        token = token_generator.make_token(user)
+        params = urlencode({"email": user.email, "token": token})
 
-        # Catching exception for backwards compatibility
-        # Previously channel_slug was validated and error returner, we don't want to
-        # return error to end user to prevent user enumeration.
-        # Exception catching should be removed after logic for default_channel is removed
-        try:
+        if not user.is_staff:
             channel_slug = clean_channel(
-                channel, error_class=AccountErrorCode, allow_replica=False
+                channel_slug, error_class=AccountErrorCode, allow_replica=False
             ).slug
-        except ValidationError:
-            channel_slug = None
+        elif channel_slug is not None:
+            channel_slug = validate_channel(
+                channel_slug, error_class=AccountErrorCode
+            ).slug
 
-        trigger_send_password_reset_notification.delay(
-            redirect_url=redirect_url,
-            user_pk=user.pk if user else None,
-            context_data=RequestorAwareContext.create_context_data(info.context),
+        manager = get_plugin_manager_promise(info.context).get()
+        send_password_reset_notification(
+            redirect_url,
+            user,
+            manager,
             channel_slug=channel_slug,
+            staff=user.is_staff,
         )
+        if user.is_staff:
+            cls.call_event(
+                manager.staff_set_password_requested,
+                user,
+                channel_slug,
+                token,
+                prepare_url(params, redirect_url),
+            )
+        else:
+            cls.call_event(
+                manager.account_set_password_requested,
+                user,
+                channel_slug,
+                token,
+                prepare_url(params, redirect_url),
+            )
+
+        user.last_password_reset_request = timezone.now()
+        user.save(update_fields=["last_password_reset_request"])
 
         return RequestPasswordReset()

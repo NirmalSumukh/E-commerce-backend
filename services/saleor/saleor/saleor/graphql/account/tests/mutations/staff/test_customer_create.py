@@ -1,9 +1,11 @@
 from unittest.mock import ANY, patch
 from urllib.parse import urlencode
 
+import before_after
+
 from ......account import events as account_events
 from ......account.error_codes import AccountErrorCode
-from ......account.models import Address, User
+from ......account.models import User
 from ......account.notifications import get_default_user_payload
 from ......account.search import (
     generate_address_search_document_value,
@@ -12,7 +14,6 @@ from ......account.search import (
 from ......core.notify import NotifyEventType
 from ......core.tests.utils import get_site_context_payload
 from ......core.utils.url import prepare_url
-from ......tests import race_condition
 from .....tests.utils import get_graphql_content
 from ....tests.utils import convert_dict_keys_to_camel_case
 
@@ -192,7 +193,7 @@ def test_customer_create(
 
     mocked_customer_metadata_updated.assert_called_once_with(new_user)
 
-    assert {shipping_address, billing_address} == set(new_user.addresses.all())
+    assert set([shipping_address, billing_address]) == set(new_user.addresses.all())
     customer_creation_event = account_events.CustomerEvent.objects.get()
     assert customer_creation_event.type == account_events.CustomerEvents.ACCOUNT_CREATED
     assert customer_creation_event.user == new_customer
@@ -315,7 +316,7 @@ def test_customer_create_as_app(
 
     mocked_customer_metadata_updated.assert_called_once_with(new_user)
 
-    assert {shipping_address, billing_address} == set(new_user.addresses.all())
+    assert set([shipping_address, billing_address]) == set(new_user.addresses.all())
     customer_creation_event = account_events.CustomerEvent.objects.get()
     assert customer_creation_event.type == account_events.CustomerEvents.ACCOUNT_CREATED
     assert customer_creation_event.user == new_customer
@@ -417,7 +418,7 @@ def test_customer_create_empty_metadata_key(
     content = get_graphql_content(response)
     errors = content["data"]["customerCreate"]["errors"]
     assert len(errors) == 1
-    assert errors[0]["field"] == "metadata"
+    assert errors[0]["field"] == "input"
     assert errors[0]["code"] == AccountErrorCode.REQUIRED.name
 
 
@@ -558,7 +559,7 @@ def test_customer_create_webhook_event_triggered(
 
 
 def test_customer_create_race_condition(
-    staff_api_client, site_settings, permission_manage_users, address
+    staff_api_client, site_settings, permission_manage_users
 ):
     """Context.
 
@@ -574,13 +575,7 @@ def test_customer_create_race_condition(
 
     email_to_create = "test-user@example.com"
 
-    address_data = convert_dict_keys_to_camel_case(address.as_data())
-    address_data.pop("privateMetadata")
-    address_data.pop("validationSkipped")
-
     variables = {
-        "shipping": address_data,
-        "billing": address_data,
         "email": email_to_create,
         "firstName": "api_first_name",
         "lastName": "api_last_name",
@@ -589,8 +584,9 @@ def test_customer_create_race_condition(
     def create_existing_customer(*args, **kwargs):
         User.objects.create(email=email_to_create)
 
-    with race_condition.RunBefore(
-        "saleor.graphql.account.mutations.staff.customer_create.CustomerCreate._save",
+    # when User is synthetically created just before the model save
+    with before_after.before(
+        "saleor.graphql.account.mutations.staff.customer_create.CustomerCreate.save",
         create_existing_customer,
     ):
         response = staff_api_client.post_graphql(
@@ -603,6 +599,3 @@ def test_customer_create_race_condition(
 
         assert len(errors_list) == 1
         assert errors_list[0]["code"] == "UNIQUE"
-
-        # make sure that addresses were not saved.
-        assert not Address.objects.exclude(id=address.id).exists()

@@ -1,5 +1,5 @@
-import datetime
-from unittest.mock import ANY, patch
+from datetime import timedelta
+from unittest.mock import patch
 
 import graphene
 from django.test import override_settings
@@ -379,15 +379,9 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_checkout_updated(
     setup_checkout_webhooks,
     settings,
     api_client,
-    checkout_with_item,
-    address,
-    shipping_method,
+    checkout,
 ):
     # given
-
-    # Include item so shipping webhooks are emitted
-    checkout = checkout_with_item
-
     mocked_send_webhook_request_sync.return_value = []
     (
         tax_webhook,
@@ -397,15 +391,8 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_checkout_updated(
     ) = setup_checkout_webhooks(WebhookEventAsyncType.CHECKOUT_UPDATED)
 
     checkout_id = graphene.Node.to_global_id("Checkout", checkout.pk)
-    checkout.price_expiration = timezone.now() - datetime.timedelta(hours=10)
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout.shipping_address = address
-    checkout.billing_address = address
-
-    checkout.save(
-        update_fields=["price_expiration", "billing_address", "shipping_address"]
-    )
+    checkout.price_expiration = timezone.now() - timedelta(hours=10)
+    checkout.save(update_fields=["price_expiration"])
     # when
     response = execute_update_public_metadata_for_item(
         api_client, None, checkout_id, "Checkout"
@@ -419,12 +406,11 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_checkout_updated(
         webhook_id=checkout_updated_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": checkout_update_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": checkout_update_delivery.id},
         queue=settings.CHECKOUT_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook con was called without saving event delivery
@@ -473,15 +459,9 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_updated_metadata(
     setup_checkout_webhooks,
     settings,
     api_client,
-    checkout_with_item,
-    address,
-    shipping_method,
+    checkout,
 ):
     # given
-
-    # Include item so shipping is also triggered
-    checkout = checkout_with_item
-
     mocked_send_webhook_request_sync.return_value = []
     (
         tax_webhook,
@@ -491,15 +471,9 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_updated_metadata(
     ) = setup_checkout_webhooks(WebhookEventAsyncType.CHECKOUT_METADATA_UPDATED)
 
     checkout_id = graphene.Node.to_global_id("Checkout", checkout.pk)
-    checkout.price_expiration = timezone.now() - datetime.timedelta(hours=10)
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout.shipping_address = address
-    checkout.billing_address = address
-
-    checkout.save(
-        update_fields=["price_expiration", "shipping_address", "billing_address"]
-    )
+    checkout_id = graphene.Node.to_global_id("Checkout", checkout.pk)
+    checkout.price_expiration = timezone.now() - timedelta(hours=10)
+    checkout.save(update_fields=["price_expiration"])
 
     # when
     response = execute_update_public_metadata_for_item(
@@ -514,12 +488,11 @@ def test_add_metadata_for_checkout_triggers_webhooks_with_updated_metadata(
         webhook_id=checkout_metadata_updated_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": checkout_metadata_updated_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": checkout_metadata_updated_delivery.id},
         queue=None,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook con was called without saving event delivery

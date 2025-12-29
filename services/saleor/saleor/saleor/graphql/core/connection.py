@@ -1,7 +1,7 @@
 import json
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 import graphene
 from django.conf import settings
@@ -9,18 +9,17 @@ from django.db.models import Model as DjangoModel
 from django.db.models import Q, QuerySet
 from graphene.relay import Connection
 from graphql import GraphQLError
-from graphql.language.ast import FragmentSpread, InlineFragment, SelectionSet
+from graphql.language.ast import FragmentSpread
 from graphql_relay.connection.arrayconnection import connection_from_list_slice
 from graphql_relay.connection.connectiontypes import Edge, PageInfo
 from graphql_relay.utils import base64, unbase64
 
 from ...channel.exceptions import ChannelNotDefined, NoDefaultChannel
+from ..channel import ChannelContext, ChannelQsContext
 from ..channel.utils import get_default_channel_slug_or_graphql_error
-from ..core.context import ChannelContext, ChannelQsContext
 from ..core.enums import OrderDirection
 from ..core.types import BaseConnection, NonNullList
 from ..utils.sorting import sort_queryset_for_connection
-from .context import SyncWebhookControlContext
 
 if TYPE_CHECKING:
     from ..core import ResolveInfo
@@ -49,9 +48,9 @@ def from_global_cursor(cursor) -> list[str]:
 def get_field_value(instance: DjangoModel, field_name: str):
     """Get field value for given field in filter format 'field__foreign_key_field'."""
     field_path = field_name.split("__")
-    attr: Any = instance
+    attr = instance
     for elem in field_path:
-        attr = getattr(attr, elem, None)
+        attr = getattr(attr, elem, None)  # type:ignore
 
     if callable(attr):
         return f"{attr()}"
@@ -68,8 +67,8 @@ def _prepare_filter_by_rank_expression(
     try:
         rank = Decimal(cursor[0])
         id = coerce_id(cursor[1])
-    except (InvalidOperation, ValueError, TypeError) as e:
-        raise GraphQLError("Received cursor is invalid.") from e
+    except (InvalidOperation, ValueError, TypeError):
+        raise GraphQLError("Received cursor is invalid.")
 
     # Because rank is float number, it gets mangled by PostgreSQL's query parser
     # making equal comparisons impossible. Instead we compare rank against small
@@ -89,8 +88,8 @@ def _prepare_filter_expression(
     cursor: list[str],
     sorting_fields: list[str],
     sorting_direction: str,
-) -> tuple[Q, dict[str, str | bool]]:
-    field_expression: dict[str, str | bool] = {}
+) -> tuple[Q, dict[str, Union[str, bool]]]:
+    field_expression: dict[str, Union[str, bool]] = {}
     extra_expression = Q()
     for cursor_id, cursor_value in enumerate(cursor[:index]):
         field_expression[sorting_fields[cursor_id]] = cursor_value
@@ -163,9 +162,9 @@ def _get_sorting_fields(sort_by, qs):
     sorting_attribute = sort_by.get("attribute_id")
     if sorting_fields and not isinstance(sorting_fields, list):
         return [sorting_fields]
-    if not sorting_fields and sorting_attribute is not None:
+    elif not sorting_fields and sorting_attribute is not None:
         return qs.model.sort_by_attribute_fields()
-    if not sorting_fields:
+    elif not sorting_fields:
         raise ValueError("Error while preparing cursor values.")
     return sorting_fields
 
@@ -219,7 +218,7 @@ def _get_edges_for_connection(edge_type, qs, args, sorting_fields):
 
     matching_records = list(qs)
     if last:
-        matching_records.reverse()
+        matching_records = list(reversed(matching_records))
         if len(matching_records) <= requested_count:
             start_slice = 0
     page_info = _get_page_info(matching_records, cursor, first, last)
@@ -246,7 +245,7 @@ def _get_id_coercion(qs: QuerySet) -> Callable[[str], Any]:
 
 def connection_from_queryset_slice(
     qs: QuerySet,
-    args: ConnectionArguments | None = None,
+    args: Optional[ConnectionArguments] = None,
     connection_type: Any = Connection,
     edge_type: Any = Edge,
     pageinfo_type: Any = PageInfo,
@@ -265,8 +264,8 @@ def connection_from_queryset_slice(
     cursor = after or before
     try:
         cursor = from_global_cursor(cursor) if cursor else None
-    except ValueError as e:
-        raise GraphQLError("Received cursor is invalid.") from e
+    except ValueError:
+        raise GraphQLError("Received cursor is invalid.")
 
     sort_by = args.get("sort_by", {})
     sorting_fields = _get_sorting_fields(sort_by, qs)
@@ -285,8 +284,8 @@ def connection_from_queryset_slice(
     )
     try:
         filtered_qs = qs.filter(filter_kwargs)
-    except ValueError as e:
-        raise GraphQLError("Received cursor is invalid.") from e
+    except ValueError:
+        raise GraphQLError("Received cursor is invalid.")
     filtered_qs = filtered_qs[:end_margin]
     edges, page_info = _get_edges_for_connection(
         edge_type, filtered_qs, args, sorting_fields
@@ -316,7 +315,7 @@ def create_connection_slice(
     connection_type,
     edge_type=None,
     pageinfo_type=graphene.relay.PageInfo,
-    max_limit: int | None = None,
+    max_limit: Optional[int] = None,
 ):
     _validate_slice_args(info, args, max_limit)
 
@@ -365,7 +364,7 @@ def create_connection_slice(
 def _validate_slice_args(
     info: "ResolveInfo",
     args: dict,
-    max_limit: int | None = None,
+    max_limit: Optional[int] = None,
 ):
     enforce_first_or_last = _is_first_or_last_required(info)
 
@@ -397,20 +396,17 @@ def _validate_slice_args(
             args["last"] = min(last, max_limit)
 
 
-def _edges_in_selections(selection_set: SelectionSet, info: "ResolveInfo") -> bool:
-    values = [
-        field.name.value
-        for field in selection_set.selections
-        if not isinstance(field, InlineFragment)
-    ]
+def _is_first_or_last_required(info):
+    """Disable `enforce_first_or_last` if not querying for `edges`."""
+    selections = info.field_asts[0].selection_set.selections
+    values = [field.name.value for field in selections]
     if "edges" in values:
         return True
 
     fragments = [
-        field.name.value
-        for field in selection_set.selections
-        if isinstance(field, FragmentSpread)
+        field.name.value for field in selections if isinstance(field, FragmentSpread)
     ]
+
     for fragment in fragments:
         fragment_values = [
             field.name.value
@@ -419,22 +415,7 @@ def _edges_in_selections(selection_set: SelectionSet, info: "ResolveInfo") -> bo
         if "edges" in fragment_values:
             return True
 
-    sub_selection_sets = [
-        field.selection_set
-        for field in selection_set.selections
-        if isinstance(field, InlineFragment)
-    ]
-    for sub_selection_set in sub_selection_sets:
-        if _edges_in_selections(sub_selection_set, info):
-            return True
-
     return False
-
-
-def _is_first_or_last_required(info: "ResolveInfo") -> bool:
-    """Disable `enforce_first_or_last` if not querying for `edges`."""
-    selection_set = info.field_asts[0].selection_set
-    return _edges_in_selections(selection_set, info)
 
 
 def slice_connection_iterable(
@@ -604,8 +585,8 @@ def where_filter_qs(
     return queryset
 
 
-def contains_filter_operator(input: dict[str, dict | str]):
-    return any(operator in input for operator in ["AND", "OR", "NOT"])
+def contains_filter_operator(input: dict[str, Union[dict, str]]):
+    return any([operator in input for operator in ["AND", "OR", "NOT"]])
 
 
 def _handle_and_filter_input(
@@ -647,22 +628,6 @@ def _handle_or_filter_input(
     return queryset
 
 
-def create_connection_slice_for_sync_webhook_control_context(
-    iterable, info: "ResolveInfo", args, connection_type, allow_sync_webhooks
-):
-    edges_with_context = []
-    sliced_connection = create_connection_slice(iterable, info, args, connection_type)
-
-    for edge in sliced_connection.edges:
-        node = edge.node
-        edge.node = SyncWebhookControlContext(
-            node=node, allow_sync_webhooks=allow_sync_webhooks
-        )
-        edges_with_context.append(edge)
-    sliced_connection.edges = edges_with_context
-    return sliced_connection
-
-
 # TODO: needs optimization
 # def _handle_not_filter_input(filter_input, queryset, args, filterset_class, request):
 #     if contains_filter_operator(filter_input):
@@ -678,7 +643,7 @@ class NonNullConnection(BaseConnection):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(cls, node=None, name=None, **options):  # type: ignore[override]
+    def __init_subclass_with_meta__(cls, node=None, name=None, **options):
         super().__init_subclass_with_meta__(node=node, name=name, **options)
 
         # Override the original EdgeBase type to make to `node` field required.

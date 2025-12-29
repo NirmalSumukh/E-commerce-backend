@@ -1,7 +1,8 @@
-import datetime
 from collections import defaultdict
+from collections.abc import Iterable
+from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import graphene
 from prices import Money
@@ -31,7 +32,7 @@ def serialize_checkout_lines(checkout: "Checkout") -> list[dict]:
         base_price = line_info.undiscounted_unit_price
         total_discount_amount_for_line = sum(
             [discount.amount_value for discount in line_info.get_promotion_discounts()],
-            Decimal(0),
+            Decimal("0"),
         )
         if total_discount_amount_for_line:
             unit_discount_amount = (
@@ -75,9 +76,9 @@ def _get_checkout_line_payload_data(line_info: "CheckoutLineInfo") -> dict[str, 
 
 def serialize_checkout_lines_for_tax_calculation(
     checkout_info: "CheckoutInfo",
-    lines: list["CheckoutLineInfo"],
+    lines: Iterable["CheckoutLineInfo"],
 ) -> list[dict]:
-    charge_taxes = get_charge_taxes_for_checkout(checkout_info)
+    charge_taxes = get_charge_taxes_for_checkout(checkout_info, lines)
     return [
         {
             **_get_checkout_line_payload_data(line_info),
@@ -98,9 +99,9 @@ def serialize_checkout_lines_for_tax_calculation(
 def serialize_product_attributes(product: "Product") -> list[dict]:
     data = []
 
-    def _prepare_reference(attribute, attr_value) -> None | str:
+    def _prepare_reference(attribute, attr_value):
         if attribute.input_type != AttributeInputType.REFERENCE:
-            return None
+            return
         if attribute.entity_type == AttributeEntityType.PAGE:
             reference_pk = attr_value.reference_page_id
         elif attribute.entity_type == AttributeEntityType.PRODUCT:
@@ -119,7 +120,7 @@ def serialize_product_attributes(product: "Product") -> list[dict]:
         values_map[av.value.attribute_id].append(av.value)
 
     for attribute_product in attribute_products:
-        attribute = attribute_product.attribute
+        attribute = attribute_product.attribute  # type: ignore[attr-defined]
 
         attr_id = graphene.Node.to_global_id("Attribute", attribute.pk)
         attr_data: dict[Any, Any] = {
@@ -135,8 +136,7 @@ def serialize_product_attributes(product: "Product") -> list[dict]:
         for attr_value in values_map[attribute.pk]:
             attr_slug = attr_value.slug
             value: dict[
-                str,
-                str | datetime.datetime | datetime.date | bool | dict[str, Any] | None,
+                str, Optional[Union[str, datetime, date, bool, dict[str, Any]]]
             ] = {
                 "name": attr_value.name,
                 "slug": attr_slug,
@@ -164,9 +164,9 @@ def serialize_product_attributes(product: "Product") -> list[dict]:
 def serialize_variant_attributes(variant: "ProductVariant") -> list[dict]:
     data = []
 
-    def _prepare_reference(attribute, attr_value) -> None | str:
+    def _prepare_reference(attribute, attr_value):
         if attribute.input_type != AttributeInputType.REFERENCE:
-            return None
+            return
         if attribute.entity_type == AttributeEntityType.PAGE:
             reference_pk = attr_value.reference_page_id
         elif attribute.entity_type == AttributeEntityType.PRODUCT:
@@ -193,8 +193,7 @@ def serialize_variant_attributes(variant: "ProductVariant") -> list[dict]:
         for attr_value in attr.values.all():
             attr_slug = attr_value.slug
             value: dict[
-                str,
-                str | datetime.datetime | datetime.date | bool | dict[str, Any] | None,
+                str, Optional[Union[str, datetime, date, bool, dict[str, Any]]]
             ] = {
                 "name": attr_value.name,
                 "slug": attr_slug,

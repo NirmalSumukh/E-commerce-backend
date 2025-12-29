@@ -10,8 +10,9 @@ import { appInstallationStatusMessages } from "@dashboard/apps/messages";
 import Wrapper from "@test/wrapper";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 
-import { AppListRow } from "./AppListRow";
+import AppListRow from "./AppListRow";
 
 jest.mock("@dashboard/apps/context", () => ({
   useAppListContext: jest.fn(() => ({
@@ -110,7 +111,7 @@ describe("Apps AppListRow", () => {
     const description = screen.queryAllByText(comingSoonApp.description.en);
     const images = screen.getAllByRole("img");
     const links = screen.queryAllByRole("link");
-    const releaseDate = screen.queryAllByText("{releaseDate}", {
+    const releaseDate = screen.queryAllByText(comingSoonApp.releaseDate, {
       exact: false,
     });
 

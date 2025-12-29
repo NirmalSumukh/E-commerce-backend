@@ -12,7 +12,7 @@ from ....payment.interface import (
     StoredPaymentMethodRequestDeleteResult,
 )
 from ....settings import WEBHOOK_SYNC_TIMEOUT
-from ....webhook.const import WEBHOOK_CACHE_DEFAULT_TTL
+from ....webhook.const import WEBHOOK_CACHE_DEFAULT_TIMEOUT
 from ....webhook.event_types import WebhookEventSyncType
 from ....webhook.models import Webhook
 from ....webhook.transport.utils import (
@@ -271,8 +271,7 @@ def test_stored_payment_method_request_delete_incorrect_result_response_from_web
     channel_USD,
 ):
     # given
-    value = "incorrect_result"
-    mock_request.return_value = {"result": value}
+    mock_request.return_value = {"result": "incorrect_result"}
 
     webhook = stored_payment_method_request_delete_app.webhooks.first()
     webhook.subscription_query = STORED_PAYMENT_METHOD_DELETE_REQUESTED
@@ -305,10 +304,9 @@ def test_stored_payment_method_request_delete_incorrect_result_response_from_web
     assert mock_request.mock_calls[0].kwargs["timeout"] == WEBHOOK_SYNC_TIMEOUT
     assert not EventDelivery.objects.exists()
 
-    assert response.result == StoredPaymentMethodRequestDeleteResult.FAILED_TO_DELETE
-    assert (
-        response.error
-        == f"Incorrect value ({value}) for field: result. Error: Value error, Enum name not found: {value}."
+    assert response == StoredPaymentMethodRequestDeleteResponseData(
+        result=StoredPaymentMethodRequestDeleteResult.FAILED_TO_DELETE,
+        error="Missing or incorrect `result` in response.",
     )
 
 
@@ -355,8 +353,10 @@ def test_stored_payment_method_request_delete_missing_result_in_response_from_we
     assert mock_request.mock_calls[0].kwargs["timeout"] == WEBHOOK_SYNC_TIMEOUT
     assert not EventDelivery.objects.exists()
 
-    assert response.result == StoredPaymentMethodRequestDeleteResult.FAILED_TO_DELETE
-    assert response.error == "Missing value for field: result. Input: {}."
+    assert response == StoredPaymentMethodRequestDeleteResponseData(
+        result=StoredPaymentMethodRequestDeleteResult.FAILED_TO_DELETE,
+        error="Missing or incorrect `result` in response.",
+    )
 
 
 @mock.patch("saleor.webhook.transport.synchronous.transport.cache.delete")
@@ -436,7 +436,7 @@ def test_stored_payment_method_request_delete_invalidates_cache_for_app(
     mocked_cache_set.assert_called_once_with(
         expected_cache_key,
         list_stored_payment_methods_response,
-        timeout=WEBHOOK_CACHE_DEFAULT_TTL,
+        timeout=WEBHOOK_CACHE_DEFAULT_TIMEOUT,
     )
 
     # when

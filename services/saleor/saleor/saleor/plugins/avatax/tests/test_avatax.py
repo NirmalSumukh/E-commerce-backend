@@ -56,7 +56,7 @@ from .. import (
     get_order_tax_data,
     taxes_need_new_fetch,
 )
-from ..plugin import DeprecatedAvataxPlugin, logger
+from ..plugin import AvataxPlugin, logger
 
 
 def order_set_shipping_method(order, shipping_method):
@@ -86,7 +86,7 @@ def assign_tax_code_to_object_meta(obj: "TaxClass", tax_code: str):
         ("30.00", "36.90", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total(
     expected_net,
     expected_gross,
@@ -140,7 +140,7 @@ def test_calculate_checkout_line_total(
         ("15.00", "18.45", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_promotion(
     expected_net,
     expected_gross,
@@ -192,7 +192,7 @@ def test_calculate_checkout_line_total_with_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_variant_on_promotion(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -248,7 +248,7 @@ def test_calculate_checkout_line_total_with_variant_on_promotion(
         ("25.00", "30.75", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_order_promotion(
     expected_net,
     expected_gross,
@@ -300,7 +300,7 @@ def test_calculate_checkout_line_total_with_order_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_gift_promotion_line(
     checkout_with_item_and_gift_promotion,
     ship_to_pl_address,
@@ -346,7 +346,7 @@ def test_calculate_checkout_line_total_gift_promotion_line(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_voucher(
     checkout_with_item,
     shipping_zone,
@@ -409,7 +409,7 @@ def test_calculate_checkout_line_total_with_voucher(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_voucher_once_per_order(
     checkout_with_item,
     shipping_zone,
@@ -469,7 +469,7 @@ def test_calculate_checkout_line_total_with_voucher_once_per_order(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_variant_on_promotion_and_voucher(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -528,7 +528,7 @@ def test_calculate_checkout_line_total_with_variant_on_promotion_and_voucher(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_total_with_variant_on_promotion_and_voucher_only_once(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -595,7 +595,7 @@ def test_calculate_checkout_line_total_with_variant_on_promotion_and_voucher_onl
         ("30.00", "36.90", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_without_sku_total(
     expected_net,
     expected_gross,
@@ -655,7 +655,7 @@ def test_calculate_checkout_line_without_sku_total(
         ("15.00", "18.45", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_without_sku_total_with_promotion(
     expected_net,
     expected_gross,
@@ -713,7 +713,7 @@ def test_calculate_checkout_line_without_sku_total_with_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_total(
     order_line,
     address,
@@ -775,7 +775,7 @@ def test_calculate_order_line_total(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_without_sku_total(
     order_line,
     address,
@@ -833,7 +833,7 @@ def test_calculate_order_line_without_sku_total(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_total_with_discount(
     order_line,
     address,
@@ -908,7 +908,7 @@ def test_calculate_order_line_total_with_discount(
         ("20.00", "24.60", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_total_entire_order_voucher(
     expected_net,
     expected_gross,
@@ -998,7 +998,7 @@ def test_calculate_order_line_total_entire_order_voucher(
         ("30.00", "36.90", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_total_shipping_voucher(
     expected_net,
     expected_gross,
@@ -1079,7 +1079,7 @@ def test_calculate_order_line_total_shipping_voucher(
     )
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_total_order_not_valid(
     order_line,
     address,
@@ -1124,7 +1124,7 @@ def test_calculate_order_line_total_order_not_valid(
     assert total == expected_total_price
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_order_not_valid(
     order_line,
     address,
@@ -1182,7 +1182,7 @@ def test_calculate_order_shipping_order_not_valid(
         ("32.04", "38.99", "3.0", True),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_uses_default_calculation(
     expected_net,
     expected_gross,
@@ -1248,7 +1248,7 @@ def test_calculate_checkout_total_uses_default_calculation(
         ("21.99", "26.73", "5.0", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_uses_default_calculation_with_promotion(
     expected_net,
     expected_gross,
@@ -1319,7 +1319,7 @@ def test_calculate_checkout_total_uses_default_calculation_with_promotion(
         ("32.04", "38.99", "3.0", True),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total(
     expected_net,
     expected_gross,
@@ -1342,8 +1342,7 @@ def test_calculate_checkout_total(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout_with_item.shipping_address = ship_to_pl_address
@@ -1387,7 +1386,7 @@ def test_calculate_checkout_total(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_with_order_promotion(
     checkout_with_item_and_order_discount,
     shipping_zone,
@@ -1405,8 +1404,7 @@ def test_calculate_checkout_total_with_order_promotion(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout.shipping_address = ship_to_pl_address
@@ -1451,7 +1449,7 @@ def test_calculate_checkout_total_with_order_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_with_gift_promotion(
     checkout_with_item_and_gift_promotion,
     shipping_zone,
@@ -1468,8 +1466,7 @@ def test_calculate_checkout_total_with_gift_promotion(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout.shipping_address = ship_to_pl_address
@@ -1521,7 +1518,7 @@ def test_calculate_checkout_total_with_gift_promotion(
         # ("21.99", "26.73", "5.0", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_with_promotion(
     expected_net,
     expected_gross,
@@ -1545,8 +1542,7 @@ def test_calculate_checkout_total_with_promotion(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout = checkout_with_item_on_promotion
@@ -1602,7 +1598,7 @@ def test_calculate_checkout_total_with_promotion(
         ("3493", "4297", "3.0", True),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_for_JPY(
     expected_net,
     expected_gross,
@@ -1624,8 +1620,7 @@ def test_calculate_checkout_total_for_JPY(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout.shipping_address = ship_to_pl_address
@@ -1676,7 +1671,7 @@ def test_calculate_checkout_total_for_JPY(
         ("4280", "5264", "5.0", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_for_JPY_with_promotion(
     expected_net,
     expected_gross,
@@ -1698,8 +1693,7 @@ def test_calculate_checkout_total_for_JPY_with_promotion(
         lambda _: {"PS081282": "desc", TAX_CODE_NON_TAXABLE_PRODUCT: "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout.shipping_address = ship_to_pl_address
@@ -1733,7 +1727,7 @@ def test_calculate_checkout_total_for_JPY_with_promotion(
     channel = checkout.channel
     promotion = Promotion.objects.create(name="Checkout promotion")
 
-    reward_value = Decimal(5)
+    reward_value = Decimal("5")
     rule = promotion.rules.create(
         catalogue_predicate={
             "productPredicate": {
@@ -1788,7 +1782,7 @@ def test_calculate_checkout_total_for_JPY_with_promotion(
         ("10.00", "12.30", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_voucher_on_entire_order(
     expected_net,
     expected_gross,
@@ -1841,7 +1835,7 @@ def test_calculate_checkout_total_voucher_on_entire_order(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_voucher_on_entire_order_applied_once_per_order(
     checkout_with_item,
     voucher_percentage,
@@ -1912,7 +1906,7 @@ def test_calculate_checkout_total_voucher_on_entire_order_applied_once_per_order
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_voucher_on_entire_order_product_without_taxes(
     checkout_with_item,
     voucher_percentage,
@@ -1979,7 +1973,7 @@ def test_calculate_checkout_total_voucher_on_entire_order_product_without_taxes(
         ("30.00", "36.90", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_voucher_on_shipping(
     expected_net,
     expected_gross,
@@ -2030,7 +2024,7 @@ def test_calculate_checkout_total_voucher_on_shipping(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_total_not_charged_product_and_shipping_with_0_price(
     checkout_with_item,
     shipping_zone,
@@ -2044,8 +2038,7 @@ def test_calculate_checkout_total_not_charged_product_and_shipping_with_0_price(
         lambda _: {"PS081282": "desc"},
     )
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
-        lambda *_: False,
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin", lambda *_: False
     )
     manager = get_plugins_manager(allow_replica=False)
     checkout_with_item.shipping_address = ship_to_pl_address
@@ -2087,7 +2080,7 @@ def test_calculate_checkout_total_not_charged_product_and_shipping_with_0_price(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_shipping(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -2132,7 +2125,7 @@ def test_calculate_checkout_shipping(
         ("50.00", "61.50", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_subtotal(
     expected_net,
     expected_gross,
@@ -2181,7 +2174,7 @@ def test_calculate_checkout_subtotal(
         ("20.33", "25.00", True),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_subtotal_with_promotion(
     expected_net,
     expected_gross,
@@ -2239,7 +2232,7 @@ def test_calculate_checkout_subtotal_with_promotion(
     )
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_subtotal_for_product_without_tax(
     checkout,
     stock,
@@ -2289,7 +2282,7 @@ def test_calculate_checkout_subtotal_for_product_without_tax(
 
 @pytest.mark.vcr
 @pytest.mark.parametrize("prices_entered_with_tax", [True, False])
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_subtotal_voucher_on_entire_order(
     prices_entered_with_tax,
     checkout_with_item,
@@ -2345,7 +2338,7 @@ def test_calculate_checkout_subtotal_voucher_on_entire_order(
         ("30.00", "36.90", False),
     ],
 )
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_subtotal_voucher_on_shipping(
     expected_net,
     expected_gross,
@@ -2397,7 +2390,7 @@ def test_calculate_checkout_subtotal_voucher_on_shipping(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping(
     order_line, shipping_zone, site_settings, address, plugin_configuration
 ):
@@ -2418,7 +2411,7 @@ def test_calculate_order_shipping(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_total(
     order_line, shipping_zone, site_settings, address, plugin_configuration
 ):
@@ -2439,7 +2432,7 @@ def test_calculate_order_total(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_total_for_JPY(
     order_line_JPY,
     shipping_zone_JPY,
@@ -2469,7 +2462,7 @@ def test_calculate_order_total_for_JPY(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_total_order_promotion(
     order_with_lines_and_order_promotion,
     shipping_zone,
@@ -2494,7 +2487,7 @@ def test_calculate_order_total_order_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_total_gift_promotion(
     order_with_lines_and_gift_promotion,
     shipping_zone,
@@ -2519,7 +2512,7 @@ def test_calculate_order_total_gift_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_entire_order_voucher(
     order_line, shipping_zone, voucher, site_settings, address, plugin_configuration
 ):
@@ -2566,7 +2559,7 @@ def test_calculate_order_shipping_entire_order_voucher(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_free_shipping_voucher(
     order_line,
     shipping_zone,
@@ -2625,7 +2618,7 @@ def test_calculate_order_shipping_free_shipping_voucher(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_voucher_on_shipping(
     order_line,
     shipping_zone,
@@ -2651,7 +2644,7 @@ def test_calculate_order_shipping_voucher_on_shipping(
     method = shipping_zone.shipping_methods.get()
     shipping_channel_listings = method.channel_listings.get(channel=channel)
 
-    discount_amount = shipping_channel_listings.price.amount - Decimal(5)
+    discount_amount = shipping_channel_listings.price.amount - Decimal("5")
     order.discounts.create(
         type=DiscountType.VOUCHER,
         value_type=DiscountValueType.FIXED,
@@ -2683,7 +2676,7 @@ def test_calculate_order_shipping_voucher_on_shipping(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_zero_shipping_amount(
     order_line, shipping_zone, site_settings, address, plugin_configuration
 ):
@@ -2708,7 +2701,7 @@ def test_calculate_order_shipping_zero_shipping_amount(
     assert price == TaxedMoney(net=Money("0.00", "USD"), gross=Money("0.00", "USD"))
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_base_shipping_price_0(
     order_line, shipping_zone, site_settings, address, plugin_configuration
 ):
@@ -2732,7 +2725,7 @@ def test_calculate_order_shipping_base_shipping_price_0(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_shipping_not_shippable_order(
     order_line, site_settings, address, plugin_configuration
 ):
@@ -2759,7 +2752,7 @@ def test_calculate_order_shipping_not_shippable_order(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_unit(
     order_line,
     shipping_zone,
@@ -2804,7 +2797,7 @@ def test_calculate_order_line_unit(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_unit_in_JPY(
     order_line_JPY,
     shipping_zone_JPY,
@@ -2851,7 +2844,7 @@ def test_calculate_order_line_unit_in_JPY(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_order_line_unit_with_discount(
     order_line,
     shipping_zone,
@@ -2901,7 +2894,7 @@ def test_calculate_order_line_unit_with_discount(
 
 @pytest.mark.vcr
 @pytest.mark.parametrize("charge_taxes", [True, False])
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price(
     charge_taxes,
     checkout_with_item,
@@ -2949,7 +2942,7 @@ def test_calculate_checkout_line_unit_price(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_in_JPY(
     checkout_JPY_with_item,
     shipping_zone_JPY,
@@ -2987,7 +2980,7 @@ def test_calculate_checkout_line_unit_price_in_JPY(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_with_variant_on_promotion(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -3032,7 +3025,7 @@ def test_calculate_checkout_line_unit_price_with_variant_on_promotion(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_order_promotion_charge_taxes(
     checkout_with_item_and_order_discount,
     shipping_zone,
@@ -3086,7 +3079,7 @@ def test_calculate_checkout_line_unit_price_order_promotion_charge_taxes(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_order_promotion_do_not_charge_taxes(
     checkout_with_item_and_order_discount,
     shipping_zone,
@@ -3138,7 +3131,7 @@ def test_calculate_checkout_line_unit_price_order_promotion_do_not_charge_taxes(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_gift_promotion_line(
     checkout_with_item_and_gift_promotion,
     shipping_zone,
@@ -3181,7 +3174,7 @@ def test_calculate_checkout_line_unit_price_gift_promotion_line(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_with_voucher(
     checkout_with_item,
     shipping_zone,
@@ -3240,7 +3233,7 @@ def test_calculate_checkout_line_unit_price_with_voucher(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_with_voucher_once_per_order(
     checkout_with_item,
     shipping_zone,
@@ -3301,7 +3294,7 @@ def test_calculate_checkout_line_unit_price_with_voucher_once_per_order(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_with_variant_on_promotion_and_voucher(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -3360,7 +3353,7 @@ def test_calculate_checkout_line_unit_price_with_variant_on_promotion_and_vouche
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_calculate_checkout_line_unit_price_variant_on_promotion_and_voucher_only_once(
     checkout_with_item_on_promotion,
     shipping_zone,
@@ -3420,7 +3413,7 @@ def test_calculate_checkout_line_unit_price_variant_on_promotion_and_voucher_onl
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation(
     checkout_with_item_on_promotion,
     monkeypatch,
@@ -3452,7 +3445,7 @@ def test_preprocess_order_creation(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_no_lines_data(
     checkout_with_item,
     monkeypatch,
@@ -3483,7 +3476,7 @@ def test_preprocess_order_creation_no_lines_data(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_wrong_data(
     checkout_with_item,
     monkeypatch,
@@ -3511,7 +3504,7 @@ def test_preprocess_order_creation_wrong_data(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_shipping_voucher_no_tax_class_on_delivery_method(
     checkout_with_item_on_promotion,
     monkeypatch,
@@ -3552,7 +3545,7 @@ def test_preprocess_order_creation_shipping_voucher_no_tax_class_on_delivery_met
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_address_error_logging(
     checkout_with_item,
     monkeypatch,
@@ -3794,7 +3787,7 @@ def test_taxes_need_new_fetch_uses_cached_data(checkout_with_item, address):
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_line_tax_rate(
     monkeypatch,
     checkout_with_item,
@@ -3849,7 +3842,7 @@ def test_get_checkout_line_tax_rate(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_line_tax_rate_for_product_with_charge_taxes_set_to_false(
     monkeypatch,
     checkout_with_item,
@@ -3914,7 +3907,7 @@ def test_get_checkout_line_tax_rate_for_product_with_charge_taxes_set_to_false(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_line_tax_rate_for_product_type_with_non_taxable_product(
     monkeypatch,
     checkout_with_item,
@@ -3990,7 +3983,7 @@ def test_get_checkout_line_tax_rate_for_product_type_with_non_taxable_product(
     assert tax_rates[1] == Decimal("0.0")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_line_tax_rate_checkout_no_shipping_method_default_value_returned(
     monkeypatch, checkout_with_item, address, plugin_configuration, site_settings
 ):
@@ -4022,7 +4015,7 @@ def test_get_checkout_line_tax_rate_checkout_no_shipping_method_default_value_re
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_line_tax_rate_error_in_response(
     monkeypatch, checkout_with_item, address, plugin_configuration, shipping_zone
 ):
@@ -4058,7 +4051,7 @@ def test_get_checkout_line_tax_rate_error_in_response(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_line_tax_rate(
     monkeypatch, order_line, shipping_zone, plugin_configuration, site_settings, address
 ):
@@ -4096,7 +4089,7 @@ def test_get_order_line_tax_rate(
     assert tax_rate == Decimal("0.23")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_line_tax_rate_order_not_valid_default_value_returned(
     monkeypatch, order_line, shipping_zone, plugin_configuration
 ):
@@ -4122,7 +4115,7 @@ def test_get_order_line_tax_rate_order_not_valid_default_value_returned(
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_line_tax_rate_error_in_response(
     monkeypatch, order_line, shipping_zone, plugin_configuration
 ):
@@ -4158,7 +4151,7 @@ def test_get_order_line_tax_rate_error_in_response(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_shipping_tax_rate(
     checkout_with_item, address, plugin_configuration, shipping_zone, site_settings
 ):
@@ -4189,12 +4182,12 @@ def test_get_checkout_shipping_tax_rate(
     assert tax_rate == Decimal("0.23")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test__get_item_tax_rate_for_shipping_handles_multiple_tax_districts(
     avalara_response_for_checkout_with_items_and_shipping, channel_USD, checkout
 ):
     manager = get_plugins_manager(allow_replica=False)
-    plugin = manager.get_plugin(DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug)
+    plugin = manager.get_plugin(AvataxPlugin.PLUGIN_ID, channel_USD.slug)
 
     # 0.46 == sum of two tax districts
     assert Decimal("0.46") == plugin._get_item_tax_rate(
@@ -4206,12 +4199,12 @@ def test__get_item_tax_rate_for_shipping_handles_multiple_tax_districts(
     ).quantize(Decimal(".01"))
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test__get_item_tax_rate_handles_multiple_tax_districts(
     avalara_response_for_checkout_with_items_and_shipping, channel_USD, checkout
 ):
     manager = get_plugins_manager(allow_replica=False)
-    plugin = manager.get_plugin(DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug)
+    plugin = manager.get_plugin(AvataxPlugin.PLUGIN_ID, channel_USD.slug)
 
     # 0.36 == sum of two tax districts
     assert Decimal("0.36") == plugin._get_item_tax_rate(
@@ -4223,17 +4216,17 @@ def test__get_item_tax_rate_handles_multiple_tax_districts(
     ).quantize(Decimal(".01"))
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test__get_item_tax_rate_handles_tax_zero_and_rate_value(
     avalara_response_with_line_details_and_zero_tax_with_returned_rate,
     channel_USD,
     checkout,
 ):
     manager = get_plugins_manager(allow_replica=False)
-    plugin = manager.get_plugin(DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug)
+    plugin = manager.get_plugin(AvataxPlugin.PLUGIN_ID, channel_USD.slug)
 
     # 0.36 == sum of two tax districts
-    assert Decimal(0) == plugin._get_item_tax_rate(
+    assert Decimal("0") == plugin._get_item_tax_rate(
         avalara_response_with_line_details_and_zero_tax_with_returned_rate,
         "123",
         Decimal(0.0),
@@ -4243,7 +4236,7 @@ def test__get_item_tax_rate_handles_tax_zero_and_rate_value(
 
 
 @patch("saleor.plugins.avatax.plugin.logger", wraps=logger)
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test__get_item_tax_rate_use_default_value_when_taxable_amount_is_different(
     mocked_logger,
     avalara_response_for_checkout_with_items_and_shipping,
@@ -4259,7 +4252,7 @@ def test__get_item_tax_rate_use_default_value_when_taxable_amount_is_different(
     response["lines"][0]["details"][1]["taxableAmount"] = line_taxable_amount + 2
 
     manager = get_plugins_manager(allow_replica=False)
-    plugin = manager.get_plugin(DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug)
+    plugin = manager.get_plugin(AvataxPlugin.PLUGIN_ID, channel_USD.slug)
 
     default_rate_value = Decimal("0.66")
     object_type = "Checkout"
@@ -4307,7 +4300,7 @@ def test__get_item_tax_rate_use_default_value_when_taxable_amount_is_different(
     )
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_shipping_tax_rate_checkout_not_valid_default_value_returned(
     monkeypatch, checkout_with_item, address, plugin_configuration
 ):
@@ -4335,7 +4328,7 @@ def test_get_checkout_shipping_tax_rate_checkout_not_valid_default_value_returne
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_shipping_tax_rate_error_in_response(
     monkeypatch, checkout_with_item, address, plugin_configuration, shipping_zone
 ):
@@ -4368,14 +4361,14 @@ def test_get_checkout_shipping_tax_rate_error_in_response(
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_shipping_tax_rate_skip_plugin(
     monkeypatch, checkout_with_item, address, plugin_configuration, shipping_zone
 ):
     # given
     plugin_configuration()
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin",
         lambda *_: True,
     )
     shipping_price = TaxedMoney(Money(12, "USD"), Money(15, "USD"))
@@ -4402,7 +4395,7 @@ def test_get_checkout_shipping_tax_rate_skip_plugin(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_shipping_tax_rate(
     order_line, shipping_zone, plugin_configuration, site_settings, address
 ):
@@ -4428,7 +4421,7 @@ def test_get_order_shipping_tax_rate(
 
 
 @pytest.mark.vcr
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_shipping_tax_rate_shipping_with_tax_class(
     order_line, shipping_zone, plugin_configuration, site_settings, address
 ):
@@ -4457,7 +4450,7 @@ def test_get_order_shipping_tax_rate_shipping_with_tax_class(
     assert tax_rate == Decimal("0.23")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_shipping_tax_rate_order_not_valid_default_value_returned(
     order_line, shipping_zone, plugin_configuration
 ):
@@ -4475,7 +4468,7 @@ def test_get_order_shipping_tax_rate_order_not_valid_default_value_returned(
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_shipping_tax_rate_error_in_response(
     monkeypatch, order_line, shipping_zone, plugin_configuration
 ):
@@ -4502,7 +4495,7 @@ def test_get_order_shipping_tax_rate_error_in_response(
     assert tax_rate == Decimal("0.25")
 
 
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_shipping_tax_rate_skip_plugin(
     monkeypatch, order_line, shipping_zone, plugin_configuration
 ):
@@ -4510,7 +4503,7 @@ def test_get_order_shipping_tax_rate_skip_plugin(
     order = order_line.order
     plugin_configuration()
     monkeypatch.setattr(
-        "saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin._skip_plugin",
+        "saleor.plugins.avatax.plugin.AvataxPlugin._skip_plugin",
         lambda *_: True,
     )
     shipping_price = TaxedMoney(Money(12, "USD"), Money(15, "USD"))
@@ -4530,11 +4523,9 @@ def test_get_order_shipping_tax_rate_skip_plugin(
 
 
 def test_get_plugin_configuration(settings, channel_USD):
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     manager = get_plugins_manager(allow_replica=False)
-    plugin = manager.get_plugin(
-        DeprecatedAvataxPlugin.PLUGIN_ID, channel_slug=channel_USD.slug
-    )
+    plugin = manager.get_plugin(AvataxPlugin.PLUGIN_ID, channel_slug=channel_USD.slug)
 
     configuration_fields = [
         configuration_item["name"] for configuration_item in plugin.configuration
@@ -4550,12 +4541,12 @@ def test_get_plugin_configuration(settings, channel_USD):
 def test_save_plugin_configuration(
     api_get_request_mock, settings, channel_USD, plugin_configuration
 ):
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration()
     api_get_request_mock.return_value = {"authenticated": True}
     manager = get_plugins_manager(allow_replica=False)
     manager.save_plugin_configuration(
-        DeprecatedAvataxPlugin.PLUGIN_ID,
+        AvataxPlugin.PLUGIN_ID,
         channel_USD.slug,
         {
             "active": True,
@@ -4566,10 +4557,10 @@ def test_save_plugin_configuration(
         },
     )
     manager.save_plugin_configuration(
-        DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug, {"active": True}
+        AvataxPlugin.PLUGIN_ID, channel_USD.slug, {"active": True}
     )
     plugin_configuration = PluginConfiguration.objects.get(
-        identifier=DeprecatedAvataxPlugin.PLUGIN_ID
+        identifier=AvataxPlugin.PLUGIN_ID
     )
     assert plugin_configuration.active
 
@@ -4579,7 +4570,7 @@ def test_save_plugin_configuration_authentication_failed(
     api_get_request_mock, settings, channel_USD, plugin_configuration
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(active=False)
     api_get_request_mock.return_value = {"authenticated": False}
     manager = get_plugins_manager(allow_replica=False)
@@ -4587,7 +4578,7 @@ def test_save_plugin_configuration_authentication_failed(
     # when
     with pytest.raises(ValidationError) as e:
         manager.save_plugin_configuration(
-            DeprecatedAvataxPlugin.PLUGIN_ID,
+            AvataxPlugin.PLUGIN_ID,
             channel_USD.slug,
             {
                 "active": True,
@@ -4601,7 +4592,7 @@ def test_save_plugin_configuration_authentication_failed(
     # then
     assert e._excinfo[1].args[0] == "Authentication failed. Please check provided data."
     plugin_configuration = PluginConfiguration.objects.get(
-        identifier=DeprecatedAvataxPlugin.PLUGIN_ID
+        identifier=AvataxPlugin.PLUGIN_ID
     )
     assert not plugin_configuration.active
 
@@ -4610,16 +4601,16 @@ def test_save_plugin_configuration_cannot_be_enabled_without_config(
     settings, plugin_configuration, channel_USD
 ):
     plugin_configuration(None, None)
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     manager = get_plugins_manager(allow_replica=False)
     with pytest.raises(ValidationError):
         manager.save_plugin_configuration(
-            DeprecatedAvataxPlugin.PLUGIN_ID, channel_USD.slug, {"active": True}
+            AvataxPlugin.PLUGIN_ID, channel_USD.slug, {"active": True}
         )
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_confirmed(
     api_post_request_task_mock, order, order_line, plugin_configuration
 ):
@@ -4656,7 +4647,7 @@ def test_order_confirmed(
                 }
             ],
             "code": str(order.id),
-            "date": datetime.datetime.now(tz=datetime.UTC).date().strftime("%Y-%m-%d"),
+            "date": datetime.date.today().strftime("%Y-%m-%d"),
             "customerCode": 0,
             "discount": None,
             "addresses": {
@@ -4706,7 +4697,7 @@ def test_order_confirmed(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_with_enabled_flat_rates(
     api_post_request_task_mock,
     checkout_with_item,
@@ -4749,7 +4740,7 @@ def test_preprocess_order_creation_with_enabled_flat_rates(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_with_country_exception_for_flat_rates(
     api_post_request_task_mock,
     checkout_with_item,
@@ -4797,7 +4788,7 @@ def test_preprocess_order_creation_with_country_exception_for_flat_rates(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_confirmed_skip_when_flat_rate_usage(
     api_post_request_task_mock, order, plugin_configuration
 ):
@@ -4826,7 +4817,7 @@ def test_order_confirmed_skip_when_flat_rate_usage(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_confirmed_skip_with_country_exception_for_flat_rate(
     api_post_request_task_mock, order, order_line, plugin_configuration
 ):
@@ -4860,7 +4851,7 @@ def test_order_confirmed_skip_with_country_exception_for_flat_rate(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_created_no_lines(
     api_post_request_task_mock, order, plugin_configuration
 ):
@@ -4886,7 +4877,7 @@ def test_plugin_uses_configuration_from_db(
     shipping_zone,
     settings,
 ):
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     configuration = plugin_configuration()
     manager = get_plugins_manager(allow_replica=False)
 
@@ -4908,9 +4899,7 @@ def test_plugin_uses_configuration_from_db(
         {"name": "Username or account", "value": "New value"},
         {"name": "Password or license", "value": "Wrong pass"},
     ]
-    DeprecatedAvataxPlugin._update_config_items(
-        field_to_update, configuration.configuration
-    )
+    AvataxPlugin._update_config_items(field_to_update, configuration.configuration)
     configuration.save()
 
     manager = get_plugins_manager(allow_replica=False)
@@ -4920,10 +4909,10 @@ def test_plugin_uses_configuration_from_db(
 
 def test_skip_disabled_plugin(settings, plugin_configuration, channel_USD):
     plugin_configuration(username=None, password=None)
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     manager = get_plugins_manager(allow_replica=False)
-    plugin: DeprecatedAvataxPlugin = manager.get_plugin(
-        DeprecatedAvataxPlugin.PLUGIN_ID, channel_slug=channel_USD.slug
+    plugin: AvataxPlugin = manager.get_plugin(
+        AvataxPlugin.PLUGIN_ID, channel_slug=channel_USD.slug
     )
 
     assert (
@@ -4941,7 +4930,7 @@ def test_get_tax_code_from_object_meta(
         {META_CODE_KEY: "KEY", META_DESCRIPTION_KEY: "DESC"}
     )
     plugin_configuration(username=None, password=None)
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     manager = get_plugins_manager(allow_replica=False)
     tax_type = manager.get_tax_code_from_object_meta(
         product.tax_class, channel_USD.slug
@@ -5032,7 +5021,7 @@ def test_get_order_request_data_checks_when_taxes_are_included_to_price(
     lines_data = request_data["createTransactionModel"]["lines"]
 
     # then
-    assert all(line for line in lines_data if line["taxIncluded"] is True)
+    assert all([line for line in lines_data if line["taxIncluded"] is True])
 
 
 def test_get_order_request_data_uses_correct_address_for_cc(
@@ -5309,7 +5298,7 @@ def test_get_order_request_data_draft_order_with_voucher(
         assert line_data["discounted"] is True
     # shipping line shouldn't be discounted
     assert lines_data[-1]["discounted"] is False
-    assert Decimal(lines_data[-1]["amount"]) != Decimal(0)
+    assert Decimal(lines_data[-1]["amount"]) != Decimal("0")
 
 
 def test_get_order_request_data_draft_order_with_shipping_voucher(
@@ -5732,7 +5721,7 @@ def test_generate_request_data_from_checkout_lines_uses_tax_code_from_product_ta
     settings, channel_USD, plugin_configuration, checkout_with_item, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5761,7 +5750,7 @@ def test_generate_request_data_from_checkout_lines_uses_tax_code_from_product_ty
     settings, channel_USD, plugin_configuration, checkout_with_item, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5794,12 +5783,12 @@ def test_generate_request_data_from_checkout_lines_sets_different_tax_code_for_z
     settings, channel_USD, plugin_configuration, checkout_with_item, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
     variant = line.variant
-    variant.channel_listings.all().update(price_amount=Decimal(0))
+    variant.channel_listings.all().update(price_amount=Decimal("0"))
     variant.product.tax_class.store_value_in_metadata(
         {META_CODE_KEY: "taxcode", META_DESCRIPTION_KEY: "tax_description"}
     )
@@ -5824,7 +5813,7 @@ def test_generate_request_data_from_checkout_lines_sets_different_tax_code_only_
     settings, channel_USD, plugin_configuration, checkout_with_item, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5832,7 +5821,7 @@ def test_generate_request_data_from_checkout_lines_sets_different_tax_code_only_
     line.save()
 
     variant = line.variant
-    variant.channel_listings.all().update(price_amount=Decimal(11))
+    variant.channel_listings.all().update(price_amount=Decimal("11"))
     variant.product.tax_class.store_value_in_metadata(
         {META_CODE_KEY: "taxcode", META_DESCRIPTION_KEY: "tax_description"}
     )
@@ -5862,7 +5851,7 @@ def test_generate_request_data_from_checkout_lines_with_collection_point(
     warehouse,
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5870,7 +5859,7 @@ def test_generate_request_data_from_checkout_lines_with_collection_point(
     line.save()
 
     variant = line.variant
-    variant.channel_listings.all().update(price_amount=Decimal(11))
+    variant.channel_listings.all().update(price_amount=Decimal("11"))
     variant.product.tax_class.store_value_in_metadata(
         {META_CODE_KEY: "taxcode", META_DESCRIPTION_KEY: "tax_description"}
     )
@@ -5902,7 +5891,7 @@ def test_generate_request_data_from_checkout_lines_with_shipping_method(
     shipping_method,
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5910,7 +5899,7 @@ def test_generate_request_data_from_checkout_lines_with_shipping_method(
     line.save()
 
     variant = line.variant
-    variant.channel_listings.all().update(price_amount=Decimal(11))
+    variant.channel_listings.all().update(price_amount=Decimal("11"))
     variant.product.tax_class.store_value_in_metadata(
         {META_CODE_KEY: "taxcode", META_DESCRIPTION_KEY: "tax_description"}
     )
@@ -5943,7 +5932,7 @@ def test_generate_request_data_from_checkout_lines_adds_lines_with_taxes_disable
     tax_class_zero_rates,
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = checkout_with_item.lines.first()
@@ -5971,7 +5960,7 @@ def test_get_order_lines_data_gets_tax_code_from_product_tax_class(
     settings, channel_USD, plugin_configuration, order_with_lines, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = order_with_lines.lines.first()
@@ -5993,7 +5982,7 @@ def test_get_order_lines_data_gets_tax_code_from_product_type_tax_class(
     settings, channel_USD, plugin_configuration, order_with_lines, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = order_with_lines.lines.first()
@@ -6019,12 +6008,12 @@ def test_get_order_lines_data_sets_different_tax_code_for_zero_amount(
     settings, channel_USD, plugin_configuration, order_with_lines, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = order_with_lines.lines.first()
-    line.base_unit_price_amount = Decimal(0)
-    line.undiscounted_base_unit_price_amount = Decimal(0)
+    line.base_unit_price_amount = Decimal("0")
+    line.undiscounted_base_unit_price_amount = Decimal("0")
     line.save(
         update_fields=[
             "base_unit_price_amount",
@@ -6049,11 +6038,11 @@ def test_get_order_lines_data_with_discounted(
     settings, channel_USD, plugin_configuration, order, order_line, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
-    order_line.unit_price_gross_amount = Decimal(10)
-    order_line.undiscounted_unit_price_gross_amount = Decimal(20)
+    order_line.unit_price_gross_amount = Decimal("10")
+    order_line.undiscounted_unit_price_gross_amount = Decimal("20")
     order_line.quantity = 1
     order_line.save(
         update_fields=[
@@ -6082,7 +6071,7 @@ def test_get_order_lines_data_sets_different_tax_code_only_for_zero_amount(
     settings, channel_USD, plugin_configuration, order_with_lines, avatax_config
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
     line = order_with_lines.lines.first()
@@ -6121,10 +6110,10 @@ def test_get_order_lines_data_adds_lines_with_taxes_disabled_for_line(
     tax_class_zero_rates,
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
 
-    order_with_lines.base_shipping_price_amount = Decimal(0)
+    order_with_lines.base_shipping_price_amount = Decimal("0")
     order_with_lines.save(update_fields=["base_shipping_price_amount"])
 
     line = order_with_lines.lines.first()
@@ -6143,7 +6132,7 @@ def test_calculate_checkout_shipping_validates_checkout(
     mocked_func, settings, channel_USD, plugin_configuration, checkout_with_item
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
     manager = get_plugins_manager(allow_replica=False)
     checkout = checkout_with_item
@@ -6174,7 +6163,7 @@ def test_calculate_checkout_line_total_validates_checkout(
     mocked_func, settings, channel_USD, plugin_configuration, checkout_with_item
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
     manager = get_plugins_manager(allow_replica=False)
     checkout = checkout_with_item
@@ -6206,7 +6195,7 @@ def test_calculate_checkout_line_unit_price_validates_checkout(
     mocked_func, settings, channel_USD, plugin_configuration, checkout_with_item
 ):
     # given
-    settings.PLUGINS = ["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"]
+    settings.PLUGINS = ["saleor.plugins.avatax.plugin.AvataxPlugin"]
     plugin_configuration(channel=channel_USD)
     manager = get_plugins_manager(allow_replica=False)
     checkout = checkout_with_item
@@ -6234,7 +6223,7 @@ def test_calculate_checkout_line_unit_price_validates_checkout(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_with_tax_app_id_as_plugin(
     api_post_request_task_mock,
     checkout_with_item,
@@ -6278,7 +6267,7 @@ def test_preprocess_order_creation_with_tax_app_id_as_plugin(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_preprocess_order_creation_with_country_exception_tax_app_id_plugin(
     api_post_request_task_mock,
     checkout_with_item,
@@ -6327,7 +6316,7 @@ def test_preprocess_order_creation_with_country_exception_tax_app_id_plugin(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_confirmed_skip_with_tax_app_id_as_plugin(
     api_post_request_task_mock, order, plugin_configuration
 ):
@@ -6357,7 +6346,7 @@ def test_order_confirmed_skip_with_tax_app_id_as_plugin(
 
 
 @patch("saleor.plugins.avatax.plugin.api_post_request_task.delay")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_order_confirmed_skip_with_country_exception_tax_app_id_plugin(
     api_post_request_task_mock, order, order_line, plugin_configuration
 ):
@@ -6392,7 +6381,7 @@ def test_order_confirmed_skip_with_country_exception_tax_app_id_plugin(
 
 
 @patch("saleor.plugins.avatax.plugin.get_order_tax_data")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_order_tax_data_set_tax_error(
     mock_get_order_tax_data, order, order_line, plugin_configuration
 ):
@@ -6401,7 +6390,7 @@ def test_get_order_tax_data_set_tax_error(
 
     channel = order.channel
     tax_configuration = channel.tax_configuration
-    tax_configuration.tax_app_id = DeprecatedAvataxPlugin.PLUGIN_IDENTIFIER
+    tax_configuration.tax_app_id = AvataxPlugin.PLUGIN_IDENTIFIER
     tax_configuration.save()
     tax_configuration.country_exceptions.all().delete()
 
@@ -6423,7 +6412,7 @@ def test_get_order_tax_data_set_tax_error(
 
 
 @patch("saleor.plugins.avatax.plugin.get_checkout_tax_data")
-@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.DeprecatedAvataxPlugin"])
+@override_settings(PLUGINS=["saleor.plugins.avatax.plugin.AvataxPlugin"])
 def test_get_checkout_tax_data_set_tax_error(
     mock_get_checkout_tax_data,
     checkout_with_item,
@@ -6438,7 +6427,7 @@ def test_get_checkout_tax_data_set_tax_error(
 
     channel = checkout_with_item.channel
     tax_configuration = channel.tax_configuration
-    tax_configuration.tax_app_id = DeprecatedAvataxPlugin.PLUGIN_IDENTIFIER
+    tax_configuration.tax_app_id = AvataxPlugin.PLUGIN_IDENTIFIER
     tax_configuration.save()
     tax_configuration.country_exceptions.all().delete()
 
@@ -6476,7 +6465,7 @@ def test_validate_plugin_tax_data_no_data(lines_info):
     tax_data = {}
 
     # when
-    error_message = DeprecatedAvataxPlugin.validate_tax_data(tax_data, lines_info)
+    error_message = AvataxPlugin.validate_tax_data(tax_data, lines_info)
 
     # then
     assert error_message == TaxDataErrorMessage.EMPTY
@@ -6505,7 +6494,7 @@ def test_validate_plugin_tax_data_with_negative_values(lines_info, caplog):
     }
 
     # when
-    error_message = DeprecatedAvataxPlugin.validate_tax_data(tax_data, lines_info)
+    error_message = AvataxPlugin.validate_tax_data(tax_data, lines_info)
 
     # then
     assert error_message == TaxDataErrorMessage.NEGATIVE_VALUE
@@ -6521,7 +6510,7 @@ def test_validate_plugin_tax_data_price_overflow(lines_info, caplog):
                 "itemCode": "SKU_A",
             },
             {
-                "lineAmount": 99999999999999999.0000,
+                "lineAmount": 999999999999999999.0000,
                 "quantity": 2.0,
                 "itemCode": "SKU_B",
             },
@@ -6534,7 +6523,7 @@ def test_validate_plugin_tax_data_price_overflow(lines_info, caplog):
     }
 
     # when
-    error_message = DeprecatedAvataxPlugin.validate_tax_data(tax_data, lines_info)
+    error_message = AvataxPlugin.validate_tax_data(tax_data, lines_info)
 
     # then
     assert error_message == TaxDataErrorMessage.OVERFLOW

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from typing import Union
 from uuid import UUID
 
 import graphene
@@ -50,6 +51,6 @@ class OrderBulkCancel(BaseBulkWithRestrictedChannelAccessMutation):
             )
 
     @classmethod
-    def get_channel_ids(cls, instances) -> Iterable[UUID | int]:
+    def get_channel_ids(cls, instances) -> Iterable[Union[UUID, int]]:
         """Get the instances channel ids for channel permission accessible check."""
         return [order.channel_id for order in instances]

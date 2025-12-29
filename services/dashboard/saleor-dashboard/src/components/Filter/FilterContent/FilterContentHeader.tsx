@@ -2,6 +2,7 @@ import { Button } from "@dashboard/components/Button";
 import { buttonMessages } from "@dashboard/intl";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text, vars } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 const useStyles = makeStyles(
@@ -31,7 +32,7 @@ interface FilterContentHeaderProps {
   onClear: () => void;
 }
 
-export const FilterContentHeader = ({ onClear }: FilterContentHeaderProps) => {
+const FilterContentHeader: React.FC<FilterContentHeaderProps> = ({ onClear }) => {
   const classes = useStyles({});
 
   return (
@@ -55,3 +56,5 @@ export const FilterContentHeader = ({ onClear }: FilterContentHeaderProps) => {
     </div>
   );
 };
+
+export default FilterContentHeader;

@@ -4,10 +4,21 @@ import { AppErrorFragment } from "@dashboard/graphql";
 import { FormChange } from "@dashboard/hooks/useForm";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getAppErrorMessage from "@dashboard/utils/errors/app";
-import { Input } from "@saleor/macaw-ui-next";
+import { TextField } from "@material-ui/core";
+import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface CustomExtensionInfoProps {
+const useStyles = makeStyles(
+  {
+    cardTitle: {
+      paddingRight: 16,
+    },
+  },
+  { name: "AccountPermissions" },
+);
+
+export interface CustomExtensionInfoProps {
   data: {
     name: string;
   };
@@ -16,37 +27,38 @@ interface CustomExtensionInfoProps {
   onChange: FormChange;
 }
 
-export const CustomExtensionInformation = ({
+const CustomExtensionInformation: React.FC<CustomExtensionInfoProps> = ({
   data,
   disabled,
   errors,
   onChange,
-}: CustomExtensionInfoProps) => {
+}) => {
   const intl = useIntl();
+  const classes = useStyles();
   const formErrors = getFormErrors(["name"], errors);
 
   return (
     <DashboardCard>
       <DashboardCard.Header>
-        <DashboardCard.Title>
+        <DashboardCard.Title className={classes.cardTitle}>
           {intl.formatMessage({
-            id: "YtCaCm",
-            defaultMessage: "Extension Information",
+            id: "imYxM9",
+            defaultMessage: "App Information",
             description: "header",
           })}
         </DashboardCard.Title>
       </DashboardCard.Header>
       <DashboardCard.Content>
-        <Input
+        <TextField
           disabled={disabled}
           error={!!formErrors.name}
           label={intl.formatMessage({
-            id: "Crht/3",
-            defaultMessage: "Extension Name",
+            id: "foNlhn",
+            defaultMessage: "App Name",
             description: "custom app name",
           })}
           helperText={getAppErrorMessage(formErrors.name, intl)}
-          width="100%"
+          fullWidth
           name="name"
           value={data.name}
           onChange={onChange}
@@ -56,4 +68,5 @@ export const CustomExtensionInformation = ({
   );
 };
 
-CustomExtensionInformation.displayName = "CustomExtensionInformation";
+CustomExtensionInformation.displayName = "CustomAppInformation";
+export default CustomExtensionInformation;

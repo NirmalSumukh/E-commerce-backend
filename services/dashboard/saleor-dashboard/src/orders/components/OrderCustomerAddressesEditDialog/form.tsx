@@ -10,8 +10,7 @@ import useForm, {
 import useHandleFormSubmit from "@dashboard/hooks/useHandleFormSubmit";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { Option } from "@saleor/macaw-ui-next";
-import { useEffect, useState } from "react";
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 
 export enum AddressInputOptionEnum {
   CUSTOMER_ADDRESS = "customerAddress",
@@ -62,7 +61,7 @@ interface UseOrderCustomerAddressesEditFormOpts {
   defaultCloneAddress: boolean;
 }
 
-interface OrderCustomerAddressesEditFormProps extends UseOrderCustomerAddressesEditFormOpts {
+export interface OrderCustomerAddressesEditFormProps extends UseOrderCustomerAddressesEditFormOpts {
   children: (props: UseOrderCustomerAddressesEditFormResult) => React.ReactNode;
   initial?: Partial<OrderCustomerAddressesEditFormData>;
   onSubmit: (data: OrderCustomerAddressesEditData) => void;
@@ -185,12 +184,12 @@ function useOrderCustomerAddressesEditForm(
   };
 }
 
-const OrderCustomerAddressesEditForm = ({
+const OrderCustomerAddressesEditForm: React.FC<OrderCustomerAddressesEditFormProps> = ({
   children,
   initial,
   onSubmit,
   ...rest
-}: OrderCustomerAddressesEditFormProps) => {
+}) => {
   const props = useOrderCustomerAddressesEditForm(initial || {}, onSubmit, rest);
 
   return (

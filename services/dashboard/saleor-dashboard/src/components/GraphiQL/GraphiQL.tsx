@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { WebhookFormData } from "@dashboard/extensions/components/WebhookDetailsPage/WebhookDetailsPage";
+import { WebhookFormData } from "@dashboard/custom-apps/components/WebhookDetailsPage";
 import {
   CopyIcon,
   GraphiQLProvider,
@@ -21,15 +21,14 @@ import {
   WriteableEditorProps,
 } from "@graphiql/react";
 import clsx from "clsx";
-import { ComponentType, PropsWithChildren, ReactNode, useState } from "react";
-import * as React from "react";
+import React, { ComponentType, PropsWithChildren, ReactNode, useState } from "react";
 import { useIntl } from "react-intl";
 
 import DryRun from "../DryRun";
 import { messages } from "./messages";
 import { useDashboardTheme, useEditorStyles, useGraphiQLThemeSwitcher, useStyles } from "./styles";
 
-interface GraphiQLToolbarConfig {
+export interface GraphiQLToolbarConfig {
   /**
    * This content will be rendered after the built-in buttons of the toolbar.
    * Note that this will not apply if you provide a completely custom toolbar
@@ -38,9 +37,9 @@ interface GraphiQLToolbarConfig {
   additionalContent?: React.ReactNode;
 }
 
-type GraphiQLProps = Omit<GraphiQLProviderProps, "children"> & GraphiQLInterfaceProps;
+export type GraphiQLProps = Omit<GraphiQLProviderProps, "children"> & GraphiQLInterfaceProps;
 
-function GraphiQL({
+export function GraphiQL({
   dangerouslyAssumeSchemaIsValid,
   defaultQuery,
   defaultTabs,
@@ -133,7 +132,7 @@ type AddSuffix<Obj extends Record<string, any>, Suffix extends string> = {
   [Key in keyof Obj as `${string & Key}${Suffix}`]: Obj[Key];
 };
 
-type GraphiQLInterfaceProps = WriteableEditorProps &
+export type GraphiQLInterfaceProps = WriteableEditorProps &
   AddSuffix<Pick<UseQueryEditorArgs, "onEdit">, "Query"> &
   Pick<UseQueryEditorArgs, "onCopyQuery"> &
   AddSuffix<Pick<UseVariableEditorArgs, "onEdit">, "Variables"> &
@@ -148,7 +147,7 @@ type GraphiQLInterfaceProps = WriteableEditorProps &
     result?: string;
   };
 
-function GraphiQLInterface(props: GraphiQLInterfaceProps) {
+export function GraphiQLInterface(props: GraphiQLInterfaceProps) {
   const intl = useIntl();
   const editorContext = useEditorContext({ nonNull: true });
   const pluginContext = usePluginContext();

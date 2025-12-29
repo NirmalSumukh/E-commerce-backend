@@ -3,7 +3,7 @@ import { TableCellProps } from "@material-ui/core/TableCell";
 import { makeStyles } from "@saleor/macaw-ui";
 import { vars } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { forwardRef } from "react";
+import React from "react";
 
 import ArrowSort from "../../icons/ArrowSort";
 
@@ -56,15 +56,15 @@ const useStyles = makeStyles(
 );
 
 export type TableCellHeaderArrowDirection = "asc" | "desc";
-type TableCellHeaderArrowPosition = "left" | "right";
-interface TableCellHeaderProps extends TableCellProps {
+export type TableCellHeaderArrowPosition = "left" | "right";
+export interface TableCellHeaderProps extends TableCellProps {
   arrowPosition?: TableCellHeaderArrowPosition;
   direction?: TableCellHeaderArrowDirection;
   textAlign?: "left" | "center" | "right";
   disabled?: boolean;
 }
 
-const TableCellHeader = forwardRef<unknown, TableCellHeaderProps>((props, ref) => {
+const TableCellHeader = React.forwardRef<unknown, TableCellHeaderProps>((props, ref) => {
   const classes = useStyles(props);
   const {
     arrowPosition,

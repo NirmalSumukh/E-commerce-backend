@@ -35,6 +35,13 @@ const mockApolloClient = {
   clearStore: jest.fn(),
 };
 
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+}));
+
 jest.mock("@dashboard/graphql", () => {
   const actualModule = jest.requireActual("@dashboard/graphql");
 

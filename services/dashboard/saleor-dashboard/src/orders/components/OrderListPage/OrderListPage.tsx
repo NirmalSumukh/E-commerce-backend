@@ -1,27 +1,26 @@
 // @ts-strict-ignore
+import {
+  extensionMountPoints,
+  mapToMenuItemsForOrderListActions,
+  useExtensions,
+} from "@dashboard/apps/hooks/useExtensions";
 import { useUserAccessibleChannels } from "@dashboard/auth/hooks/useUserAccessibleChannels";
 import { useContextualLink } from "@dashboard/components/AppLayout/ContextualLinks/useContextualLink";
 import { LimitsInfo } from "@dashboard/components/AppLayout/LimitsInfo";
 import { ListFilters } from "@dashboard/components/AppLayout/ListFilters";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { ButtonGroupWithDropdown } from "@dashboard/components/ButtonGroupWithDropdown";
+import { ButtonWithDropdown } from "@dashboard/components/ButtonWithDropdown";
 import { DashboardCard } from "@dashboard/components/Card";
 import { useConditionalFilterContext } from "@dashboard/components/ConditionalFilter";
-import { createOrderQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import { useDevModeContext } from "@dashboard/components/DevModePanel/hooks";
 import { FilterPresetsSelect } from "@dashboard/components/FilterPresetsSelect";
 import { ListPageLayout } from "@dashboard/components/Layouts";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import {
-  getExtensionItemsForOverviewCreate,
-  getExtensionsItemsForOrderOverviewActions,
-} from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import { OrderListQuery, RefreshLimitsQuery } from "@dashboard/graphql";
 import { sectionNames } from "@dashboard/intl";
 import { orderMessages } from "@dashboard/orders/messages";
 import { DevModeQuery } from "@dashboard/orders/queries";
 import { OrderListUrlQueryParams, OrderListUrlSortField, orderUrl } from "@dashboard/orders/urls";
+import { getFilterVariables } from "@dashboard/orders/views/OrderList/filters";
 import {
   PageListProps,
   RelayToFlat,
@@ -31,13 +30,13 @@ import {
 } from "@dashboard/types";
 import { hasLimits, isLimitReached } from "@dashboard/utils/limits";
 import { Box, Button, ChevronRightIcon, Tooltip } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import OrderLimitReached from "../OrderLimitReached";
 import { OrderListDatagrid } from "../OrderListDatagrid";
 
-interface OrderListPageProps
+export interface OrderListPageProps
   extends PageListProps,
     SearchPageProps,
     Omit<TabPageProps, "onTabDelete">,
@@ -52,12 +51,13 @@ interface OrderListPageProps
   onTabDelete: (tabIndex: number) => void;
 }
 
-const OrderListPage = ({
+const OrderListPage: React.FC<OrderListPageProps> = ({
   initialSearch,
   limits,
   onAdd,
   onSearchChange,
   onSettingsOpen,
+  params,
   onTabChange,
   onTabDelete,
   onTabSave,
@@ -67,7 +67,7 @@ const OrderListPage = ({
   currentTab,
   hasPresetsChanged,
   ...listProps
-}: OrderListPageProps) => {
+}) => {
   const intl = useIntl();
   const subtitle = useContextualLink("order_list");
   const userAccessibleChannels = useUserAccessibleChannels();
@@ -77,8 +77,8 @@ const OrderListPage = ({
   const { ORDER_OVERVIEW_CREATE, ORDER_OVERVIEW_MORE_ACTIONS } = useExtensions(
     extensionMountPoints.ORDER_LIST,
   );
-  const extensionMenuItems = getExtensionsItemsForOrderOverviewActions(ORDER_OVERVIEW_MORE_ACTIONS);
-  const extensionCreateButtonItems = getExtensionItemsForOverviewCreate(ORDER_OVERVIEW_CREATE);
+  const extensionMenuItems = mapToMenuItemsForOrderListActions(ORDER_OVERVIEW_MORE_ACTIONS);
+  const extensionCreateButtonItems = mapToMenuItemsForOrderListActions(ORDER_OVERVIEW_CREATE);
   const context = useDevModeContext();
   const { valueProvider } = useConditionalFilterContext();
 
@@ -87,7 +87,7 @@ const OrderListPage = ({
 
     const variables = JSON.stringify(
       {
-        filter: createOrderQueryVariables(valueProvider.value),
+        filter: getFilterVariables(params, valueProvider.value),
         // TODO add sorting: Issue #3409
         // strange error when uncommenting this line
         // sortBy: getSortQueryVariables(params)
@@ -157,7 +157,7 @@ const OrderListPage = ({
             <Tooltip>
               <Tooltip.Trigger>
                 {extensionCreateButtonItems.length > 0 ? (
-                  <ButtonGroupWithDropdown
+                  <ButtonWithDropdown
                     onClick={onAdd}
                     testId={"create-order-button"}
                     options={extensionCreateButtonItems}
@@ -168,7 +168,7 @@ const OrderListPage = ({
                       defaultMessage="Create order"
                       description="button"
                     />
-                  </ButtonGroupWithDropdown>
+                  </ButtonWithDropdown>
                 ) : (
                   <Button
                     data-test-id="create-order-button"

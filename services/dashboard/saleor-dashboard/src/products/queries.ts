@@ -86,7 +86,21 @@ export const productTypeQuery = gql`
       name
       hasVariants
       productAttributes {
-        ...AttributeDetails
+        id
+        inputType
+        entityType
+        slug
+        name
+        valueRequired
+        unit
+        choices(
+          first: $firstValues
+          after: $afterValues
+          last: $lastValues
+          before: $beforeValues
+        ) {
+          ...AttributeValueList
+        }
       }
       taxClass {
         id

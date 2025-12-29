@@ -64,9 +64,6 @@ mutation checkoutDeliveryMethodUpdate($checkoutId: ID!, $deliveryMethodId: ID) {
           id
         }
       }
-      shippingAddress {
-        ...Address
-      }
     }
   }
 }

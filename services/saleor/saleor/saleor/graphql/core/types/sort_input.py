@@ -23,7 +23,7 @@ class SortInputObjectType(BaseInputObjectType):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls, container=None, _meta=None, sort_enum=None, type_name=None, **options
     ):
         if not _meta:

@@ -1,10 +1,9 @@
 import { fixedForwardRef, useCombinedRefs } from "@dashboard/utils/ref";
 import { Checkbox, CheckboxProps } from "@saleor/macaw-ui-next";
-import { ForwardedRef } from "react";
-import * as React from "react";
+import React, { ForwardedRef } from "react";
 import { Control, FieldPath, FieldValues, RegisterOptions, useController } from "react-hook-form";
 
-type HookFormCheckboxProps<
+export type HookFormCheckboxProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = Omit<CheckboxProps, "checked" | "onCheckedChange" | "name"> & {

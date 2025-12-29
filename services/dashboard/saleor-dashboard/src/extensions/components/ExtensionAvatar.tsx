@@ -1,5 +1,5 @@
 import { Box } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 interface ExtensionAvatarProps {
   children: React.ReactNode;

@@ -13,7 +13,7 @@ import ArrowIcon from "@material-ui/icons/ArrowDropDown";
 import { Button, IconButton, makeStyles } from "@saleor/macaw-ui";
 import { Skeleton, Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { Fragment, useState } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import TranslationFieldsLong from "./TranslationFieldsLong";
@@ -22,7 +22,7 @@ import TranslationFieldsShort from "./TranslationFieldsShort";
 
 type Pagination = Pick<ListProps, Exclude<keyof ListProps, "getRowHref" | "disabled">>;
 
-interface TranslationFieldsProps {
+export interface TranslationFieldsProps {
   activeField: string;
   disabled: boolean;
   title: string;
@@ -101,7 +101,7 @@ const useStyles = makeStyles(
   { name: "TranslationFields" },
 );
 const numberOfColumns = 2;
-const TranslationFields = (props: TranslationFieldsProps) => {
+const TranslationFields: React.FC<TranslationFieldsProps> = props => {
   const {
     activeField,
     disabled,
@@ -116,7 +116,7 @@ const TranslationFields = (props: TranslationFieldsProps) => {
     onSubmit,
   } = props;
   const classes = useStyles(props);
-  const [expanded, setExpandedState] = useState(initialState);
+  const [expanded, setExpandedState] = React.useState(initialState);
 
   return (
     <DashboardCard>
@@ -146,7 +146,7 @@ const TranslationFields = (props: TranslationFieldsProps) => {
               />
             </Text>
             {fields.map(field => (
-              <Fragment key={field.name}>
+              <React.Fragment key={field.name}>
                 <Hr className={classes.hr} />
                 <Text className={classes.fieldName} fontSize={3}>
                   {field.displayName}
@@ -226,7 +226,7 @@ const TranslationFields = (props: TranslationFieldsProps) => {
                     <Skeleton />
                   )}
                 </Text>
-              </Fragment>
+              </React.Fragment>
             ))}
           </Grid>
           {pagination && (

@@ -4,21 +4,21 @@ import { FormChange } from "@dashboard/hooks/useForm";
 import { Table, TableCell, TableHead } from "@material-ui/core";
 import { Button, ChervonDownIcon, Skeleton, Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { WebhookFormData } from "../../WebhookDetailsPage";
 import { messages } from "./messages";
-import { useStyles } from "./styles";
+import useStyles from "./styles";
 import { hasEmptyHeader, mapHeaders, stringifyHeaders } from "./utils";
-import { WebhookHeadersTableBody } from "./WebhookHeadersTableBody";
+import WebhookHeadersTableBody from "./WebhookHeadersTableBody";
 
 export interface WebhookHeadersProps {
   data: WebhookFormData;
   onChange: FormChange;
 }
 
-export const WebhookHeaders = ({ data: { customHeaders }, onChange }: WebhookHeadersProps) => {
+const WebhookHeaders: React.FC<WebhookHeadersProps> = ({ data: { customHeaders }, onChange }) => {
   const intl = useIntl();
   const [expanded, setExpanded] = useState(false);
   const classes = useStyles();
@@ -141,3 +141,4 @@ export const WebhookHeaders = ({ data: { customHeaders }, onChange }: WebhookHea
 };
 
 WebhookHeaders.displayName = "WebhookHeaders";
+export default WebhookHeaders;

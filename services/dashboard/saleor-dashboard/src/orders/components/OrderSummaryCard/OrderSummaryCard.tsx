@@ -1,10 +1,12 @@
+// @ts-strict-ignore
 import { DashboardCard } from "@dashboard/components/Card";
 import { OrderDetailsFragment } from "@dashboard/graphql";
 import { getDiscountTypeLabel } from "@dashboard/orders/utils/data";
-import { OrderDetailsViewModel } from "@dashboard/orders-v2/order-details-view-model";
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { obtainUsedGifrcards } from "../OrderPayment/utils";
 import { OrderUsedGiftCards } from "../OrderUsedGiftCards";
 import { orderSummaryMessages } from "./messages";
 import SummaryLine from "./SummaryLine";
@@ -30,11 +32,11 @@ const useStyles = makeStyles(
   }),
   { name: "OrderSummaryCard" },
 );
-const OrderSummaryCard = ({ order }: OrderPaymentProps) => {
+const OrderSummaryCard: React.FC<OrderPaymentProps> = ({ order }) => {
   const classes = useStyles();
   const intl = useIntl();
   const giftCardAmount = extractOrderGiftCardUsedAmount(order);
-  const usedGiftcards = OrderDetailsViewModel.getUsedGiftCards(order.giftCards);
+  const usedGiftcards = obtainUsedGifrcards(order);
 
   return (
     <DashboardCard data-test-id="OrderSummaryCard">
@@ -68,7 +70,7 @@ const OrderSummaryCard = ({ order }: OrderPaymentProps) => {
             />
           ))}
           {/* TODO: Remove when gift cards are not treated as discounts */}
-          {giftCardAmount && giftCardAmount > 0 && usedGiftcards && (
+          {giftCardAmount > 0 && (
             <SummaryLine
               text={<OrderUsedGiftCards giftCards={usedGiftcards} />}
               negative

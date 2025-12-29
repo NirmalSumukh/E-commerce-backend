@@ -1,3 +1,4 @@
+// @ts-strict-ignore
 import {
   add,
   addAtIndex,
@@ -11,7 +12,7 @@ import {
 } from "./lists";
 
 const initialArray = ["lorem", "ipsum", "dolor"];
-const compare = (a: unknown, b: unknown) => a === b;
+const compare = (a, b) => a === b;
 
 describe("Properly calculates output arrays", () => {
   it("Adds", () => {

@@ -8,7 +8,6 @@ from graphene.utils.str_converters import to_camel_case
 from ....app.models import App
 from ....core import EventDeliveryStatus
 from ....core import models as core_models
-from ....core.telemetry import get_task_context
 from ....core.utils.events import get_is_deferred_payload
 from ....discount import models as discount_models
 from ....graphql.utils import get_user_or_app_from_context
@@ -16,13 +15,8 @@ from ....permission.auth_filters import AuthorizationFilters
 from ....webhook.error_codes import WebhookTriggerErrorCode
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.models import Webhook
-from ....webhook.transport.asynchronous.transport import (
-    create_deliveries_for_subscriptions,
-    generate_deferred_payloads,
-    send_webhook_request_async,
-)
-from ....webhook.transport.utils import prepare_deferred_payload_data
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_311, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_WEBHOOKS
 from ...core.mutations import BaseMutation
 from ...core.types.common import WebhookTriggerError
@@ -47,6 +41,8 @@ class WebhookTrigger(BaseMutation):
             "provided in the `webhook.subscription_query`). Requires permission "
             "relevant to processed event. Successfully delivered webhook returns "
             "`delivery` with status='PENDING' and empty payload."
+            + ADDED_IN_311
+            + PREVIEW_FEATURE
         )
         doc_category = DOC_CATEGORY_WEBHOOKS
         permissions = (AuthorizationFilters.AUTHENTICATED_STAFF_USER,)
@@ -100,7 +96,7 @@ class WebhookTrigger(BaseMutation):
         event_name = (
             event_type[0].upper() + to_camel_case(event_type)[1:] if event_type else ""
         )
-        return raise_validation_error(
+        raise_validation_error(
             message=(
                 f"Event type: {event_name}, "
                 f"which was parsed from webhook's "
@@ -155,6 +151,13 @@ class WebhookTrigger(BaseMutation):
 
     @classmethod
     def perform_mutation(cls, _root, info, **data):
+        from ....webhook.transport.asynchronous.transport import (
+            create_deliveries_for_subscriptions,
+            generate_deferred_payloads,
+            send_webhook_request_async,
+        )
+        from ....webhook.transport.utils import prepare_deferred_payload_data
+
         event_type, object, webhook = cls.validate_input(info, **data)
         delivery = None
         requestor = get_user_or_app_from_context(info.context)
@@ -181,7 +184,6 @@ class WebhookTrigger(BaseMutation):
                     kwargs={
                         "event_delivery_ids": [delivery.pk],
                         "deferred_payload_data": asdict(deferred_payload_data),
-                        "telemetry_context": get_task_context().to_dict(),
                     },
                     bind=True,
                 )
@@ -192,10 +194,7 @@ class WebhookTrigger(BaseMutation):
                 if deliveries:
                     delivery = deliveries[0]
                     try:
-                        send_webhook_request_async(
-                            delivery.id,
-                            telemetry_context=get_task_context().to_dict(),
-                        )
+                        send_webhook_request_async(delivery.id)
                         return WebhookTrigger(delivery=delivery)
                     except Retry:
                         delivery.status = EventDeliveryStatus.FAILED

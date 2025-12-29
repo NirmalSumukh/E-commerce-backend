@@ -6,10 +6,6 @@ from ....attribute import models as attribute_models
 from ....core.tracing import traced_atomic_transaction
 from ....page import models
 from ....permission.enums import PageTypePermissions
-from ....product.models import Product
-from ....product.utils.search_helpers import (
-    mark_products_search_vector_as_dirty_in_batches,
-)
 from ...core import ResolveInfo
 from ...core.mutations import ModelDeleteMutation
 from ...core.types import PageError
@@ -22,7 +18,7 @@ class PageTypeDelete(ModelDeleteMutation):
         id = graphene.ID(required=True, description="ID of the page type to delete.")
 
     class Meta:
-        description = "Deletes a page type."
+        description = "Delete a page type."
         model = models.PageType
         object_type = PageType
         permissions = (PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES,)
@@ -36,28 +32,7 @@ class PageTypeDelete(ModelDeleteMutation):
         page_type_pk = cls.get_global_id_or_error(id, only_type=PageType, field="pk")
         with traced_atomic_transaction():
             cls.delete_assigned_attribute_values(page_type_pk)
-            cls.update_products_search_index(page_type_pk)
             return super().perform_mutation(_root, info, id=id)
-
-    @classmethod
-    def update_products_search_index(cls, instance):
-        # Mark products that use pages belonging to this page type as reference as dirty
-        page_ids = models.Page.objects.filter(page_type=instance).values_list(
-            "id", flat=True
-        )
-        product_ids = list(
-            Product.objects.filter(
-                Exists(
-                    attribute_models.AssignedProductAttributeValue.objects.filter(
-                        product_id=OuterRef("id"),
-                        value__in=attribute_models.AttributeValue.objects.filter(
-                            reference_page_id__in=page_ids
-                        ),
-                    )
-                )
-            ).values_list("id", flat=True)
-        )
-        mark_products_search_vector_as_dirty_in_batches(product_ids)
 
     @staticmethod
     def delete_assigned_attribute_values(instance_pk):

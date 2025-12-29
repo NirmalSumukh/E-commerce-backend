@@ -1,6 +1,7 @@
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 
-interface HorizontalSpacerProps {
+export interface HorizontalSpacerProps {
   spacing?: number;
 }
 
@@ -12,7 +13,7 @@ const useStyles = makeStyles(
   }),
   { name: "HorizontalSpacer" },
 );
-const HorizontalSpacer = ({ spacing = 1 }: HorizontalSpacerProps) => {
+const HorizontalSpacer: React.FC<HorizontalSpacerProps> = ({ spacing = 1 }) => {
   const classes = useStyles({ spacing });
 
   return <div className={classes.container} />;

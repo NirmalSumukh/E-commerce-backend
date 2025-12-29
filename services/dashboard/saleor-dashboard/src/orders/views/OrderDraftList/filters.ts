@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { FilterElement } from "@dashboard/components/Filter/types";
+import { FilterElement } from "@dashboard/components/Filter";
 import { OrderDraftFilterInput } from "@dashboard/graphql";
 import { maybe } from "@dashboard/misc";
 import {
@@ -9,13 +9,18 @@ import {
 
 import {
   createFilterTabUtils,
+  createFilterUtils,
   getGteLteVariables,
   getMinMaxQueryParam,
   getSingleValueQueryParam,
 } from "../../../utils/filters";
-import { OrderDraftListUrlFilters, OrderDraftListUrlFiltersEnum } from "../../urls";
+import {
+  OrderDraftListUrlFilters,
+  OrderDraftListUrlFiltersEnum,
+  OrderDraftListUrlQueryParams,
+} from "../../urls";
 
-const ORDER_DRAFT_FILTERS_KEY = "orderDraftFilters";
+export const ORDER_DRAFT_FILTERS_KEY = "orderDraftFilters";
 
 export function getFilterOpts(params: OrderDraftListUrlFilters): OrderDraftListFilterOpts {
   return {
@@ -66,3 +71,8 @@ export function getFilterQueryParam(
 }
 
 export const storageUtils = createFilterTabUtils<string>(ORDER_DRAFT_FILTERS_KEY);
+
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
+  OrderDraftListUrlQueryParams,
+  OrderDraftListUrlFilters
+>(OrderDraftListUrlFiltersEnum);

@@ -2,14 +2,22 @@ import {
   AttributeFilterKeys,
   AttributeListFilterOpts,
 } from "@dashboard/attributes/components/AttributeListPage";
-import { FilterElement } from "@dashboard/components/Filter/types";
+import { FilterElement } from "@dashboard/components/Filter";
 import { AttributeFilterInput } from "@dashboard/graphql";
 import { parseBoolean } from "@dashboard/misc";
 
-import { createFilterTabUtils, getSingleValueQueryParam } from "../../../utils/filters";
-import { AttributeListUrlFilters, AttributeListUrlFiltersEnum } from "../../urls";
+import {
+  createFilterTabUtils,
+  createFilterUtils,
+  getSingleValueQueryParam,
+} from "../../../utils/filters";
+import {
+  AttributeListUrlFilters,
+  AttributeListUrlFiltersEnum,
+  AttributeListUrlQueryParams,
+} from "../../urls";
 
-const ATTRIBUTE_FILTERS_KEY = "attributeFilters";
+export const ATTRIBUTE_FILTERS_KEY = "attributeFilters";
 
 export function getFilterOpts(params: AttributeListUrlFilters): AttributeListFilterOpts {
   return {
@@ -71,3 +79,8 @@ export function getFilterQueryParam(
 }
 
 export const storageUtils = createFilterTabUtils<string>(ATTRIBUTE_FILTERS_KEY);
+
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
+  AttributeListUrlQueryParams,
+  AttributeListUrlFilters
+>(AttributeListUrlFiltersEnum);

@@ -3,6 +3,7 @@ import { toggle } from "@dashboard/utils/lists";
 import { FormControlLabel, TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Option, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import Checkbox from "../Checkbox";
@@ -46,14 +47,14 @@ const useStyles = makeStyles(
   }),
   { name: "FilterAutocompleteField" },
 );
-const FilterAutocompleteField = ({
+const FilterAutocompleteField: React.FC<FilterAutocompleteFieldProps> = ({
   displayValues,
   filter,
   setDisplayValues,
   onFilterPropertyChange,
   initialDisplayValues,
   ...rest
-}: FilterAutocompleteFieldProps) => {
+}) => {
   const classes = useStyles({});
   const fieldDisplayValues = displayValues[filter.name] ?? [];
   const initialFieldDisplayValues = initialDisplayValues[filter.name];

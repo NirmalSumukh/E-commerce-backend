@@ -1,6 +1,7 @@
-import datetime
+from datetime import datetime
 
 import graphene
+import pytz
 from django.core.exceptions import ValidationError
 
 from .....core.tracing import traced_atomic_transaction
@@ -10,10 +11,11 @@ from .....discount.models import Promotion
 from .....discount.utils.promotion import mark_catalogue_promotion_rules_as_dirty
 from .....permission.enums import DiscountPermissions
 from .....webhook.event_types import WebhookEventAsyncType
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
+from ....core.descriptions import ADDED_IN_31, DEPRECATED_IN_3X_MUTATION
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.scalars import DateTime, PositiveDecimal
 from ....core.types import BaseInputObjectType, DiscountError, NonNullList
 from ....core.utils import WebhookEventInfo
@@ -36,7 +38,7 @@ class SaleInput(BaseInputObjectType):
     )
     variants = NonNullList(
         graphene.ID,
-        descriptions="Product variant related to the discount.",
+        descriptions="Product variant related to the discount." + ADDED_IN_31,
         name="variants",
     )
     categories = NonNullList(
@@ -56,14 +58,18 @@ class SaleInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_DISCOUNTS
 
 
-class SaleCreate(DeprecatedModelMutation):
+class SaleCreate(ModelMutation):
     class Arguments:
         input = SaleInput(
             required=True, description="Fields required to create a sale."
         )
 
     class Meta:
-        description = "Creates a new sale."
+        description = (
+            "Creates a new sale."
+            + DEPRECATED_IN_3X_MUTATION
+            + " Use `promotionCreate` mutation instead."
+        )
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)
         model = models.Promotion
         object_type = Sale
@@ -100,9 +106,9 @@ class SaleCreate(DeprecatedModelMutation):
         end_date = instance.end_date
         try:
             validate_end_is_after_start(start_date, end_date)
-        except ValidationError as e:
-            e.code = DiscountErrorCode.INVALID.value
-            raise ValidationError({"end_date": e}) from e
+        except ValidationError as error:
+            error.code = DiscountErrorCode.INVALID.value
+            raise ValidationError({"end_date": error})
 
     @classmethod
     def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
@@ -138,7 +144,7 @@ class SaleCreate(DeprecatedModelMutation):
         Send the notification when the start date is before the current date and the
         sale is not already finished.
         """
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = datetime.now(pytz.utc)
 
         start_date = instance.start_date
         end_date = instance.end_date

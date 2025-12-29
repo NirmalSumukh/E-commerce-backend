@@ -1,6 +1,12 @@
 import { FormChange } from "@dashboard/hooks/useForm";
 import { Option } from "@saleor/macaw-ui-next";
 
+export interface SingleAutocompleteSelectedChangeHandlerProps {
+  change: FormChange;
+  setSelected: (value: string) => void;
+  choices: Option[];
+}
+
 function createSingleAutocompleteSelectHandler(
   change: FormChange,
   setSelected: (value: string) => void,

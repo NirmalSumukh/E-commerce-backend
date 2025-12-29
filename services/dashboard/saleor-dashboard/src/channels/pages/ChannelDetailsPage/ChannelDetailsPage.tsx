@@ -35,7 +35,7 @@ import { FetchMoreProps, RelayToFlat } from "@dashboard/types";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { mapCountriesToChoices } from "@dashboard/utils/maps";
 import { Option } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useIntl } from "react-intl";
 
 import { ChannelForm, FormData } from "../../components/ChannelForm";
@@ -49,7 +49,7 @@ import {
 } from "./handlers";
 import { ChannelShippingZones, ChannelWarehouses } from "./types";
 
-interface ChannelDetailsPageProps<TErrors extends ChannelErrorFragment[]> {
+export interface ChannelDetailsPageProps<TErrors extends ChannelErrorFragment[]> {
   channel?: ChannelDetailsFragment;
   currencyCodes?: Option[];
   disabled: boolean;
@@ -127,8 +127,7 @@ const ChannelDetailsPage = function <TErrors extends ChannelErrorFragment[]>({
     ...initialStockSettings,
     shippingZonesToDisplay: channelShippingZones,
     warehousesToDisplay: channelWarehouses,
-    markAsPaidStrategy:
-      orderSettings?.markAsPaidStrategy ?? MarkAsPaidStrategyEnum.TRANSACTION_FLOW,
+    markAsPaidStrategy: orderSettings?.markAsPaidStrategy,
     deleteExpiredOrdersAfter: orderSettings?.deleteExpiredOrdersAfter,
     allowUnpaidOrders: orderSettings?.allowUnpaidOrders,
     defaultTransactionFlowStrategy: paymentSettings?.defaultTransactionFlowStrategy,

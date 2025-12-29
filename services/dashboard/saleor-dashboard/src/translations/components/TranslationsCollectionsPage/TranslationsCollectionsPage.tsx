@@ -1,10 +1,9 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import CardSpacer from "@dashboard/components/CardSpacer";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { CollectionTranslationFragment, LanguageCodeEnum } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import {
@@ -16,15 +15,16 @@ import {
   languageEntityUrl,
   TranslatableEntities,
 } from "@dashboard/translations/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsCollectionsPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsCollectionsPageProps extends TranslationsEntitiesPageProps {
   data: CollectionTranslationFragment;
 }
 
-const TranslationsCollectionsPage = ({
+const TranslationsCollectionsPage: React.FC<TranslationsCollectionsPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -35,9 +35,8 @@ const TranslationsCollectionsPage = ({
   onDiscard,
   onEdit,
   onSubmit,
-}: TranslationsCollectionsPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -57,11 +56,11 @@ const TranslationsCollectionsPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.collections, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.collections, translationId)
           }
         />
       </TopNav>

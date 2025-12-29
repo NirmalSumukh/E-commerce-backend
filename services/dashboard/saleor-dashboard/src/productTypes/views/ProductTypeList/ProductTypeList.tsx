@@ -2,6 +2,7 @@ import { useConditionalFilterContext } from "@dashboard/components/ConditionalFi
 import { createProductTypesQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
+import { useFlag } from "@dashboard/featureFlags";
 import { useProductTypeBulkDeleteMutation, useProductTypeListQuery } from "@dashboard/graphql";
 import useBulkActions from "@dashboard/hooks/useBulkActions";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
@@ -22,7 +23,7 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import { Button, TrashBinIcon } from "@saleor/macaw-ui-next";
-import { useMemo } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TypeDeleteWarningDialog from "../../../components/TypeDeleteWarningDialog/TypeDeleteWarningDialog";
@@ -33,14 +34,14 @@ import {
   ProductTypeListUrlDialog,
   ProductTypeListUrlQueryParams,
 } from "../../urls";
-import { getFilterOpts, getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterOpts, getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { getSortQueryVariables } from "./sort";
 
 interface ProductTypeListProps {
   params: ProductTypeListUrlQueryParams;
 }
 
-const ProductTypeList = ({ params }: ProductTypeListProps) => {
+export const ProductTypeList: React.FC<ProductTypeListProps> = ({ params }) => {
   const navigate = useNavigator();
   const intl = useIntl();
   const notify = useNotifier();
@@ -52,14 +53,22 @@ const ProductTypeList = ({ params }: ProductTypeListProps) => {
     toggleAll,
   } = useBulkActions(params.ids);
   const { settings } = useListSettings(ListViews.PRODUCT_LIST);
+  const { enabled: isProductTypesFilterEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
   const filters = createProductTypesQueryVariables(valueProvider.value);
 
   usePaginationReset(productTypeListUrl, params, settings.rowNumber);
 
   const paginationState = createPaginationState(settings.rowNumber, params);
-
-  const newQueryVariables = useMemo(
+  const queryVariables = React.useMemo(
+    () => ({
+      ...paginationState,
+      filter: getFilterVariables(params),
+      sort: getSortQueryVariables(params),
+    }),
+    [params, settings.rowNumber],
+  );
+  const newQueryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: {
@@ -72,7 +81,7 @@ const ProductTypeList = ({ params }: ProductTypeListProps) => {
   );
   const { data, loading, refetch } = useProductTypeListQuery({
     displayLoader: true,
-    variables: newQueryVariables,
+    variables: isProductTypesFilterEnabled ? newQueryVariables : queryVariables,
   });
   const [changeFilters, resetFilters, handleSearchChange] = createFilterHandlers({
     cleanupFn: reset,
@@ -207,6 +216,5 @@ const ProductTypeList = ({ params }: ProductTypeListProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 ProductTypeList.displayName = "ProductTypeList";
 export default ProductTypeList;

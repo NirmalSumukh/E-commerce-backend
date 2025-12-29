@@ -22,12 +22,12 @@ type ControlFunctions = {
   isPending: () => boolean;
 };
 
-type DebouncedState<T extends (...args: any) => ReturnType<T>> = ((
+export type DebouncedState<T extends (...args: any) => ReturnType<T>> = ((
   ...args: Parameters<T>
 ) => ReturnType<T> | undefined) &
   ControlFunctions;
 
-function useDebounceCallback<T extends (...args: any) => ReturnType<T>>(
+export function useDebounceCallback<T extends (...args: any) => ReturnType<T>>(
   func: T,
   delay = 500,
   options?: DebounceOptions,

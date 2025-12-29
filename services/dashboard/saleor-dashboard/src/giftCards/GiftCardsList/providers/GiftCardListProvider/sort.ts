@@ -4,7 +4,7 @@ import { createGetSortQueryVariables } from "@dashboard/utils/sort";
 
 import { GiftCardUrlSortField } from "../../types";
 
-const getSortQueryField = (sort: GiftCardUrlSortField): GiftCardSortField => {
+export const getSortQueryField = (sort: GiftCardUrlSortField): GiftCardSortField => {
   switch (sort) {
     case GiftCardUrlSortField.balance:
       return GiftCardSortField.CURRENT_BALANCE;

@@ -3,6 +3,7 @@ import { IS_CLOUD_INSTANCE } from "@dashboard/config";
 import { useHasManagedAppsPermission } from "@dashboard/hooks/useHasManagedAppsPermission";
 import { buttonMessages } from "@dashboard/intl";
 import { Button } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { messages } from "./messages";

@@ -1,11 +1,11 @@
-import * as React from "react";
+import React from "react";
 
 interface SavebarRefContext {
   anchor: React.RefObject<HTMLDivElement | null>;
   setAnchor: (element: HTMLDivElement | null) => void;
 }
 
-const SavebarRefContext = React.createContext<SavebarRefContext | null>(null);
+export const SavebarRefContext = React.createContext<SavebarRefContext | null>(null);
 
 export const useSavebarRef = () => {
   const context = React.useContext(SavebarRefContext);

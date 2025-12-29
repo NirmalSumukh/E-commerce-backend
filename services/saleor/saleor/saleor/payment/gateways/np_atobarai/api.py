@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+from typing import Optional
 
 from ....order.models import Fulfillment
 from ...interface import PaymentData
@@ -152,8 +153,8 @@ def reregister_transaction_for_partial_return(
     config: ApiConfig,
     payment: Payment,
     payment_information: PaymentData,
-    shipping_company_code: str | None,
-    tracking_number: str | None,
+    shipping_company_code: Optional[str],
+    tracking_number: Optional[str],
     goods: list[dict],
     billed_amount: Decimal,
 ) -> PaymentResult:

@@ -1,6 +1,6 @@
 import { AppstoreApi } from "@dashboard/apps/appstore.types";
 import { Box, Text } from "@saleor/macaw-ui-next";
-import { PropsWithChildren } from "react";
+import React from "react";
 
 import { AppLogo } from "./AppLogo";
 
@@ -8,7 +8,7 @@ interface AppListCardDescriptionProps {
   app: AppstoreApi.SaleorApp;
 }
 
-export const AppListCardDescription = ({ app }: PropsWithChildren<AppListCardDescriptionProps>) => (
+const AppListCardDescription: React.FC<AppListCardDescriptionProps> = ({ app }) => (
   <Box>
     <Box display="flex" flexDirection="row" alignItems="center" marginBottom={5} gap={3}>
       <AppLogo backgroundColor={app.logo.color}>
@@ -37,3 +37,4 @@ export const AppListCardDescription = ({ app }: PropsWithChildren<AppListCardDes
 );
 
 AppListCardDescription.displayName = "AppListCardDescription";
+export default AppListCardDescription;

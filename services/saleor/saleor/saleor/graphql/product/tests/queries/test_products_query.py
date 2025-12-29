@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from decimal import Decimal
 
 import graphene
@@ -563,12 +563,12 @@ SORT_PRODUCTS_QUERY = """
 
 
 def test_sort_products(user_api_client, product, channel_USD):
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
 
     product.pk = None
     product.slug = "second-product"
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
     ProductChannelListing.objects.create(
         product=product,
@@ -587,7 +587,7 @@ def test_sort_products(user_api_client, product, channel_USD):
     )
     product.pk = None
     product.slug = "third-product"
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
     ProductChannelListing.objects.create(
         product=product,
@@ -673,13 +673,13 @@ def test_sort_products(user_api_client, product, channel_USD):
 def test_sort_products_by_price_as_staff(
     staff_api_client, product, channel_USD, permission_manage_products
 ):
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
     staff_api_client.user.user_permissions.add(permission_manage_products)
 
     product.pk = None
     product.slug = "second-product"
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
     ProductChannelListing.objects.create(
         product=product,
@@ -698,7 +698,7 @@ def test_sort_products_by_price_as_staff(
     )
     product.pk = None
     product.slug = "third-product"
-    product.updated_at = datetime.datetime.now(tz=datetime.UTC)
+    product.updated_at = datetime.utcnow()
     product.save()
     ProductChannelListing.objects.create(
         product=product,
@@ -1181,11 +1181,6 @@ def test_products_with_variants_query_as_app(
               node{
                 id
                 name
-                assignedAttributes(limit:10) {
-                    attribute {
-                        slug
-                    }
-                }
                 attributes {
                     attribute {
                         id
@@ -1216,9 +1211,6 @@ def test_products_with_variants_query_as_app(
         attrs = response_product["node"]["attributes"]
         assert len(attrs) == 1
         assert attrs[0]["attribute"]["id"] == attribute_id
-        assigned_attribtues = response_product["node"]["assignedAttributes"]
-        assert len(assigned_attribtues) == 1
-        assert assigned_attribtues[0]["attribute"]["slug"] == attribute.slug
 
 
 PRODUCT_SEARCH_QUERY = """

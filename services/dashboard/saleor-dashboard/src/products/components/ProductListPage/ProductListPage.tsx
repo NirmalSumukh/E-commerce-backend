@@ -1,22 +1,22 @@
 // @ts-strict-ignore
 import { LazyQueryResult } from "@apollo/client/react";
+import {
+  extensionMountPoints,
+  mapToMenuItems,
+  mapToMenuItemsForProductOverviewActions,
+  useExtensions,
+} from "@dashboard/apps/hooks/useExtensions";
 import { useContextualLink } from "@dashboard/components/AppLayout/ContextualLinks/useContextualLink";
 import { ListFilters } from "@dashboard/components/AppLayout/ListFilters";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import { BulkDeleteButton } from "@dashboard/components/BulkDeleteButton";
-import { ButtonGroupWithDropdown } from "@dashboard/components/ButtonGroupWithDropdown";
+import { ButtonWithDropdown } from "@dashboard/components/ButtonWithDropdown";
 import { DashboardCard } from "@dashboard/components/Card";
-import { FilterElement } from "@dashboard/components/Filter/types";
+import { FilterElement } from "@dashboard/components/Filter";
 import { FilterPresetsSelect } from "@dashboard/components/FilterPresetsSelect";
 import { ListPageLayout } from "@dashboard/components/Layouts";
 import LimitReachedAlert from "@dashboard/components/LimitReachedAlert";
 import { ProductListColumns } from "@dashboard/config";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import {
-  getExtensionItemsForOverviewCreate,
-  getExtensionsItemsForProductOverviewActions,
-} from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import {
   Exact,
   GridAttributesQuery,
@@ -38,7 +38,7 @@ import {
 } from "@dashboard/types";
 import { hasLimits, isLimitReached } from "@dashboard/utils/limits";
 import { Box, Button, ChevronRightIcon, Text } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router";
 
@@ -47,7 +47,7 @@ import { ProductListDatagrid } from "../ProductListDatagrid";
 import { ProductListTiles } from "../ProductListTiles/ProductListTiles";
 import { ProductListViewSwitch } from "../ProductListViewSwitch";
 
-interface ProductListPageProps
+export interface ProductListPageProps
   extends PageListProps<ProductListColumns>,
     SearchPageProps,
     Omit<TabPageProps, "onTabDelete" | "onTabDelete">,
@@ -80,8 +80,9 @@ export type ProductListViewType = "datagrid" | "tile";
 
 const DEFAULT_PRODUCT_LIST_VIEW_TYPE: ProductListViewType = "datagrid";
 
-const ProductListPage = (props: ProductListPageProps) => {
+export const ProductListPage: React.FC<ProductListPageProps> = props => {
   const {
+    currencySymbol,
     defaultSettings,
     gridAttributesOpts,
     limits,
@@ -117,11 +118,11 @@ const ProductListPage = (props: ProductListPageProps) => {
   const { PRODUCT_OVERVIEW_CREATE, PRODUCT_OVERVIEW_MORE_ACTIONS } = useExtensions(
     extensionMountPoints.PRODUCT_LIST,
   );
-  const extensionMenuItems = getExtensionsItemsForProductOverviewActions(
+  const extensionMenuItems = mapToMenuItemsForProductOverviewActions(
     PRODUCT_OVERVIEW_MORE_ACTIONS,
     selectedProductIds,
   );
-  const extensionCreateButtonItems = getExtensionItemsForOverviewCreate(PRODUCT_OVERVIEW_CREATE);
+  const extensionCreateButtonItems = mapToMenuItems(PRODUCT_OVERVIEW_CREATE);
   const [storedProductListViewType, setProductListViewType] = useLocalStorage<ProductListViewType>(
     "productListViewType",
     DEFAULT_PRODUCT_LIST_VIEW_TYPE,
@@ -192,7 +193,7 @@ const ProductListPage = (props: ProductListPageProps) => {
               ]}
             />
             {extensionCreateButtonItems.length > 0 ? (
-              <ButtonGroupWithDropdown
+              <ButtonWithDropdown
                 onClick={onAdd}
                 testId={"add-product"}
                 options={extensionCreateButtonItems}
@@ -202,7 +203,7 @@ const ProductListPage = (props: ProductListPageProps) => {
                   defaultMessage="Create Product"
                   description="button"
                 />
-              </ButtonGroupWithDropdown>
+              </ButtonWithDropdown>
             ) : (
               <Button data-test-id="add-product" onClick={onAdd}>
                 <FormattedMessage
@@ -300,6 +301,5 @@ const ProductListPage = (props: ProductListPageProps) => {
     </ListPageLayout>
   );
 };
-
 ProductListPage.displayName = "ProductListPage";
 export default ProductListPage;

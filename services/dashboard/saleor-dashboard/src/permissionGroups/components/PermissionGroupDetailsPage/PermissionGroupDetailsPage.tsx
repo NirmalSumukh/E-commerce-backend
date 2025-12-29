@@ -22,6 +22,7 @@ import { ListActions, SortPage } from "@dashboard/types";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getPermissionGroupErrorMessage from "@dashboard/utils/errors/permissionGroups";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import {
@@ -49,7 +50,9 @@ export interface PermissionData extends Omit<UserPermissionFragment, "__typename
   disabled?: boolean;
 }
 
-interface PermissonGroupDetailsPageProps extends ListActions, SortPage<MembersListUrlSortField> {
+export interface PermissonGroupDetailsPageProps
+  extends ListActions,
+    SortPage<MembersListUrlSortField> {
   channels: ChannelFragment[];
   disabled: boolean;
   isUserAbleToEditChannels: boolean;
@@ -65,7 +68,7 @@ interface PermissonGroupDetailsPageProps extends ListActions, SortPage<MembersLi
   onSubmit: (data: PermissionGroupDetailsPageFormData) => SubmitPromise;
 }
 
-export const PermissionGroupDetailsPage = ({
+export const PermissionGroupDetailsPage: React.FC<PermissonGroupDetailsPageProps> = ({
   disabled,
   errors,
   members,
@@ -78,7 +81,7 @@ export const PermissionGroupDetailsPage = ({
   channels,
   isUserAbleToEditChannels,
   ...listProps
-}: PermissonGroupDetailsPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const user = useUser();
@@ -86,7 +89,7 @@ export const PermissionGroupDetailsPage = ({
   const hasUserRestrictedChannels = checkIfUserHasRestictedAccessToChannels(user.user);
   const initialForm: PermissionGroupDetailsPageFormData = {
     hasFullAccess: isGroupFullAccess(permissionGroup, permissions),
-    hasAllChannels: !permissionGroup?.restrictedAccessToChannels,
+    hasAllChannels: !permissionGroup?.restrictedAccessToChannels ?? false,
     channels: getInitialChannels(permissionGroup, channels?.length ?? 0),
     isActive: false,
     name: permissionGroup?.name || "",

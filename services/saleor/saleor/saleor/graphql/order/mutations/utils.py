@@ -1,4 +1,5 @@
-from typing import NamedTuple
+from collections import namedtuple
+from typing import Optional
 
 import graphene
 from django.conf import settings
@@ -6,9 +7,7 @@ from django.core.exceptions import ValidationError
 
 from ....checkout.fetch import get_variant_channel_listing
 from ....core.taxes import zero_money, zero_taxed_money
-from ....discount import VoucherType
-from ....discount.interface import VariantPromotionRuleInfo, fetch_variant_rules_info
-from ....discount.utils.manual_discount import apply_discount_to_value
+from ....discount.interface import fetch_variant_rules_info
 from ....order import ORDER_EDITABLE_STATUS, OrderStatus, events, models
 from ....order.actions import call_order_event
 from ....order.error_codes import OrderErrorCode
@@ -18,36 +17,12 @@ from ....payment import models as payment_models
 from ....plugins.manager import PluginsManager
 from ....product import models as product_models
 from ....shipping.interface import ShippingMethodData
-from ....shipping.models import ShippingMethod, ShippingMethodChannelListing
+from ....shipping.models import ShippingMethodChannelListing
 from ....shipping.utils import convert_to_shipping_method_data
 from ....webhook.event_types import WebhookEventAsyncType
 from ..utils import get_shipping_method_availability_error
 
-DRAFT_ORDER_UPDATE_FIELDS = {
-    "base_shipping_price_amount",
-    "billing_address",
-    "channel",
-    "collection_point",
-    "collection_point_name",
-    "customer_note",
-    "display_gross_prices",
-    "draft_save_billing_address",
-    "draft_save_shipping_address",
-    "external_reference",
-    "language_code",
-    "metadata",
-    "private_metadata",
-    "redirect_url",
-    "search_vector",
-    "shipping_address",
-    "user",
-    "user_email",
-    "voucher",
-    "voucher_code",
-    "weight",
-}
-
-SHIPPING_METHOD_UPDATE_FIELDS = {
+SHIPPING_METHOD_UPDATE_FIELDS = [
     "currency",
     "shipping_method",
     "shipping_price_net_amount",
@@ -62,18 +37,7 @@ SHIPPING_METHOD_UPDATE_FIELDS = {
     "shipping_tax_rate",
     "should_refresh_prices",
     "updated_at",
-}
-
-ORDER_UPDATE_FIELDS = {
-    "billing_address",
-    "external_reference",
-    "language_code",
-    "metadata",
-    "private_metadata",
-    "shipping_address",
-    "user",
-    "user_email",
-}
+]
 
 
 class EditableOrderValidationMixin:
@@ -110,25 +74,20 @@ class ShippingMethodUpdateMixin:
         invalidate_order_prices(order)
 
     @classmethod
-    def update_shipping_method(cls, order: models.Order, method: ShippingMethod):
+    def _update_shipping_method(cls, order, method, shipping_method_data):
         order.shipping_method = method
         order.shipping_method_name = method.name
 
         tax_class = method.tax_class
-        order.shipping_tax_class = tax_class
         if tax_class:
+            order.shipping_tax_class = tax_class
             order.shipping_tax_class_name = tax_class.name
             order.shipping_tax_class_private_metadata = tax_class.private_metadata
             order.shipping_tax_class_metadata = tax_class.metadata
-        else:
-            order.shipping_tax_class_name = None
-            order.shipping_tax_class_private_metadata = {}
-            order.shipping_tax_class_metadata = {}
-
         invalidate_order_prices(order)
 
     @classmethod
-    def validate_shipping_channel_listing(cls, method, order):
+    def _validate_shipping_channel_listing(cls, method, order):
         shipping_channel_listing = ShippingMethodChannelListing.objects.filter(
             shipping_method=method, channel=order.channel
         ).first()
@@ -144,12 +103,11 @@ class ShippingMethodUpdateMixin:
         return shipping_channel_listing
 
     @classmethod
-    def update_shipping_price(cls, order, shipping_channel_listing):
-        cls.assign_shipping_price(order, shipping_channel_listing)
-        cls.update_shipping_discount(order)
-
-    @classmethod
-    def assign_shipping_price(cls, order, shipping_channel_listing):
+    def _update_shipping_price(
+        cls,
+        order,
+        shipping_channel_listing,
+    ):
         if not shipping_channel_listing:
             order.base_shipping_price = zero_money(order.currency)
             order.undiscounted_base_shipping_price = zero_money(order.currency)
@@ -160,52 +118,24 @@ class ShippingMethodUpdateMixin:
             and order.shipping_address
             and order.is_shipping_required()
         ):
-            undiscounted_shipping_price = shipping_channel_listing.price
-            order.undiscounted_base_shipping_price = undiscounted_shipping_price
-            order.base_shipping_price = undiscounted_shipping_price
-
+            order.base_shipping_price = shipping_channel_listing.price
+            order.undiscounted_base_shipping_price = shipping_channel_listing.price
         else:
             order.base_shipping_price = zero_money(order.currency)
             order.undiscounted_base_shipping_price = zero_money(order.currency)
 
     @classmethod
-    def update_shipping_discount(cls, order: models.Order):
-        if shipping_discount := order.discounts.filter(
-            voucher__type=VoucherType.SHIPPING
-        ).first():
-            undiscounted_shipping_price = order.undiscounted_base_shipping_price
-            shipping_price = apply_discount_to_value(
-                value=shipping_discount.value,
-                value_type=shipping_discount.value_type,
-                currency=order.currency,
-                price_to_discount=undiscounted_shipping_price,
-            )
-            order.base_shipping_price = shipping_price
-            shipping_discount_amount = undiscounted_shipping_price - shipping_price
-            if shipping_discount.amount != shipping_discount_amount:
-                shipping_discount.amount = shipping_discount_amount
-                shipping_discount.save(update_fields=["amount_value"])
-
-    @classmethod
-    def process_shipping_method(
-        cls,
-        order: models.Order,
-        method: ShippingMethod,
-        manager: "PluginsManager",
-        update_shipping_discount: bool,
-    ):
-        shipping_channel_listing = cls.validate_shipping_channel_listing(method, order)
+    def process_shipping_method(cls, order, method, manager):
+        shipping_channel_listing = cls._validate_shipping_channel_listing(method, order)
+        shipping_method_data = convert_to_shipping_method_data(
+            method,
+            shipping_channel_listing,
+        )
         if order.status != OrderStatus.DRAFT:
-            shipping_method_data = convert_to_shipping_method_data(
-                method,
-                shipping_channel_listing,
-            )
             clean_order_update_shipping(order, shipping_method_data, manager)
-        cls.update_shipping_method(order, method)
-        cls.assign_shipping_price(order, shipping_channel_listing)
-        # for new instance the shipping discount is created later
-        if update_shipping_discount:
-            cls.update_shipping_discount(order)
+
+        cls._update_shipping_method(order, method, shipping_method_data)
+        cls._update_shipping_price(order, shipping_channel_listing)
 
 
 def clean_order_update_shipping(
@@ -255,10 +185,10 @@ def try_payment_action(order, user, app, payment, func, *args, **kwargs):
                     message, code=OrderErrorCode.PAYMENT_ERROR.value
                 )
             }
-        ) from e
+        )
 
 
-def clean_payment(payment: payment_models.Payment | None) -> payment_models.Payment:
+def clean_payment(payment: Optional[payment_models.Payment]) -> payment_models.Payment:
     if not payment:
         raise ValidationError(
             {
@@ -271,9 +201,7 @@ def clean_payment(payment: payment_models.Payment | None) -> payment_models.Paym
     return payment
 
 
-class VariantData(NamedTuple):
-    variant: product_models.ProductVariant
-    rules_info: list[VariantPromotionRuleInfo]
+VariantData = namedtuple("VariantData", ["variant", "rules_info"])
 
 
 def get_variant_rule_info_map(
@@ -283,6 +211,7 @@ def get_variant_rule_info_map(
     variants = product_models.ProductVariant.objects.filter(
         pk__in=variant_ids
     ).prefetch_related(
+        "channel_listings__variantlistingpromotionrule__promotion_rule__promotion",
         "channel_listings__variantlistingpromotionrule__promotion_rule__promotion__translations",
         "channel_listings__variantlistingpromotionrule__promotion_rule__translations",
     )

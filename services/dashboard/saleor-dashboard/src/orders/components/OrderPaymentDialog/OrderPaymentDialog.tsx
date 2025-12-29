@@ -10,13 +10,14 @@ import { getFormErrors } from "@dashboard/utils/errors";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import { TextField } from "@material-ui/core";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface FormData {
+export interface FormData {
   amount: number;
 }
 
-interface OrderPaymentDialogProps {
+export interface OrderPaymentDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   errors: OrderErrorFragment[];
   open: boolean;
@@ -25,14 +26,14 @@ interface OrderPaymentDialogProps {
   onSubmit: (data: FormData) => void;
 }
 
-const OrderPaymentDialog = ({
+const OrderPaymentDialog: React.FC<OrderPaymentDialogProps> = ({
   confirmButtonState,
   errors,
   open,
   initial,
   onClose,
   onSubmit,
-}: OrderPaymentDialogProps) => {
+}) => {
   const intl = useIntl();
   const formFields = ["payment"];
   const formErrors = getFormErrors(formFields, errors);

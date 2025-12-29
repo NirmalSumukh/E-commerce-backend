@@ -1,13 +1,14 @@
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Weight } from "../Weight";
 
-interface WeightRangeProps {
+export interface WeightRangeProps {
   from?: Weight;
   to?: Weight;
 }
 
-const WeightRange = ({ from, to }: WeightRangeProps) =>
+const WeightRange: React.FC<WeightRangeProps> = ({ from, to }) =>
   from && to ? (
     <FormattedMessage
       id="5x6yT9"

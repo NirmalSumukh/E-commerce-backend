@@ -1,7 +1,7 @@
 import { makeStyles } from "@material-ui/core";
 import { Tooltip } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 
 import { useOverflow } from "./useOverflow";
 
@@ -31,14 +31,14 @@ const useStyles = makeStyles(
     name: "OverflowTooltip",
   },
 );
-const OverflowTooltip = ({
+const OverflowTooltip: React.FC<OverflowTooltipProps> = ({
   checkHorizontal = true,
   checkVertical = true,
   title,
   header,
   className,
   children,
-}: OverflowTooltipProps) => {
+}) => {
   const classes = useStyles();
   const { ref, isOverflow } = useOverflow<HTMLDivElement>({
     horizontal: checkHorizontal,

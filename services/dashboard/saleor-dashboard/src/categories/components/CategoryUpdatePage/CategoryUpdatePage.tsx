@@ -1,5 +1,3 @@
-import { useUser } from "@dashboard/auth";
-import { hasPermission } from "@dashboard/auth/misc";
 import { categoryListPath, categoryUrl } from "@dashboard/categories/urls";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import { CardSpacer } from "@dashboard/components/CardSpacer";
@@ -9,18 +7,12 @@ import { Metadata } from "@dashboard/components/Metadata/Metadata";
 import { Savebar } from "@dashboard/components/Savebar";
 import { SeoForm } from "@dashboard/components/SeoForm";
 import { Tab, TabContainer } from "@dashboard/components/Tab";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import { getExtensionsItemsForCategoryDetails } from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
-import { CategoryDetailsQuery, PermissionEnum, ProductErrorFragment } from "@dashboard/graphql";
+import { CategoryDetailsQuery, ProductErrorFragment } from "@dashboard/graphql";
 import { useBackLinkWithState } from "@dashboard/hooks/useBackLinkWithState";
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import useNavigator from "@dashboard/hooks/useNavigator";
-import { TranslationsIcon } from "@dashboard/icons/Translations";
-import { TranslationsButton } from "@dashboard/translations/components/TranslationsButton/TranslationsButton";
-import { languageEntityUrl, TranslatableEntities } from "@dashboard/translations/urls";
-import { useCachedLocales } from "@dashboard/translations/useCachedLocales";
-import { Box, sprinkles } from "@saleor/macaw-ui-next";
+import { sprinkles } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { ListProps, ListViews, RelayToFlat } from "../../../types";
@@ -35,7 +27,7 @@ export enum CategoryPageTab {
   products = "products",
 }
 
-interface CategoryUpdatePageProps
+export interface CategoryUpdatePageProps
   extends Pick<ListProps<ListViews.CATEGORY_LIST>, "onUpdateListSettings" | "settings"> {
   categoryId: string;
   changeTab: (index: CategoryPageTab) => void;
@@ -60,7 +52,7 @@ interface CategoryUpdatePageProps
 const CategoriesTab = Tab(CategoryPageTab.categories);
 const ProductsTab = Tab(CategoryPageTab.products);
 
-export const CategoryUpdatePage = ({
+export const CategoryUpdatePage: React.FC<CategoryUpdatePageProps> = ({
   categoryId,
   changeTab,
   currentTab,
@@ -82,10 +74,7 @@ export const CategoryUpdatePage = ({
   onUpdateListSettings,
 }: CategoryUpdatePageProps) => {
   const intl = useIntl();
-  const { lastUsedLocaleOrFallback } = useCachedLocales();
   const navigate = useNavigator();
-  const { user } = useUser();
-  const canTranslate = user && hasPermission(PermissionEnum.MANAGE_TRANSLATIONS, user);
 
   const categoryBackListUrl = useBackLinkWithState({
     path: categoryListPath,
@@ -93,38 +82,11 @@ export const CategoryUpdatePage = ({
 
   const backHref = category?.parent?.id ? categoryUrl(category?.parent?.id) : categoryBackListUrl;
 
-  const { CATEGORY_DETAILS_MORE_ACTIONS } = useExtensions(extensionMountPoints.CATEGORY_DETAILS);
-  const extensionMenuItems = getExtensionsItemsForCategoryDetails(
-    CATEGORY_DETAILS_MORE_ACTIONS,
-    categoryId,
-  );
-
   return (
     <CategoryUpdateForm category={category} onSubmit={onSubmit} disabled={disabled}>
       {({ data, change, handlers, submit, isSaveDisabled }) => (
         <DetailPageLayout gridTemplateColumns={1}>
-          <TopNav href={backHref} title={category?.name}>
-            {canTranslate && (
-              <TranslationsButton
-                variant="secondary"
-                icon={<TranslationsIcon />}
-                onClick={() =>
-                  navigate(
-                    languageEntityUrl(
-                      lastUsedLocaleOrFallback,
-                      TranslatableEntities.categories,
-                      categoryId,
-                    ),
-                  )
-                }
-              />
-            )}
-            {extensionMenuItems.length > 0 && (
-              <Box marginLeft={3}>
-                <TopNav.Menu items={[...extensionMenuItems]} dataTestId="menu" />
-              </Box>
-            )}
-          </TopNav>
+          <TopNav href={backHref} title={category?.name} />
           <DetailPageLayout.Content>
             <CategoryDetailsForm
               data={data}
@@ -236,3 +198,4 @@ export const CategoryUpdatePage = ({
   );
 };
 CategoryUpdatePage.displayName = "CategoryUpdatePage";
+export default CategoryUpdatePage;

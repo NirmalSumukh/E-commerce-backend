@@ -1,9 +1,9 @@
 import * as RadixRadioGroup from "@radix-ui/react-radio-group";
-import * as React from "react";
+import React from "react";
 
 import { RadioTile } from "./RadioTile";
 
-interface RadioTilesProps {
+export interface RadioTilesProps {
   children: React.ReactNode;
   asChild: boolean;
   value: string;

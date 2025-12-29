@@ -1,6 +1,6 @@
 import datetime
 import json
-from typing import NamedTuple
+from collections import namedtuple
 from unittest import mock
 
 import pytest
@@ -19,16 +19,14 @@ from ....payment.utils import create_payment_information
 from ....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from ....webhook.models import Webhook, WebhookEvent
 from ....webhook.transport import signature_for_payload
-from ....webhook.transport.payment import (
-    parse_list_payment_gateways_response,
-    parse_payment_action_response,
-)
 from ....webhook.transport.synchronous.transport import (
     send_webhook_request_sync,
     trigger_webhook_sync,
 )
 from ....webhook.transport.utils import (
     from_payment_app_id,
+    parse_list_payment_gateways_response,
+    parse_payment_action_response,
     to_payment_app_id,
 )
 from .utils import generate_request_headers
@@ -56,11 +54,7 @@ def payment_removed_app(payment_dummy):
     return payment_dummy
 
 
-class WebhookTestData(NamedTuple):
-    secret: str
-    event_type: WebhookEventAsyncType
-    data: str
-    message: bytes
+WebhookTestData = namedtuple("WebhookTestData", "secret, event_type, data, message")
 
 
 @pytest.fixture

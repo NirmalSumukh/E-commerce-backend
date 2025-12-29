@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta
 from decimal import Decimal
 
 import graphene
@@ -24,17 +24,14 @@ def orders_for_pagination(db, channel_USD):
             Order(
                 total=TaxedMoney(net=Money(1, "USD"), gross=Money(1, "USD")),
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 total=TaxedMoney(net=Money(2, "USD"), gross=Money(2, "USD")),
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 total=TaxedMoney(net=Money(3, "USD"), gross=Money(3, "USD")),
                 channel=channel_USD,
-                lines_count=0,
             ),
         ]
     )
@@ -57,21 +54,18 @@ def draft_orders_for_pagination(db, channel_USD):
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 total=TaxedMoney(net=Money(2, "USD"), gross=Money(2, "USD")),
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 total=TaxedMoney(net=Money(3, "USD"), gross=Money(3, "USD")),
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
         ]
     )
@@ -148,57 +142,17 @@ QUERY_DRAFT_ORDERS_WITH_PAGINATION = """
         (
             {
                 "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    ),
-                    "lte": str(datetime.datetime.now(tz=datetime.UTC).date()),
+                    "gte": str(date.today() - timedelta(days=3)),
+                    "lte": str(date.today()),
                 }
             },
             [3.0, 2.0],
             3,
         ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            [3.0, 2.0],
-            3,
-        ),
-        (
-            {"created": {"lte": str(datetime.datetime.now(tz=datetime.UTC).date())}},
-            [0.0, 3.0],
-            4,
-        ),
-        (
-            {
-                "created": {
-                    "lte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            [0.0],
-            1,
-        ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        + datetime.timedelta(days=1)
-                    )
-                }
-            },
-            [],
-            0,
-        ),
+        ({"created": {"gte": str(date.today() - timedelta(days=3))}}, [3.0, 2.0], 3),
+        ({"created": {"lte": str(date.today())}}, [0.0, 3.0], 4),
+        ({"created": {"lte": str(date.today() - timedelta(days=3))}}, [0.0], 1),
+        ({"created": {"gte": str(date.today() + timedelta(days=1))}}, [], 0),
     ],
 )
 def test_order_query_pagination_with_filter_created(
@@ -211,7 +165,7 @@ def test_order_query_pagination_with_filter_created(
     channel_USD,
 ):
     with freeze_time("2012-01-14"):
-        Order.objects.create(channel=channel_USD, lines_count=0)
+        Order.objects.create(channel=channel_USD)
     page_size = 2
     variables = {"first": page_size, "after": None, "filter": orders_filter}
     permission_group_manage_orders.user_set.add(staff_api_client.user)
@@ -221,7 +175,7 @@ def test_order_query_pagination_with_filter_created(
     orders = content["data"]["orders"]["edges"]
     total_count = content["data"]["orders"]["totalCount"]
 
-    for i in range(min(total_count, page_size)):
+    for i in range(total_count if total_count < page_size else page_size):
         assert orders[i]["node"]["total"]["gross"]["amount"] == orders_order[i]
 
     assert expected_total_count == total_count
@@ -278,7 +232,7 @@ def test_order_query_pagination_with_filter_payment_status(
     total_count = content["data"]["orders"]["totalCount"]
     assert total_count == expected_total_count
 
-    for i in range(min(total_count, page_size)):
+    for i in range(total_count if total_count < page_size else page_size):
         assert orders[i]["node"]["total"]["gross"]["amount"] == orders_order[i]
 
 
@@ -315,7 +269,7 @@ def test_order_query_pagination_with_filter_status(
     total_count = content["data"]["orders"]["totalCount"]
     assert total_count == expected_total_count
 
-    for i in range(min(total_count, page_size)):
+    for i in range(total_count if total_count < page_size else page_size):
         assert orders[i]["node"]["total"]["gross"]["amount"] == orders_order[i]
 
 
@@ -341,7 +295,7 @@ def test_order_query_pagination_with_filter_customer_fields(
     customer_user.save()
     customer_user.refresh_from_db()
 
-    order = Order.objects.create(user=customer_user, channel=channel_USD, lines_count=0)
+    order = Order.objects.create(user=customer_user, channel=channel_USD)
 
     page_size = 2
     variables = {"first": page_size, "after": None, "filter": orders_filter}
@@ -379,7 +333,9 @@ def test_draft_order_query_pagination_with_filter_customer_fields(
     customer_user.refresh_from_db()
 
     order = Order.objects.create(
-        status=OrderStatus.DRAFT, user=customer_user, channel=channel_USD, lines_count=0
+        status=OrderStatus.DRAFT,
+        user=customer_user,
+        channel=channel_USD,
     )
 
     page_size = 2
@@ -403,57 +359,17 @@ def test_draft_order_query_pagination_with_filter_customer_fields(
         (
             {
                 "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    ),
-                    "lte": str(datetime.datetime.now(tz=datetime.UTC).date()),
+                    "gte": str(date.today() - timedelta(days=3)),
+                    "lte": str(date.today()),
                 }
             },
             3,
             [3.0, 2.0],
         ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            3,
-            [3.0, 2.0],
-        ),
-        (
-            {"created": {"lte": str(datetime.datetime.now(tz=datetime.UTC).date())}},
-            4,
-            [0.0, 3.0],
-        ),
-        (
-            {
-                "created": {
-                    "lte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            1,
-            [0.0],
-        ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        + datetime.timedelta(days=1)
-                    )
-                }
-            },
-            0,
-            [],
-        ),
+        ({"created": {"gte": str(date.today() - timedelta(days=3))}}, 3, [3.0, 2.0]),
+        ({"created": {"lte": str(date.today())}}, 4, [0.0, 3.0]),
+        ({"created": {"lte": str(date.today() - timedelta(days=3))}}, 1, [0.0]),
+        ({"created": {"gte": str(date.today() + timedelta(days=1))}}, 0, []),
     ],
 )
 def test_draft_order_query_pagination_with_filter_created(
@@ -470,7 +386,6 @@ def test_draft_order_query_pagination_with_filter_created(
             status=OrderStatus.DRAFT,
             channel=channel_USD,
             should_refresh_prices=False,
-            lines_count=0,
         )
     page_size = 2
     variables = {"first": page_size, "after": None, "filter": orders_filter}
@@ -484,7 +399,7 @@ def test_draft_order_query_pagination_with_filter_created(
     orders = content["data"]["draftOrders"]["edges"]
     total_count = content["data"]["draftOrders"]["totalCount"]
 
-    for i in range(min(total_count, page_size)):
+    for i in range(total_count if total_count < page_size else page_size):
         assert orders[i]["node"]["total"]["gross"]["amount"] == orders_order[i]
 
     assert expected_total_count == total_count
@@ -516,17 +431,14 @@ def test_orders_query_pagination_with_filter_search(
                 user=customer_user,
                 user_email="test@mirumee.com",
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email1@example.com",
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email2@example.com",
                 channel=channel_USD,
-                lines_count=0,
             ),
         ]
     )
@@ -535,15 +447,15 @@ def test_orders_query_pagination_with_filter_search(
             OrderDiscount(
                 order=orders[0],
                 name="Some discount name",
-                value=Decimal(1),
-                amount_value=Decimal(1),
+                value=Decimal("1"),
+                amount_value=Decimal("1"),
                 translated_name="translated",
             ),
             OrderDiscount(
                 order=orders[2],
                 name="Some other discount name",
-                value=Decimal(10),
-                amount_value=Decimal(10),
+                value=Decimal("10"),
+                amount_value=Decimal("10"),
                 translated_name="PL_name",
             ),
         ]
@@ -603,21 +515,18 @@ def test_draft_orders_query_pagination_with_filter_search(
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email1@example.com",
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email2@example.com",
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
         ]
     )
@@ -626,15 +535,15 @@ def test_draft_orders_query_pagination_with_filter_search(
             OrderDiscount(
                 order=orders[0],
                 name="Some discount name",
-                value=Decimal(1),
-                amount_value=Decimal(1),
+                value=Decimal("1"),
+                amount_value=Decimal("1"),
                 translated_name="translated",
             ),
             OrderDiscount(
                 order=orders[2],
                 name="Some other discount name",
-                value=Decimal(10),
-                amount_value=Decimal(10),
+                value=Decimal("10"),
+                amount_value=Decimal("10"),
                 translated_name="PL_name",
             ),
         ]
@@ -727,7 +636,6 @@ def test_query_orders_pagination_with_sort(
                 status=OrderStatus.PARTIALLY_FULFILLED,
                 total=TaxedMoney(net=Money(10, "USD"), gross=Money(13, "USD")),
                 channel=channel_USD,
-                lines_count=0,
             )
         )
     with freeze_time("2012-01-14"):
@@ -740,7 +648,6 @@ def test_query_orders_pagination_with_sort(
                 status=OrderStatus.FULFILLED,
                 total=TaxedMoney(net=Money(100, "USD"), gross=Money(130, "USD")),
                 channel=channel_USD,
-                lines_count=0,
             )
         )
     address3 = address.get_copy()
@@ -752,7 +659,6 @@ def test_query_orders_pagination_with_sort(
             status=OrderStatus.CANCELED,
             total=TaxedMoney(net=Money(20, "USD"), gross=Money(26, "USD")),
             channel=channel_USD,
-            lines_count=0,
         )
     )
 
@@ -802,21 +708,18 @@ def test_orders_with_filter_search_returns_correct_cursor(
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 user_email=search_query,
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
             Order(
                 user_email=search_query,
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
                 should_refresh_prices=False,
-                lines_count=0,
             ),
         ]
     )

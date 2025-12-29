@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import graphene
 import pytest
@@ -68,7 +68,6 @@ def test_order_note_add_as_staff_user(
 
     order.refresh_from_db()
     assert order.status == OrderStatus.UNFULFILLED
-    assert order.search_vector
 
     # Ensure the correct order event was created
     event = order.events.get()
@@ -202,6 +201,7 @@ def test_order_note_add_user_triggers_webhooks(
     permission_group_manage_orders,
     order_with_lines,
     settings,
+    django_capture_on_commit_callbacks,
     status,
     webhook_event,
 ):
@@ -224,7 +224,8 @@ def test_order_note_add_user_triggers_webhooks(
     variables = {"id": order_id, "message": message}
 
     # when
-    response = staff_api_client.post_graphql(ORDER_NOTE_ADD_MUTATION, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(ORDER_NOTE_ADD_MUTATION, variables)
 
     # then
     content = get_graphql_content(response)
@@ -233,9 +234,11 @@ def test_order_note_add_user_triggers_webhooks(
     # confirm that event delivery was generated for each async webhook.
     order_delivery = EventDelivery.objects.get(webhook_id=order_webhook.id)
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={"event_delivery_id": order_delivery.id, "telemetry_context": ANY},
+        kwargs={"event_delivery_id": order_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

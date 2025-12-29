@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, CloseIcon } from "@saleor/macaw-ui-next";
-import { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction } from "react";
 
 import { AvailableColumn } from "../types";
 import { ColumnCategory } from "./useColumns";

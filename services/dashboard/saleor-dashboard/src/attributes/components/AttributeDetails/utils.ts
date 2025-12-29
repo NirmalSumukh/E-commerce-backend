@@ -1,6 +1,6 @@
 import { MeasurementUnitsEnum } from "@dashboard/graphql";
 import { Option } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { IntlShape, MessageDescriptor } from "react-intl";
 
 import * as M from "./messages";
@@ -45,7 +45,7 @@ const UNIT_MESSAGES_MAPPING = {
   [MeasurementUnitsEnum.SQ_KM]: M.units.squareKilometer,
 };
 
-const getMeasurementUnitMessage = (
+export const getMeasurementUnitMessage = (
   unit: MeasurementUnitsEnum,
   formatMessage: IntlShape["formatMessage"],
 ): MessageDescriptor | React.ReactNode => {
@@ -86,7 +86,7 @@ export const unitTypeChoices = [
   },
 ];
 
-const unitMapping = {
+export const unitMapping = {
   imperial: {
     volume: [
       MeasurementUnitsEnum.CUBIC_FOOT,

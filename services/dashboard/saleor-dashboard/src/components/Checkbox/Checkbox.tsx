@@ -2,6 +2,7 @@
 import MuiCheckbox, { CheckboxProps as MuiCheckboxProps } from "@material-ui/core/Checkbox";
 import FormHelperText from "@material-ui/core/FormHelperText";
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 
 const useStyles = makeStyles(
   theme => ({
@@ -12,7 +13,7 @@ const useStyles = makeStyles(
   { name: "Checkbox" },
 );
 
-type CheckboxProps = Omit<
+export type CheckboxProps = Omit<
   MuiCheckboxProps,
   "checkedIcon" | "color" | "icon" | "indeterminateIcon" | "classes" | "onClick"
 > & {
@@ -25,7 +26,7 @@ const firefoxHandler = (event, onChange, checked) => {
   event.preventDefault();
   onChange(event, checked);
 };
-const Checkbox = ({ helperText, error, ...props }: CheckboxProps) => {
+const Checkbox: React.FC<CheckboxProps> = ({ helperText, error, ...props }) => {
   const { disableClickPropagation, ...rest } = props;
   const classes = useStyles();
 

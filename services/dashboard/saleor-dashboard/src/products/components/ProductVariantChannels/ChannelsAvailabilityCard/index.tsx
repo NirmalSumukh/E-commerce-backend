@@ -3,6 +3,7 @@ import {
   IChannelPriceAndPreorderArgs,
 } from "@dashboard/channels/utils";
 import { FormsetData } from "@dashboard/hooks/useFormset";
+import React from "react";
 
 import { Product, Variant } from "./../types";
 import { AvailabilityCard } from "./AvailabilityCard";
@@ -26,12 +27,9 @@ interface ProductDetailsChannelsAvailabilityCardProps {
   disabled: boolean;
 }
 
-export const VariantDetailsChannelsAvailabilityCard = ({
-  variant,
-  listings,
-  onManageClick,
-  disabled,
-}: VariantDetailsChannelsAvailabilityCardProps) => (
+export const VariantDetailsChannelsAvailabilityCard: React.FC<
+  VariantDetailsChannelsAvailabilityCardProps
+> = ({ variant, listings, onManageClick, disabled }) => (
   <AvailabilityCard
     allAvailableListings={listings}
     productChannelListings={variant?.product.channelListings}
@@ -45,12 +43,9 @@ export const VariantDetailsChannelsAvailabilityCard = ({
   </AvailabilityCard>
 );
 
-export const ProductDetailsChannelsAvailabilityCard = ({
-  product,
-  listings,
-  onManageClick,
-  disabled,
-}: ProductDetailsChannelsAvailabilityCardProps) => (
+export const ProductDetailsChannelsAvailabilityCard: React.FC<
+  ProductDetailsChannelsAvailabilityCardProps
+> = ({ product, listings, onManageClick, disabled }) => (
   <AvailabilityCard
     allAvailableListings={listings}
     productChannelListings={product?.channelListings}

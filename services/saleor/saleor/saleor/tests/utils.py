@@ -2,11 +2,8 @@ import json
 import math
 from decimal import Decimal
 
-import pytest
 from django.conf import settings
-from django.db import connections
-from opentelemetry.sdk.metrics.export import DataPointT, Metric, MetricsData
-from opentelemetry.sdk.trace import ReadableSpan
+from django.db import connections, transaction
 
 from ..core.db.connection import allow_writer
 
@@ -55,7 +52,21 @@ def prepare_test_db_connections():
     https://docs.djangoproject.com/en/4.2/topics/testing/advanced/#testing-primary-replica-configurations
     """
     replica = settings.DATABASE_CONNECTION_REPLICA_NAME
-    connections[replica] = FakeDbReplicaConnection(connections[replica])  # type: ignore[assignment]
+    connections[replica] = FakeDbReplicaConnection(connections[replica])  # type: ignore
+
+
+def flush_post_commit_hooks():
+    """Run all pending `transaction.on_commit()` callbacks.
+
+    Forces all `on_commit()` hooks to run even if the transaction was not committed yet.
+    """
+    connection = transaction.get_connection(settings.DATABASE_CONNECTION_DEFAULT_NAME)
+    was_atomic = connection.in_atomic_block
+    was_commit_on_exit = connection.commit_on_exit
+    connection.in_atomic_block = False
+    connection.run_and_clear_commit_hooks()
+    connection.in_atomic_block = was_atomic
+    connection.commit_on_exit = was_commit_on_exit
 
 
 def dummy_editorjs(text, json_format=False):
@@ -69,37 +80,3 @@ def round_down(price: Decimal) -> Decimal:
 
 def round_up(price: Decimal) -> Decimal:
     return Decimal(math.ceil(price * 100)) / 100
-
-
-def get_metric_data(metrics_data: MetricsData, metric_name: str) -> Metric:
-    for resource in metrics_data.resource_metrics:
-        for scope_metrics in resource.scope_metrics:
-            for metric in scope_metrics.metrics:
-                if metric.name == metric_name:
-                    return metric
-    raise KeyError(f"Metric {metric_name} not found in metrics data")
-
-
-def get_metric_data_point(metrics_data: MetricsData, metric_name: str) -> DataPointT:
-    metric_data = get_metric_data(metrics_data, metric_name)
-    datapoints_count = len(metric_data.data.data_points)
-    assert datapoints_count == 1, (
-        f"For metric {metric_name} found {datapoints_count} instead of 1"
-    )
-    return metric_data.data.data_points[0]
-
-
-def filter_spans_by_name(
-    spans: tuple[ReadableSpan, ...], name
-) -> tuple[ReadableSpan, ...]:
-    return tuple(span for span in spans if span.name == name)
-
-
-def get_span_by_name(spans: tuple[ReadableSpan, ...], name: str) -> ReadableSpan:
-    __tracebackhide__ = True
-    spans = filter_spans_by_name(spans, name)
-    if not spans:
-        pytest.fail(f"No span with name '{name}' found")
-    if len(spans) > 1:
-        pytest.fail(f"Multiple '{name}' spans")
-    return spans[0]

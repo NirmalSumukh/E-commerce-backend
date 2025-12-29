@@ -5,11 +5,7 @@ mutation checkoutLinesAdd($checkoutId: ID!, $lines: [CheckoutLineInput!]!) {
   checkoutLinesAdd(id: $checkoutId, lines: $lines) {
     checkout {
       lines {
-        id
         quantity
-        variant {
-          id
-        }
         totalPrice {
           gross {
             amount
@@ -23,31 +19,9 @@ mutation checkoutLinesAdd($checkoutId: ID!, $lines: [CheckoutLineInput!]!) {
         undiscountedUnitPrice {
           amount
         }
-        undiscountedTotalPrice {
-          amount
-        }
       }
       availablePaymentGateways {
         id
-      }
-      subtotalPrice {
-        gross {
-          amount
-        }
-      }
-      totalPrice {
-        gross {
-          amount
-        }
-      }
-      isShippingRequired
-      availableCollectionPoints {
-        id
-        name
-      }
-      shippingMethods {
-        id
-        name
       }
     }
     errors {

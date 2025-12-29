@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Union
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -20,7 +21,7 @@ from ...utils import (
 from ..utils import update_variants_for_promotion
 from ..voucher.voucher_add_catalogues import CatalogueInput
 
-CatalogueInfo = defaultdict[str, set[int | str]]
+CatalogueInfo = defaultdict[str, set[Union[int, str]]]
 
 
 class SaleBaseCatalogueMutation(BaseMutation):
@@ -76,7 +77,7 @@ class SaleBaseCatalogueMutation(BaseMutation):
             ).values_list("channel_id", flat=True)
             cls.call_event(
                 mark_products_in_channels_as_dirty,
-                dict.fromkeys(channel_ids, product_ids),
+                {channel_id: product_ids for channel_id in channel_ids},
             )
 
     @classmethod

@@ -1,5 +1,5 @@
 import { Box } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 interface ListPageLayoutProps {
   children: React.ReactNode;
@@ -7,7 +7,7 @@ interface ListPageLayoutProps {
   hasTopNav?: boolean;
 }
 
-export const ListPageLayout = ({ children }: ListPageLayoutProps) => (
+export const ListPageLayout: React.FC<ListPageLayoutProps> = ({ children }) => (
   <Box display="grid" __gridTemplateColumns="1fr" __gridTemplateRows="auto 1fr" height="100%">
     {children}
   </Box>

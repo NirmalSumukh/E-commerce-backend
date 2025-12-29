@@ -5,9 +5,10 @@ import { OrderErrorFragment } from "@dashboard/graphql";
 import useModalDialogErrors from "@dashboard/hooks/useModalDialogErrors";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface OrderDraftCancelDialogProps {
+export interface OrderDraftCancelDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   errors: OrderErrorFragment[];
   open: boolean;
@@ -16,14 +17,14 @@ interface OrderDraftCancelDialogProps {
   orderNumber: string;
 }
 
-const OrderDraftCancelDialog = ({
+const OrderDraftCancelDialog: React.FC<OrderDraftCancelDialogProps> = ({
   confirmButtonState,
   errors: apiErrors,
   onClose,
   onConfirm,
   open,
   orderNumber,
-}: OrderDraftCancelDialogProps) => {
+}) => {
   const intl = useIntl();
   const errors = useModalDialogErrors(apiErrors, open);
 

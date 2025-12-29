@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 import graphene
-from babel.numbers import get_currency_precision
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django_prices.utils.formatting import get_currency_fraction
 from graphene.utils.str_converters import to_camel_case
 from graphql.error import GraphQLError
 
@@ -21,7 +21,7 @@ def validate_one_of_args_is_in_mutation(*args, **kwargs):
     try:
         validate_one_of_args_is_in_query(*args, **kwargs)
     except GraphQLError as e:
-        raise ValidationError(str(e), code="graphql_error") from e
+        raise ValidationError(str(e), code="graphql_error")
 
 
 def validate_one_of_args_is_in_query(*args, **kwargs):
@@ -76,7 +76,7 @@ def validate_price_precision(
         except KeyError:
             currency_fraction = currency_fractions["DEFAULT"][0]
     else:
-        currency_fraction = get_currency_precision(currency)
+        currency_fraction = get_currency_fraction(currency)
 
     value = value.normalize()
     if value.as_tuple().exponent < -currency_fraction:
@@ -213,17 +213,5 @@ def validate_if_int_or_uuid(id):
     except ValueError:
         try:
             UUID(id)
-        except (AttributeError, ValueError) as e:
-            raise ValidationError("Must receive an int or UUID.") from e
-
-
-def validate_limit_of_list_input(
-    input_list: list,
-    limit: int,
-    field_name: str,
-):
-    """Validate if the length of the input list does not exceed the limit."""
-    if len(input_list) > limit:
-        raise ValidationError(
-            f"The maximum number of items in {field_name} is {limit}."
-        )
+        except (AttributeError, ValueError):
+            raise ValidationError("Must receive an int or UUID.")

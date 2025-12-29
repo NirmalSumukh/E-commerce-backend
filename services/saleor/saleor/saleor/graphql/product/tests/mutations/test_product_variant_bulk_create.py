@@ -1,9 +1,10 @@
-import datetime
 import json
+from datetime import datetime, timedelta
 from unittest.mock import ANY, patch
 from uuid import uuid4
 
 import graphene
+import pytz
 from django.conf import settings
 from freezegun import freeze_time
 
@@ -15,187 +16,87 @@ from .....product.models import (
     ProductVariant,
     ProductVariantChannelListing,
 )
-from .....tests.utils import dummy_editorjs
+from .....tests.utils import dummy_editorjs, flush_post_commit_hooks
 from ....core.enums import ErrorPolicyEnum
 from ....tests.utils import get_graphql_content
 
 PRODUCT_VARIANT_BULK_CREATE_MUTATION = """
-mutation ProductVariantBulkCreate($variants: [ProductVariantBulkCreateInput!]!, $productId: ID!, $errorPolicy: ErrorPolicyEnum) {
-  productVariantBulkCreate(
-    variants: $variants
-    product: $productId
-    errorPolicy: $errorPolicy
-  ) {
-    results {
-      productVariant {
-        metadata {
-          key
-          value
+    mutation ProductVariantBulkCreate(
+        $variants: [ProductVariantBulkCreateInput!]!,
+        $productId: ID!,
+        $errorPolicy: ErrorPolicyEnum
+    ) {
+        productVariantBulkCreate(
+            variants: $variants, product: $productId, errorPolicy: $errorPolicy
+            ) {
+                results{
+                    productVariant{
+                        metadata {
+                            key
+                            value
+                        }
+                        id
+                        name
+                        sku
+                        trackInventory
+                        attributes{
+                            attribute {
+                                slug
+                            }
+                            values {
+                                name
+                                slug
+                                reference
+                                richText
+                                plainText
+                                boolean
+                                date
+                                dateTime
+                                file {
+                                    url
+                                    contentType
+                                }
+                            }
+                        }
+                        stocks {
+                            warehouse {
+                                slug
+                            }
+                            quantity
+                        }
+                        channelListings {
+                            channel {
+                                slug
+                            }
+                            price {
+                                currency
+                                amount
+                            }
+                            costPrice {
+                                currency
+                                amount
+                            }
+                            preorderThreshold {
+                                quantity
+                            }
+                        }
+                        preorder {
+                            globalThreshold
+                            endDate
+                        }
+                    }
+                    errors {
+                        field
+                        path
+                        message
+                        code
+                        warehouses
+                        channels
+                    }
+                }
+            count
         }
-        id
-        name
-        sku
-        trackInventory
-        assignedAttributes(limit:10) {
-          attribute {
-            slug
-          }
-          ... on AssignedNumericAttribute {
-            value
-          }
-          ... on AssignedTextAttribute {
-            text: value
-          }
-          ... on AssignedPlainTextAttribute {
-            plain_text: value
-          }
-          ... on AssignedFileAttribute {
-            file: value {
-              contentType
-              url
-            }
-          }
-          ... on AssignedMultiPageReferenceAttribute {
-            pages: value {
-              slug
-            }
-          }
-          ... on AssignedMultiProductReferenceAttribute {
-            products: value {
-              slug
-            }
-          }
-          ... on AssignedMultiCategoryReferenceAttribute {
-            categories: value {
-              slug
-            }
-          }
-          ... on AssignedMultiCollectionReferenceAttribute {
-            collections: value {
-              slug
-            }
-          }
-          ... on AssignedSinglePageReferenceAttribute {
-            page: value {
-              slug
-            }
-          }
-          ... on AssignedSingleProductReferenceAttribute {
-            product: value {
-              slug
-            }
-          }
-          ... on AssignedSingleProductVariantReferenceAttribute {
-            variant: value {
-              sku
-            }
-          }
-          ... on AssignedSingleCategoryReferenceAttribute {
-            category: value {
-              slug
-            }
-          }
-          ... on AssignedSingleCollectionReferenceAttribute {
-            collection: value {
-              slug
-            }
-          }
-          ... on AssignedMultiProductVariantReferenceAttribute {
-            variants: value {
-              sku
-            }
-          }
-          ... on AssignedSingleChoiceAttribute {
-            choice: value {
-              name
-              slug
-            }
-          }
-          ... on AssignedMultiChoiceAttribute {
-            multi: value {
-              name
-              slug
-            }
-          }
-          ... on AssignedSwatchAttribute {
-            swatch: value {
-              name
-              slug
-              hexColor
-              file {
-                url
-                contentType
-              }
-            }
-          }
-          ... on AssignedBooleanAttribute {
-            bool: value
-          }
-          ... on AssignedDateAttribute {
-            date: value
-          }
-          ... on AssignedDateTimeAttribute {
-            datetime: value
-          }
-        }
-        attributes {
-          attribute {
-            slug
-          }
-          values {
-            name
-            slug
-            reference
-            richText
-            plainText
-            boolean
-            date
-            dateTime
-            file {
-              url
-              contentType
-            }
-          }
-        }
-        stocks {
-          warehouse {
-            slug
-          }
-          quantity
-        }
-        channelListings {
-          channel {
-            slug
-          }
-          price {
-            currency
-            amount
-          }
-          costPrice {
-            currency
-            amount
-          }
-          preorderThreshold {
-            quantity
-          }
-        }
-        preorder {
-          globalThreshold
-          endDate
-        }
-      }
-      errors {
-        field
-        path
-        message
-        code
-        warehouses
-        channels
-      }
     }
-    count
-  }
-}
 """
 
 
@@ -254,6 +155,7 @@ def test_product_variant_bulk_create_by_name(
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response, ignore_errors=True)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -316,6 +218,7 @@ def test_product_variant_bulk_create_by_attribute_id(
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -370,6 +273,7 @@ def test_product_variant_bulk_create_by_attribute_external_ref(
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -384,15 +288,6 @@ def test_product_variant_bulk_create_by_attribute_external_ref(
         data["results"][0]["productVariant"]["attributes"][1]["values"][0]["slug"]
         == attribute_value.slug
     )
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_choice_attribute = {
-        "attribute": {"slug": color_attribute.slug},
-        "choice": {
-            "name": attribute_value.name,
-            "slug": attribute_value.slug,
-        },
-    }
-    assert expected_assigned_choice_attribute in assigned_attributes
 
 
 def test_product_variant_bulk_create_return_error_when_attribute_external_ref_and_id(
@@ -432,6 +327,7 @@ def test_product_variant_bulk_create_return_error_when_attribute_external_ref_an
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -484,6 +380,7 @@ def test_product_variant_bulk_create_will_create_new_attr_value_and_external_ref
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -498,15 +395,6 @@ def test_product_variant_bulk_create_will_create_new_attr_value_and_external_ref
         data["results"][0]["productVariant"]["attributes"][1]["values"][0]["name"]
         == new_value
     )
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_choice_attribute = {
-        "attribute": {"slug": color_attribute.slug},
-        "choice": {
-            "name": new_value,
-            "slug": new_value.lower(),
-        },
-    }
-    assert expected_assigned_choice_attribute in assigned_attributes
 
 
 def test_product_variant_bulk_create_with_swatch_attribute(
@@ -598,18 +486,10 @@ def test_product_variant_bulk_create_with_plain_text_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["plainText"] == plain_text
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": plain_text_attribute.slug},
-        "plain_text": plain_text,
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
-@freeze_time(datetime.datetime(2020, 5, 5, 5, 5, 5, tzinfo=datetime.UTC))
+@freeze_time(datetime(2020, 5, 5, 5, 5, 5, tzinfo=pytz.utc))
 def test_product_variant_bulk_create_with_date_attribute(
     staff_api_client, product, date_attribute, permission_manage_products
 ):
@@ -619,7 +499,7 @@ def test_product_variant_bulk_create_with_date_attribute(
 
     product_id = graphene.Node.to_global_id("Product", product.pk)
     attribute_id = graphene.Node.to_global_id("Attribute", date_attribute.pk)
-    date_time_value = datetime.datetime.now(tz=datetime.UTC)
+    date_time_value = datetime.now(tz=pytz.utc)
     date_value = date_time_value.date()
 
     sku = str(uuid4())[:12]
@@ -647,19 +527,11 @@ def test_product_variant_bulk_create_with_date_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["date"] == str(date_value)
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": date_attribute.slug},
-        "date": str(date_value),
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
 def test_product_variant_bulk_create_with_file_attribute(
-    staff_api_client, product, file_attribute, permission_manage_products
+    staff_api_client, product, file_attribute, permission_manage_products, site_settings
 ):
     # given
     product_variant_count = ProductVariant.objects.count()
@@ -668,7 +540,8 @@ def test_product_variant_bulk_create_with_file_attribute(
     product_id = graphene.Node.to_global_id("Product", product.pk)
     attribute_id = graphene.Node.to_global_id("Attribute", file_attribute.pk)
     existing_value = file_attribute.values.first()
-    file_url = f"https://example.com{settings.MEDIA_URL}{existing_value.file_url}"
+    domain = site_settings.site.domain
+    file_url = f"http://{domain}{settings.MEDIA_URL}{existing_value.file_url}"
 
     sku = str(uuid4())[:12]
     variants = [
@@ -695,26 +568,16 @@ def test_product_variant_bulk_create_with_file_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["file"]["url"] == file_url
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": file_attribute.slug},
-        "file": {
-            "url": file_url,
-            "contentType": None,
-        },
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
-@freeze_time(datetime.datetime(2020, 5, 5, 5, 5, 5, tzinfo=datetime.UTC))
+@freeze_time(datetime(2020, 5, 5, 5, 5, 5, tzinfo=pytz.utc))
 def test_product_variant_bulk_create_with_datetime_attribute(
     staff_api_client,
     product,
     date_time_attribute,
     permission_manage_products,
+    site_settings,
 ):
     # given
     product_variant_count = ProductVariant.objects.count()
@@ -722,7 +585,7 @@ def test_product_variant_bulk_create_with_datetime_attribute(
 
     product_id = graphene.Node.to_global_id("Product", product.pk)
     attribute_id = graphene.Node.to_global_id("Attribute", date_time_attribute.pk)
-    date_time_value = datetime.datetime.now(tz=datetime.UTC)
+    date_time_value = datetime.now(tz=pytz.utc)
 
     sku = str(uuid4())[:12]
     variants = [
@@ -749,14 +612,6 @@ def test_product_variant_bulk_create_with_datetime_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["dateTime"] == date_time_value.isoformat()
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": date_time_attribute.slug},
-        "datetime": date_time_value.isoformat(),
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
@@ -765,6 +620,7 @@ def test_product_variant_bulk_create_with_rich_text_attribute(
     product,
     rich_text_attribute,
     permission_manage_products,
+    site_settings,
 ):
     # given
     product_variant_count = ProductVariant.objects.count()
@@ -772,7 +628,7 @@ def test_product_variant_bulk_create_with_rich_text_attribute(
 
     product_id = graphene.Node.to_global_id("Product", product.pk)
     attribute_id = graphene.Node.to_global_id("Attribute", rich_text_attribute.pk)
-    rich_text = dummy_editorjs("Sample text")
+    rich_text = json.dumps(dummy_editorjs("Sample text"))
 
     sku = str(uuid4())[:12]
     variants = [
@@ -780,7 +636,7 @@ def test_product_variant_bulk_create_with_rich_text_attribute(
             "sku": sku,
             "weight": 2.5,
             "trackInventory": True,
-            "attributes": [{"id": attribute_id, "richText": json.dumps(rich_text)}],
+            "attributes": [{"id": attribute_id, "richText": rich_text}],
         }
     ]
 
@@ -798,15 +654,7 @@ def test_product_variant_bulk_create_with_rich_text_attribute(
     assert not data["results"][0]["errors"]
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
-    assert attributes[-1]["values"][0]["richText"] == json.dumps(rich_text)
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": rich_text_attribute.slug},
-        "text": rich_text,
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
+    assert attributes[-1]["values"][0]["richText"] == rich_text
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
@@ -815,6 +663,7 @@ def test_product_variant_bulk_create_with_numeric_attribute(
     product,
     numeric_attribute,
     permission_manage_products,
+    site_settings,
 ):
     # given
     product_variant_count = ProductVariant.objects.count()
@@ -849,14 +698,6 @@ def test_product_variant_bulk_create_with_numeric_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["name"] == existing_value.name
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": numeric_attribute.slug},
-        "value": existing_value.numeric,
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
@@ -865,6 +706,7 @@ def test_product_variant_bulk_create_with_page_reference_attribute(
     product,
     product_type_page_reference_attribute,
     permission_manage_products,
+    site_settings,
     page,
 ):
     # given
@@ -902,276 +744,7 @@ def test_product_variant_bulk_create_with_page_reference_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["reference"] == reference
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": product_type_page_reference_attribute.slug},
-        "pages": [{"slug": page.slug}],
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
-
-
-def test_product_variant_bulk_create_with_single_reference_attribute(
-    staff_api_client,
-    product,
-    product_type_category_single_reference_attribute,
-    permission_manage_products,
-    category,
-):
-    # given
-    product_variant_count = ProductVariant.objects.count()
-    attribute = product_type_category_single_reference_attribute
-    product.product_type.variant_attributes.add(attribute)
-    reference_attr_id = graphene.Node.to_global_id("Attribute", attribute.id)
-    reference = graphene.Node.to_global_id("Category", category.pk)
-    product_id = graphene.Node.to_global_id("Product", product.pk)
-
-    sku = str(uuid4())[:12]
-    variants = [
-        {
-            "sku": sku,
-            "weight": 2.5,
-            "trackInventory": True,
-            "attributes": [{"id": reference_attr_id, "reference": reference}],
-        }
-    ]
-
-    variables = {"productId": product_id, "variants": variants}
-
-    # when
-    staff_api_client.user.user_permissions.add(permission_manage_products)
-    response = staff_api_client.post_graphql(
-        PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
-    )
-    content = get_graphql_content(response)
-    data = content["data"]["productVariantBulkCreate"]
-
-    # then
-    assert not data["results"][0]["errors"]
-    assert data["count"] == 1
-    attributes = data["results"][0]["productVariant"]["attributes"]
-    assert attributes[-1]["values"][0]["reference"] == reference
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": product_type_category_single_reference_attribute.slug},
-        "category": {"slug": category.slug},
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
-    assert product_variant_count + 1 == ProductVariant.objects.count()
-
-
-def test_product_variant_bulk_create_with_ref_attributes_and_reference_types_defined(
-    staff_api_client,
-    product,
-    product_type,
-    product_type_page_single_reference_attribute,
-    product_type_product_reference_attribute,
-    product_type_variant_reference_attribute,
-    page,
-    variant,
-    permission_manage_products,
-):
-    # given
-    product_type.variant_attributes.clear()
-    product_type.variant_attributes.add(
-        product_type_page_single_reference_attribute,
-        product_type_product_reference_attribute,
-        product_type_variant_reference_attribute,
-    )
-
-    product_type_page_single_reference_attribute.reference_page_types.add(
-        page.page_type
-    )
-    product_type_product_reference_attribute.reference_product_types.add(
-        product.product_type
-    )
-    product_type_variant_reference_attribute.reference_product_types.add(
-        variant.product.product_type
-    )
-
-    page_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_page_single_reference_attribute.id
-    )
-    product_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_product_reference_attribute.id
-    )
-    variant_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_variant_reference_attribute.id
-    )
-    page_ref = graphene.Node.to_global_id("Page", page.pk)
-    product_ref = graphene.Node.to_global_id("Product", product.pk)
-    variant_ref = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    product_id = graphene.Node.to_global_id("Product", product.pk)
-
-    sku1 = str(uuid4())[:12]
-    sku2 = str(uuid4())[:12]
-    sku3 = str(uuid4())[:12]
-
-    variants = [
-        {
-            "sku": sku1,
-            "attributes": [{"id": page_ref_attr_id, "reference": page_ref}],
-        },
-        {
-            "sku": sku2,
-            "attributes": [{"id": product_ref_attr_id, "references": [product_ref]}],
-        },
-        {
-            "sku": sku3,
-            "attributes": [{"id": variant_ref_attr_id, "references": [variant_ref]}],
-        },
-    ]
-
-    # when
-    staff_api_client.user.user_permissions.add(permission_manage_products)
-    response = staff_api_client.post_graphql(
-        PRODUCT_VARIANT_BULK_CREATE_MUTATION,
-        {"productId": product_id, "variants": variants},
-    )
-    content = get_graphql_content(response)
-    data = content["data"]["productVariantBulkCreate"]
-
-    # then
-    assert not data["results"][0]["errors"]
-    assert not data["results"][1]["errors"]
-    assert not data["results"][2]["errors"]
-    assert data["count"] == 3
-
-    expected_attributes = [
-        {
-            "slug": product_type_page_single_reference_attribute.slug,
-            "reference": page_ref,
-        },
-        {
-            "slug": product_type_product_reference_attribute.slug,
-            "reference": product_ref,
-        },
-        {
-            "slug": product_type_variant_reference_attribute.slug,
-            "reference": variant_ref,
-        },
-    ]
-    expected_assigned_attributes = [
-        {
-            "attribute": {"slug": product_type_page_single_reference_attribute.slug},
-            "page": {"slug": page.slug},
-        },
-        {
-            "attribute": {"slug": product_type_product_reference_attribute.slug},
-            "products": [{"slug": product.slug}],
-        },
-        {
-            "attribute": {"slug": product_type_variant_reference_attribute.slug},
-            "variants": [{"sku": variant.sku}],
-        },
-    ]
-
-    for i, result in enumerate(data["results"]):
-        matching_attribute = next(
-            attr
-            for attr in result["productVariant"]["attributes"]
-            if attr["attribute"]["slug"] == expected_attributes[i]["slug"]
-        )
-        assert len(matching_attribute["values"]) == 1
-        assert (
-            matching_attribute["values"][0]["reference"]
-            == expected_attributes[i]["reference"]
-        )
-        assert (
-            expected_assigned_attributes[i]
-            in result["productVariant"]["assignedAttributes"]
-        )
-
-
-def test_product_variant_bulk_create_with_ref_attributes_refs_not_in_available_choices(
-    staff_api_client,
-    product,
-    product_type,
-    product_type_page_single_reference_attribute,
-    product_type_product_reference_attribute,
-    product_type_variant_reference_attribute,
-    page,
-    variant,
-    permission_manage_products,
-    product_type_with_variant_attributes,
-    page_type_list,
-):
-    # given
-    product_type.variant_attributes.clear()
-    product_type.variant_attributes.add(
-        product_type_page_single_reference_attribute,
-        product_type_product_reference_attribute,
-        product_type_variant_reference_attribute,
-    )
-
-    product_type_page_single_reference_attribute.reference_page_types.add(
-        page_type_list[1]
-    )
-    product_type_product_reference_attribute.reference_product_types.add(
-        product_type_with_variant_attributes
-    )
-    product_type_variant_reference_attribute.reference_product_types.add(
-        product_type_with_variant_attributes
-    )
-
-    page_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_page_single_reference_attribute.id
-    )
-    product_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_product_reference_attribute.id
-    )
-    variant_ref_attr_id = graphene.Node.to_global_id(
-        "Attribute", product_type_variant_reference_attribute.id
-    )
-    page_ref = graphene.Node.to_global_id("Page", page.pk)
-    product_ref = graphene.Node.to_global_id("Product", product.pk)
-    variant_ref = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    product_id = graphene.Node.to_global_id("Product", product.pk)
-
-    sku1 = str(uuid4())[:12]
-    sku2 = str(uuid4())[:12]
-    sku3 = str(uuid4())[:12]
-
-    variants = [
-        {
-            "sku": sku1,
-            "attributes": [{"id": page_ref_attr_id, "reference": page_ref}],
-        },
-        {
-            "sku": sku2,
-            "attributes": [{"id": product_ref_attr_id, "references": [product_ref]}],
-        },
-        {
-            "sku": sku3,
-            "attributes": [{"id": variant_ref_attr_id, "references": [variant_ref]}],
-        },
-    ]
-
-    # when
-    staff_api_client.user.user_permissions.add(permission_manage_products)
-    response = staff_api_client.post_graphql(
-        PRODUCT_VARIANT_BULK_CREATE_MUTATION,
-        {"productId": product_id, "variants": variants},
-    )
-    content = get_graphql_content(response)
-    data = content["data"]["productVariantBulkCreate"]
-
-    # then
-    assert len(data["results"][0]["errors"]) == 1
-    assert len(data["results"][1]["errors"]) == 1
-    assert len(data["results"][2]["errors"]) == 1
-    assert data["count"] == 0
-
-    for result in data["results"]:
-        assert len(result["errors"]) == 1
-        assert result["errors"][0]["code"] == ProductVariantBulkErrorCode.INVALID.name
-        assert result["errors"][0]["path"] == "attributes"
 
 
 def test_product_variant_bulk_create_with_dropdown_attribute(
@@ -1222,14 +795,6 @@ def test_product_variant_bulk_create_with_dropdown_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["name"] == attribute_value.name
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": size_attribute.slug},
-        "choice": {"slug": attribute_value.slug, "name": attribute_value.name},
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
@@ -1277,14 +842,6 @@ def test_product_variant_bulk_create_with_multiselect_attribute(
     assert data["count"] == 1
     attributes = data["results"][0]["productVariant"]["attributes"]
     assert attributes[-1]["values"][0]["name"] == attribute_value.name
-
-    assigned_attributes = data["results"][0]["productVariant"]["assignedAttributes"]
-    expected_assigned_attribute = {
-        "attribute": {"slug": size_attribute.slug},
-        "multi": [{"slug": attribute_value.slug, "name": attribute_value.name}],
-    }
-    assert expected_assigned_attribute in assigned_attributes
-
     assert product_variant_count + 1 == ProductVariant.objects.count()
 
 
@@ -1582,7 +1139,7 @@ def test_product_variant_bulk_create_stocks_input(
         assert variant_data["sku"] in expected_result
         expected_variant = expected_result[variant_data["sku"]]
         expected_stocks = expected_variant["stocks"]
-        assert all(stock in expected_stocks for stock in variant_data["stocks"])
+        assert all([stock in expected_stocks for stock in variant_data["stocks"]])
 
 
 def test_product_variant_bulk_create_duplicated_warehouses(
@@ -1817,8 +1374,10 @@ def test_product_variant_bulk_create_channel_listings_input(
         expected_variant = expected_result[variant_data["sku"]]
         expected_channel_listing = expected_variant["channelListings"]
         assert all(
-            channelListing in expected_channel_listing
-            for channelListing in variant_data["channelListings"]
+            [
+                channelListing in expected_channel_listing
+                for channelListing in variant_data["channelListings"]
+            ]
         )
 
     # ensure all variants channel listings has discounted_price_amount set
@@ -1852,7 +1411,7 @@ def test_product_variant_bulk_create_preorder_channel_listings_input(
 
     global_threshold = 10
     end_date = (
-        (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=3))
+        (datetime.now() + timedelta(days=3))
         .astimezone()
         .replace(microsecond=0)
         .isoformat()
@@ -1947,9 +1506,11 @@ def test_product_variant_bulk_create_preorder_channel_listings_input(
             for channel_listing in expected_variant["channelListings"]
         ]
         assert all(
-            channel_listing["preorderThreshold"]["quantity"]
-            in expected_channel_listing_thresholds
-            for channel_listing in variant_data["channelListings"]
+            [
+                channel_listing["preorderThreshold"]["quantity"]
+                in expected_channel_listing_thresholds
+                for channel_listing in variant_data["channelListings"]
+            ]
         )
         preorder_data = variant_data["preorder"]
         assert preorder_data["globalThreshold"] == global_threshold

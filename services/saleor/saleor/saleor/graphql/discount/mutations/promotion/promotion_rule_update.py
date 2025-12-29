@@ -11,9 +11,9 @@ from .....product.utils.product import mark_products_in_channels_as_dirty
 from .....webhook.event_types import WebhookEventAsyncType
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
-from ....core.descriptions import ADDED_IN_319, PREVIEW_FEATURE
+from ....core.descriptions import ADDED_IN_317, ADDED_IN_319, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.types import Error, NonNullList
 from ....core.utils import WebhookEventInfo
 from ....plugins.dataloaders import get_plugin_manager_promise
@@ -68,7 +68,7 @@ class PromotionRuleUpdateInput(PromotionRuleBaseInput):
     )
 
 
-class PromotionRuleUpdate(DeprecatedModelMutation):
+class PromotionRuleUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(
             description="ID of the promotion rule to update.", required=True
@@ -78,7 +78,9 @@ class PromotionRuleUpdate(DeprecatedModelMutation):
         )
 
     class Meta:
-        description = "Updates an existing promotion rule."
+        description = (
+            "Updates an existing promotion rule." + ADDED_IN_317 + PREVIEW_FEATURE
+        )
         model = models.PromotionRule
         object_type = PromotionRule
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)
@@ -178,7 +180,7 @@ class PromotionRuleUpdate(DeprecatedModelMutation):
             if product_ids:
                 cls.call_event(
                     mark_products_in_channels_as_dirty,
-                    dict.fromkeys(channel_ids_to_update, product_ids),
+                    {channel_id: product_ids for channel_id in channel_ids_to_update},
                 )
         clear_promotion_old_sale_id(instance.promotion, save=True)
         app = get_app_promise(info.context).get()

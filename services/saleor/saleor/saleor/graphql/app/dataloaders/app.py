@@ -17,7 +17,7 @@ def create_app_cache_key_from_token(token: str) -> str:
     return f"AppByTokenLoader:{hashlib.md5(token.encode('utf-8')).hexdigest()}"
 
 
-class AppByIdLoader(DataLoader[str, App]):
+class AppByIdLoader(DataLoader):
     context_key = "app_by_id"
 
     def batch_load(self, keys):
@@ -46,7 +46,7 @@ class TokenInfo:
         return self._cache_key
 
 
-class AppByTokenLoader(DataLoader[str, App]):
+class AppByTokenLoader(DataLoader):
     context_key = "app_by_token"
 
     def get_and_cache_app_id(

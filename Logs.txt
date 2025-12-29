@@ -1,0 +1,876 @@
+docker compose ps
+NAME                            IMAGE                              COMMAND                   SERVICE         CREATED         STATUS                          PORTS
+leemasmart-dashboard-prod       leemasmart-backend-dashboard       "/docker-entrypoint.…"    dashboard       5 minutes ago   Up 5 minutes                    0.0.0.0:9000->80/tcp, [::]:9000->80/tcp
+leemasmart-postgres-prod        postgres:16-alpine                 "docker-entrypoint.s…"    postgres        5 minutes ago   Up 5 minutes (healthy)          0.0.0.0:5433->5432/tcp, [::]:5433->5432/tcp
+leemasmart-redis-prod           redis:7-alpine                     "docker-entrypoint.s…"    redis           5 minutes ago   Up 5 minutes (healthy)          0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+leemasmart-saleor-beat-prod     leemasmart-backend-saleor-beat     "celery -A saleor be…"    saleor-beat     5 minutes ago   Restarting (1) 48 seconds ago   
+leemasmart-saleor-prod          leemasmart-backend-saleor          "sh -c '\n  python ma…"   saleor          5 minutes ago   Restarting (1) 5 seconds ago    
+leemasmart-saleor-worker-prod   leemasmart-backend-saleor-worker   "celery -A saleor wo…"    saleor-worker   5 minutes ago   Up 5 minutes                    8000/tcp
+leemasmart-traefik              traefik:v2.10                      "/entrypoint.sh --ap…"    traefik         5 minutes ago   Up 5 minutes                    0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+root@srv1222486:/opt/leemasmart# docker compose logs saleor --tail 100
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod  | {"asctime": "2025-12-27T19:00:15Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod  | Traceback (most recent call last):
+leemasmart-saleor-prod  |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod  |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod  |     utility.execute()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod  |     django.setup()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod  |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod  |     app_config.ready()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod  |     self.validate_jwt_manager()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod  | {"asctime": "2025-12-27T19:00:47Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 6, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod  | Traceback (most recent call last):
+leemasmart-saleor-prod  |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod  |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod  |     utility.execute()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod  |     django.setup()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod  |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod  |     app_config.ready()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod  |     self.validate_jwt_manager()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod  | {"asctime": "2025-12-27T19:01:46Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod  | Traceback (most recent call last):
+leemasmart-saleor-prod  |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod  |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod  |     utility.execute()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod  |     django.setup()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod  |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod  |     app_config.ready()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod  |     self.validate_jwt_manager()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod  | {"asctime": "2025-12-27T19:02:52Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod  | Traceback (most recent call last):
+leemasmart-saleor-prod  |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod  |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod  |     utility.execute()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod  |     django.setup()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod  |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod  |     app_config.ready()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod  |     self.validate_jwt_manager()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod  | {"asctime": "2025-12-27T19:03:57Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod  | Traceback (most recent call last):
+leemasmart-saleor-prod  |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod  |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod  |     utility.execute()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod  |     django.setup()
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod  |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod  |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod  |     app_config.ready()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod  |     self.validate_jwt_manager()
+leemasmart-saleor-prod  |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod  |     validate_method()
+leemasmart-saleor-prod  |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod  |     raise ImproperlyConfigured(
+leemasmart-saleor-prod  | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+root@srv1222486:/opt/leemasmart# docker compose logs saleor-beat --tail 100
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+leemasmart-saleor-beat-prod  |     return self.main(*args, **kwargs)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1406, in main
+leemasmart-saleor-beat-prod  |     rv = self.invoke(ctx)
+leemasmart-saleor-beat-prod  |          ^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+leemasmart-saleor-beat-prod  |     return _process_result(sub_ctx.command.invoke(sub_ctx))
+leemasmart-saleor-beat-prod  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+leemasmart-saleor-beat-prod  |     return ctx.invoke(self.callback, **ctx.params)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+leemasmart-saleor-beat-prod  |     return callback(*args, **kwargs)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/click/decorators.py", line 34, in new_func
+leemasmart-saleor-beat-prod  |     return f(get_current_context(), *args, **kwargs)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/bin/base.py", line 135, in caller
+leemasmart-saleor-beat-prod  |     return f(ctx, *args, **kwargs)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/bin/beat.py", line 72, in beat
+leemasmart-saleor-beat-prod  |     return beat().run()
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/apps/beat.py", line 84, in run
+leemasmart-saleor-beat-prod  |     self.start_scheduler()
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/apps/beat.py", line 113, in start_scheduler
+leemasmart-saleor-beat-prod  |     service.start()
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 636, in start
+leemasmart-saleor-beat-prod  |     humanize_seconds(self.scheduler.max_interval))
+leemasmart-saleor-beat-prod  |                      ^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/kombu/utils/objects.py", line 40, in __get__
+leemasmart-saleor-beat-prod  |     return super().__get__(instance, owner)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/functools.py", line 998, in __get__
+leemasmart-saleor-beat-prod  |     val = self.func(instance)
+leemasmart-saleor-beat-prod  |           ^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 679, in scheduler
+leemasmart-saleor-beat-prod  |     return self.get_scheduler()
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 670, in get_scheduler
+leemasmart-saleor-beat-prod  |     return symbol_by_name(self.scheduler_cls, aliases=aliases)(
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 252, in __init__
+leemasmart-saleor-beat-prod  |     Scheduler.__init__(self, *args, **kwargs)
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 266, in __init__
+leemasmart-saleor-beat-prod  |     self.setup_schedule()
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 260, in setup_schedule
+leemasmart-saleor-beat-prod  |     self.install_default_entries(self.schedule)
+leemasmart-saleor-beat-prod  |                                  ^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 531, in schedule
+leemasmart-saleor-beat-prod  |     self._schedule = self.all_as_schedule()
+leemasmart-saleor-beat-prod  |                      ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 266, in all_as_schedule
+leemasmart-saleor-beat-prod  |     for model in self.enabled_models():
+leemasmart-saleor-beat-prod  |                  ^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 279, in enabled_models
+leemasmart-saleor-beat-prod  |     return list(self.enabled_models_qs())
+leemasmart-saleor-beat-prod  |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 290, in enabled_models_qs
+leemasmart-saleor-beat-prod  |     exclude_cron_tasks_query = self._get_crontab_exclude_query()
+leemasmart-saleor-beat-prod  |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 343, in _get_crontab_exclude_query
+leemasmart-saleor-beat-prod  |     for timezone_name in self._get_unique_timezone_names()
+leemasmart-saleor-beat-prod  |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 386, in __iter__
+leemasmart-saleor-beat-prod  |     self._fetch_all()
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+leemasmart-saleor-beat-prod  |     self._result_cache = list(self._iterable_class(self))
+leemasmart-saleor-beat-prod  |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 273, in __iter__
+leemasmart-saleor-beat-prod  |     for row in compiler.results_iter(
+leemasmart-saleor-beat-prod  |                ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+leemasmart-saleor-beat-prod  |     results = self.execute_sql(
+leemasmart-saleor-beat-prod  |               ^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1623, in execute_sql
+leemasmart-saleor-beat-prod  |     cursor.execute(sql, params)
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+leemasmart-saleor-beat-prod  |     return super().execute(sql, params)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+leemasmart-saleor-beat-prod  |     return self._execute_with_wrappers(
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+leemasmart-saleor-beat-prod  |     return executor(sql, params, many, context)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+leemasmart-saleor-beat-prod  |     with self.db.wrap_database_errors:
+leemasmart-saleor-beat-prod  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+leemasmart-saleor-beat-prod  |     raise dj_exc_value.with_traceback(traceback) from exc_value
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+leemasmart-saleor-beat-prod  |     return self.cursor.execute(sql, params)
+leemasmart-saleor-beat-prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod  |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+leemasmart-saleor-beat-prod  |     raise ex.with_traceback(None)
+leemasmart-saleor-beat-prod  | django.db.utils.ProgrammingError: relation "django_celery_beat_crontabschedule" does not exist
+leemasmart-saleor-beat-prod  | LINE 1: ...django_celery_beat_crontabschedule"."minute" FROM "django_ce...
+leemasmart-saleor-beat-prod  |                                                              ^
+root@srv1222486:/opt/leemasmart# docker compose logs --tail 200
+leemasmart-dashboard-prod  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+leemasmart-saleor-beat-prod  | 
+leemasmart-saleor-worker-prod  | 2025-12-27 18:58:53,934 WARNING py.warnings /usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+leemasmart-saleor-worker-prod  |   import pkg_resources
+leemasmart-saleor-worker-prod  |  [PID:1:MainThread]
+leemasmart-saleor-worker-prod  | 2025-12-27 18:58:56,799 WARNING saleor.core.jwt_manager RSA_PRIVATE_KEY is missing. Using temporary key for local development with DEBUG mode. [PID:1:MainThread]
+leemasmart-saleor-worker-prod  | 2025-12-27 18:59:00,166 WARNING py.warnings /usr/local/lib/python3.12/site-packages/celery/platforms.py:841: SecurityWarning: You're running the worker with superuser privileges: this is
+leemasmart-saleor-worker-prod  | absolutely not recommended!
+leemasmart-saleor-worker-prod  | 
+leemasmart-saleor-worker-prod  | Please specify a different user using the --uid option.
+leemasmart-saleor-worker-prod  | 
+leemasmart-saleor-worker-prod  | User information: uid=0 euid=0 gid=0 egid=0
+leemasmart-saleor-worker-prod  | 
+leemasmart-saleor-worker-prod  |   warnings.warn(SecurityWarning(ROOT_DISCOURAGED.format(
+leemasmart-saleor-worker-prod  |  [PID:1:MainThread]
+leemasmart-saleor-worker-prod  |  
+leemasmart-saleor-worker-prod  |  -------------- celery@8443de0d43ef v5.6.0 (recovery)
+leemasmart-saleor-worker-prod  | --- ***** ----- 
+leemasmart-saleor-worker-prod  | -- ******* ---- Linux-6.8.0-90-generic-x86_64-with-glibc2.41 2025-12-27 18:59:00
+leemasmart-saleor-worker-prod  | - *** --- * --- 
+leemasmart-saleor-worker-prod  | - ** ---------- [config]
+leemasmart-saleor-worker-prod  | - ** ---------- .> app:         saleor:0x7d0a40fe2c30
+leemasmart-saleor-worker-prod  | - ** ---------- .> transport:   redis://redis:6379/1
+leemasmart-saleor-worker-prod  | - ** ---------- .> results:     disabled://
+leemasmart-saleor-worker-prod  | - *** --- * --- .> concurrency: 2 (prefork)
+leemasmart-saleor-worker-prod  | -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+leemasmart-saleor-worker-prod  | --- ***** ----- 
+leemasmart-saleor-worker-prod  |  -------------- [queues]
+leemasmart-saleor-worker-prod  |                 .> celery           exchange=celery(direct) key=celery
+leemasmart-saleor-worker-prod  |                 
+leemasmart-saleor-worker-prod  | 
+leemasmart-saleor-worker-prod  | [tasks]
+leemasmart-saleor-worker-prod  |   . export-gift-cards
+leemasmart-saleor-worker-prod  |   . export-products
+leemasmart-saleor-worker-prod  |   . export-voucher-codes
+leemasmart-saleor-worker-prod  |   . saleor.account.migrations.tasks.saleor3_22.populate_user_number_of_orders_task
+leemasmart-saleor-worker-prod  |   . saleor.account.tasks.finish_creating_user
+leemasmart-saleor-worker-prod  |   . saleor.account.tasks.trigger_send_password_reset_notification
+leemasmart-saleor-worker-prod  |   . saleor.app.installation_utils.fetch_brand_data_task
+leemasmart-saleor-worker-prod  |   . saleor.app.tasks.install_app_task
+leemasmart-saleor-worker-prod  |   . saleor.app.tasks.remove_apps_task
+leemasmart-saleor-worker-prod  |   . saleor.attribute.migrations.tasks.saleor3_22.fulfill_attribute_value_numeric_field
+leemasmart-saleor-worker-prod  |   . saleor.checkout.tasks.automatic_checkout_completion_task
+leemasmart-saleor-worker-prod  |   . saleor.checkout.tasks.delete_expired_checkouts
+leemasmart-saleor-worker-prod  |   . saleor.core.search_tasks.set_order_search_document_values
+leemasmart-saleor-worker-prod  |   . saleor.core.search_tasks.set_product_search_document_values
+leemasmart-saleor-worker-prod  |   . saleor.core.search_tasks.set_user_search_document_values
+leemasmart-saleor-worker-prod  |   . saleor.core.tasks.delete_event_payloads_task
+leemasmart-saleor-worker-prod  |   . saleor.core.tasks.delete_files_from_private_storage_task
+leemasmart-saleor-worker-prod  |   . saleor.core.tasks.delete_files_from_storage_task
+leemasmart-saleor-worker-prod  |   . saleor.core.tasks.delete_from_storage_task
+leemasmart-saleor-worker-prod  |   . saleor.csv.tasks.delete_old_export_files
+leemasmart-saleor-worker-prod  |   . saleor.discount.migrations.tasks.saleor3_17.set_promotion_rule_variants
+leemasmart-saleor-worker-prod  |   . saleor.discount.migrations.tasks.saleor3_17.update_discounted_prices_task
+leemasmart-saleor-worker-prod  |   . saleor.discount.tasks.clear_promotion_rule_variants_task
+leemasmart-saleor-worker-prod  |   . saleor.discount.tasks.decrease_voucher_codes_usage_task
+leemasmart-saleor-worker-prod  |   . saleor.discount.tasks.disconnect_voucher_codes_from_draft_orders_task
+leemasmart-saleor-worker-prod  |   . saleor.discount.tasks.handle_promotion_toggle
+leemasmart-saleor-worker-prod  |   . saleor.giftcard.tasks.deactivate_expired_cards_task
+leemasmart-saleor-worker-prod  |   . saleor.giftcard.tasks.update_gift_cards_search_vector_task
+leemasmart-saleor-worker-prod  |   . saleor.order.migrations.tasks.saleor3_22.populate_order_line_product_type_id_task
+leemasmart-saleor-worker-prod  |   . saleor.order.tasks.delete_expired_orders_task
+leemasmart-saleor-worker-prod  |   . saleor.order.tasks.expire_orders_task
+leemasmart-saleor-worker-prod  |   . saleor.order.tasks.recalculate_orders_task
+leemasmart-saleor-worker-prod  |   . saleor.order.tasks.send_order_updated
+leemasmart-saleor-worker-prod  |   . saleor.page.tasks.mark_pages_search_vector_as_dirty
+leemasmart-saleor-worker-prod  |   . saleor.page.tasks.update_pages_search_vector_task
+leemasmart-saleor-worker-prod  |   . saleor.payment.tasks.transaction_release_funds_for_checkout_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.admin_email.tasks.send_email_with_link_to_download_file_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.admin_email.tasks.send_export_failed_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.admin_email.tasks.send_set_staff_password_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.admin_email.tasks.send_staff_order_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.admin_email.tasks.send_staff_password_reset_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.avatax.tasks.api_post_request_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_account_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_account_delete_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_email_with_dynamic_template_id
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_fulfillment_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_fulfillment_update_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_gift_card_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_invoice_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_order_canceled_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_order_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_order_confirmed_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_order_refund_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_password_reset_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_payment_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_request_email_change_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_set_user_password_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.sendgrid.tasks.send_user_change_email_notification_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_account_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_account_delete_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_fulfillment_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_fulfillment_update_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_gift_card_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_invoice_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_order_canceled_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_order_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_order_confirmed_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_order_refund_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_password_reset_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_payment_confirmation_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_request_email_change_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_set_user_password_email_task
+leemasmart-saleor-worker-prod  |   . saleor.plugins.user_email.tasks.send_user_change_email_notification_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.collection_product_updated_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.deactivate_preorder_for_variants_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.mark_products_search_vector_as_dirty
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.recalculate_discounted_price_for_products_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_discounted_prices_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_products_discounted_prices_for_promotion_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_products_discounted_prices_of_promotion_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_products_search_vector_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_variant_relations_for_active_promotion_rules_task
+leemasmart-saleor-worker-prod  |   . saleor.product.tasks.update_variants_names
+leemasmart-saleor-worker-prod  |   . saleor.shipping.tasks.drop_invalid_shipping_methods_relations_for_given_channels
+leemasmart-saleor-worker-prod  |   . saleor.warehouse.tasks.delete_empty_allocations_task
+leemasmart-saleor-worker-prod  |   . saleor.warehouse.tasks.delete_expired_reservations_task
+leemasmart-saleor-worker-prod  |   . saleor.warehouse.tasks.update_stocks_quantity_allocated_task
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.asynchronous.transport.generate_deferred_payloads
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.asynchronous.transport.observability_reporter_task
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.asynchronous.transport.observability_send_events
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.asynchronous.transport.send_webhook_request_async
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.asynchronous.transport.send_webhooks_async_for_app
+leemasmart-saleor-worker-prod  |   . saleor.webhook.transport.synchronous.transport.handle_transaction_request_task
+leemasmart-saleor-worker-prod  | 
+leemasmart-saleor-worker-prod  | 2025-12-27 18:59:01,360 INFO celery.worker.consumer.connection Connected to redis://redis:6379/1 [PID:1:MainThread]
+leemasmart-saleor-worker-prod  | 2025-12-27 18:59:01,375 INFO celery.worker.consumer.mingle mingle: searching for neighbors [PID:1:MainThread]
+leemasmart-postgres-prod       | The files belonging to this database system will be owned by user "postgres".
+leemasmart-postgres-prod       | This user must also own the server process.
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | The database cluster will be initialized with locale "en_US.utf8".
+leemasmart-postgres-prod       | The default database encoding has accordingly been set to "UTF8".
+leemasmart-postgres-prod       | The default text search configuration will be set to "english".
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | Data page checksums are disabled.
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | fixing permissions on existing directory /var/lib/postgresql/data/pgdata ... ok
+leemasmart-postgres-prod       | creating subdirectories ... ok
+leemasmart-postgres-prod       | selecting dynamic shared memory implementation ... posix
+leemasmart-postgres-prod       | selecting default max_connections ... 100
+leemasmart-postgres-prod       | selecting default shared_buffers ... 128MB
+leemasmart-postgres-prod       | selecting default time zone ... UTC
+leemasmart-postgres-prod       | creating configuration files ... ok
+leemasmart-postgres-prod       | running bootstrap script ... ok
+leemasmart-postgres-prod       | sh: locale: not found
+leemasmart-postgres-prod       | 2025-12-27 18:58:35.535 UTC [35] WARNING:  no usable system locales were found
+leemasmart-postgres-prod       | performing post-bootstrap initialization ... ok
+leemasmart-postgres-prod       | initdb: warning: enabling "trust" authentication for local connections
+leemasmart-postgres-prod       | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+leemasmart-postgres-prod       | syncing data to disk ... ok
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | Success. You can now start the database server using:
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       |     pg_ctl -D /var/lib/postgresql/data/pgdata -l logfile start
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | waiting for server to start....2025-12-27 18:58:36.233 UTC [41] LOG:  starting PostgreSQL 16.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.235 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.241 UTC [44] LOG:  database system was shut down at 2025-12-27 18:58:36 UTC
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.247 UTC [41] LOG:  database system is ready to accept connections
+leemasmart-postgres-prod       |  done
+leemasmart-postgres-prod       | server started
+leemasmart-postgres-prod       | CREATE DATABASE
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/01-init.sql
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | CREATE EXTENSION
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | ALTER SYSTEM
+leemasmart-postgres-prod       | CREATE FUNCTION
+leemasmart-postgres-prod       | CREATE FUNCTION
+leemasmart-postgres-prod       | CREATE FUNCTION
+leemasmart-postgres-prod       | CREATE FUNCTION
+leemasmart-postgres-prod       | CREATE TABLE
+leemasmart-postgres-prod       | CREATE INDEX
+leemasmart-postgres-prod       | CREATE INDEX
+leemasmart-postgres-prod       | CREATE INDEX
+leemasmart-postgres-prod       | COMMENT
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.703 UTC [54] WARNING:  database "cms" does not exist
+leemasmart-postgres-prod       | COMMENT
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.704 UTC [54] WARNING:  database "payment" does not exist
+leemasmart-postgres-prod       | COMMENT
+leemasmart-postgres-prod       | psql:/docker-entrypoint-initdb.d/01-init.sql:177: WARNING:  database "cms" does not exist
+leemasmart-postgres-prod       | psql:/docker-entrypoint-initdb.d/01-init.sql:178: WARNING:  database "payment" does not exist
+leemasmart-postgres-prod       | psql:/docker-entrypoint-initdb.d/01-init.sql:179: WARNING:  database "shipping" does not exist
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.704 UTC [54] WARNING:  database "shipping" does not exist
+leemasmart-postgres-prod       | COMMENT
+leemasmart-postgres-prod       | DO
+leemasmart-postgres-prod       | GRANT
+leemasmart-postgres-prod       | GRANT
+leemasmart-postgres-prod       | GRANT
+leemasmart-postgres-prod       | ALTER DEFAULT PRIVILEGES
+leemasmart-postgres-prod       | psql:/docker-entrypoint-initdb.d/01-init.sql:199: ERROR:  syntax error at or near "NOT"
+leemasmart-postgres-prod       | LINE 1: CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS english_stem ...
+leemasmart-postgres-prod       |                                             ^
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.719 UTC [54] ERROR:  syntax error at or near "NOT" at character 37
+leemasmart-postgres-prod       | 2025-12-27 18:58:36.719 UTC [54] STATEMENT:  CREATE TEXT SEARCH CONFIGURATION IF NOT EXISTS english_stem (COPY = pg_catalog.english);
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | PostgreSQL Database directory appears to contain a database; Skipping initialization
+leemasmart-postgres-prod       | 
+leemasmart-postgres-prod       | 2025-12-27 18:58:37 UTC [1]: [1-1] user=,db=,app=,client= LOG:  redirecting log output to logging collector process
+leemasmart-postgres-prod       | 2025-12-27 18:58:37 UTC [1]: [2-1] user=,db=,app=,client= HINT:  Future log output will appear in directory "pg_log".
+leemasmart-saleor-beat-prod    | The above exception was the direct cause of the following exception:
+leemasmart-saleor-beat-prod    | 
+leemasmart-saleor-beat-prod    | Traceback (most recent call last):
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/apps/beat.py", line 113, in start_scheduler
+leemasmart-saleor-beat-prod    |     service.start()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 636, in start
+leemasmart-saleor-beat-prod    |     humanize_seconds(self.scheduler.max_interval))
+leemasmart-saleor-beat-prod    |                      ^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/kombu/utils/objects.py", line 40, in __get__
+leemasmart-saleor-beat-prod    |     return super().__get__(instance, owner)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/functools.py", line 998, in __get__
+leemasmart-saleor-beat-prod    |     val = self.func(instance)
+leemasmart-saleor-beat-prod    |           ^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 679, in scheduler
+leemasmart-saleor-beat-prod    |     return self.get_scheduler()
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 670, in get_scheduler
+leemasmart-saleor-beat-prod    |     return symbol_by_name(self.scheduler_cls, aliases=aliases)(
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 252, in __init__
+leemasmart-saleor-beat-prod    |     Scheduler.__init__(self, *args, **kwargs)
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 266, in __init__
+leemasmart-saleor-beat-prod    |     self.setup_schedule()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 260, in setup_schedule
+leemasmart-saleor-beat-prod    |     self.install_default_entries(self.schedule)
+leemasmart-saleor-beat-prod    |                                  ^^^^^^^^^^^^^
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T18:59:15Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 8, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T18:59:24Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T18:59:32Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T18:59:44Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T18:59:56Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 6, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T19:00:15Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T19:00:47Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 6, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T19:01:46Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T19:02:52Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-saleor-prod         | {"asctime": "2025-12-27T19:03:57Z", "levelname": "WARNING", "lineno": 112, "message": "/usr/local/lib/python3.12/site-packages/razorpay/client.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.\n  import pkg_resources\n", "name": "py.warnings", "pathname": "/usr/local/lib/python3.12/warnings.py", "process": 7, "threadName": "MainThread", "hostname": "74dac9e29c01"}
+leemasmart-saleor-prod         | Traceback (most recent call last):
+leemasmart-saleor-prod         |   File "/app/manage.py", line 10, in <module>
+leemasmart-saleor-prod         |     execute_from_command_line(sys.argv)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+leemasmart-saleor-prod         |     utility.execute()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+leemasmart-saleor-prod         |     django.setup()
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+leemasmart-saleor-prod         |     apps.populate(settings.INSTALLED_APPS)
+leemasmart-saleor-prod         |   File "/usr/local/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+leemasmart-saleor-prod         |     app_config.ready()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 19, in ready
+leemasmart-saleor-prod         |     self.validate_jwt_manager()
+leemasmart-saleor-prod         |   File "/app/saleor/core/apps.py", line 37, in validate_jwt_manager
+leemasmart-saleor-prod         |     validate_method()
+leemasmart-saleor-prod         |   File "/app/saleor/core/jwt_manager.py", line 207, in validate_configuration
+leemasmart-saleor-prod         |     raise ImproperlyConfigured(
+leemasmart-saleor-prod         | django.core.exceptions.ImproperlyConfigured: Variable RSA_PRIVATE_KEY is not provided. It is required for running in not DEBUG mode.
+leemasmart-redis-prod          | 1:C 27 Dec 2025 18:58:34.706 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+leemasmart-redis-prod          | 1:C 27 Dec 2025 18:58:34.707 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+leemasmart-redis-prod          | 1:C 27 Dec 2025 18:58:34.707 * Redis version=7.4.7, bits=64, commit=00000000, modified=0, pid=1, just started
+leemasmart-redis-prod          | 1:C 27 Dec 2025 18:58:34.707 * Configuration loaded
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.708 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.708 * monotonic clock: POSIX clock_gettime
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.710 * Running mode=standalone, port=6379.
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.710 * Server initialized
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.712 * Creating AOF base file appendonly.aof.1.base.rdb on server start
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.715 * Creating AOF incr file appendonly.aof.1.incr.aof on server start
+leemasmart-redis-prod          | 1:M 27 Dec 2025 18:58:34.715 * Ready to accept connections tcp
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+leemasmart-dashboard-prod      | 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+leemasmart-dashboard-prod      | 10-listen-on-ipv6-by-default.sh: info: /etc/nginx/conf.d/default.conf differs from the packaged version
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Ignoring /docker-entrypoint.d/50-replace-env-vars.sh, not executable
+leemasmart-dashboard-prod      | /docker-entrypoint.sh: Configuration complete; ready for start up
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: using the "epoll" event method
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: nginx/1.28.1
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: OS: Linux 6.8.0-90-generic
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: start worker processes
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: start worker process 28
+leemasmart-dashboard-prod      | 2025/12/27 18:58:48 [notice] 1#1: start worker process 29
+leemasmart-saleor-worker-prod  | 2025-12-27 18:59:02,410 INFO celery.worker.consumer.mingle mingle: all alone [PID:1:MainThread]
+leemasmart-saleor-worker-prod  | 2025-12-27 18:59:02,467 INFO celery.apps.worker celery@8443de0d43ef ready. [PID:1:MainThread]
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 531, in schedule
+leemasmart-saleor-beat-prod    |     self._schedule = self.all_as_schedule()
+leemasmart-saleor-beat-prod    |                      ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 266, in all_as_schedule
+leemasmart-saleor-beat-prod    |     for model in self.enabled_models():
+leemasmart-saleor-beat-prod    |                  ^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 279, in enabled_models
+leemasmart-saleor-beat-prod    |     return list(self.enabled_models_qs())
+leemasmart-saleor-beat-prod    |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 290, in enabled_models_qs
+leemasmart-saleor-beat-prod    |     exclude_cron_tasks_query = self._get_crontab_exclude_query()
+leemasmart-saleor-beat-prod    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 343, in _get_crontab_exclude_query
+leemasmart-saleor-beat-prod    |     for timezone_name in self._get_unique_timezone_names()
+leemasmart-saleor-beat-prod    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 386, in __iter__
+leemasmart-saleor-beat-prod    |     self._fetch_all()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+leemasmart-saleor-beat-prod    |     self._result_cache = list(self._iterable_class(self))
+leemasmart-saleor-beat-prod    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 273, in __iter__
+leemasmart-saleor-beat-prod    |     for row in compiler.results_iter(
+leemasmart-saleor-beat-prod    |                ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+leemasmart-saleor-beat-prod    |     results = self.execute_sql(
+leemasmart-saleor-beat-prod    |               ^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1623, in execute_sql
+leemasmart-saleor-beat-prod    |     cursor.execute(sql, params)
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+leemasmart-saleor-beat-prod    |     return super().execute(sql, params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+leemasmart-saleor-beat-prod    |     return self._execute_with_wrappers(
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+leemasmart-saleor-beat-prod    |     return executor(sql, params, many, context)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+leemasmart-saleor-beat-prod    |     with self.db.wrap_database_errors:
+leemasmart-saleor-beat-prod    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+leemasmart-saleor-beat-prod    |     raise dj_exc_value.with_traceback(traceback) from exc_value
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+leemasmart-saleor-beat-prod    |     return self.cursor.execute(sql, params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+leemasmart-saleor-beat-prod    |     raise ex.with_traceback(None)
+leemasmart-saleor-beat-prod    | django.db.utils.ProgrammingError: relation "django_celery_beat_crontabschedule" does not exist
+leemasmart-saleor-beat-prod    | LINE 1: ...django_celery_beat_crontabschedule"."minute" FROM "django_ce...
+leemasmart-saleor-beat-prod    |                                                              ^
+leemasmart-saleor-beat-prod    | Traceback (most recent call last):
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+leemasmart-saleor-beat-prod    |     return self.cursor.execute(sql, params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+leemasmart-saleor-beat-prod    |     raise ex.with_traceback(None)
+leemasmart-saleor-beat-prod    | psycopg.errors.UndefinedTable: relation "django_celery_beat_crontabschedule" does not exist
+leemasmart-saleor-beat-prod    | LINE 1: ...django_celery_beat_crontabschedule"."minute" FROM "django_ce...
+leemasmart-saleor-beat-prod    |                                                              ^
+leemasmart-saleor-beat-prod    | 
+leemasmart-saleor-beat-prod    | The above exception was the direct cause of the following exception:
+leemasmart-saleor-beat-prod    | 
+leemasmart-saleor-beat-prod    | Traceback (most recent call last):
+leemasmart-saleor-beat-prod    |   File "/usr/local/bin/celery", line 10, in <module>
+leemasmart-saleor-beat-prod    |     sys.exit(main())
+leemasmart-saleor-beat-prod    |              ^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/__main__.py", line 15, in main
+leemasmart-saleor-beat-prod    |     sys.exit(_main())
+leemasmart-saleor-beat-prod    |              ^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/bin/celery.py", line 227, in main
+leemasmart-saleor-beat-prod    |     return celery(auto_envvar_prefix="CELERY")
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+leemasmart-saleor-beat-prod    |     return self.main(*args, **kwargs)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1406, in main
+leemasmart-saleor-beat-prod    |     rv = self.invoke(ctx)
+leemasmart-saleor-beat-prod    |          ^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+leemasmart-saleor-beat-prod    |     return _process_result(sub_ctx.command.invoke(sub_ctx))
+leemasmart-saleor-beat-prod    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+leemasmart-saleor-beat-prod    |     return ctx.invoke(self.callback, **ctx.params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+leemasmart-saleor-beat-prod    |     return callback(*args, **kwargs)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/click/decorators.py", line 34, in new_func
+leemasmart-saleor-beat-prod    |     return f(get_current_context(), *args, **kwargs)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/bin/base.py", line 135, in caller
+leemasmart-saleor-beat-prod    |     return f(ctx, *args, **kwargs)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/bin/beat.py", line 72, in beat
+leemasmart-saleor-beat-prod    |     return beat().run()
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/apps/beat.py", line 84, in run
+leemasmart-saleor-beat-prod    |     self.start_scheduler()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/apps/beat.py", line 113, in start_scheduler
+leemasmart-saleor-beat-prod    |     service.start()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 636, in start
+leemasmart-saleor-beat-prod    |     humanize_seconds(self.scheduler.max_interval))
+leemasmart-saleor-beat-prod    |                      ^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/kombu/utils/objects.py", line 40, in __get__
+leemasmart-saleor-beat-prod    |     return super().__get__(instance, owner)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/functools.py", line 998, in __get__
+leemasmart-saleor-beat-prod    |     val = self.func(instance)
+leemasmart-saleor-beat-prod    |           ^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 679, in scheduler
+leemasmart-saleor-beat-prod    |     return self.get_scheduler()
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 670, in get_scheduler
+leemasmart-saleor-beat-prod    |     return symbol_by_name(self.scheduler_cls, aliases=aliases)(
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 252, in __init__
+leemasmart-saleor-beat-prod    |     Scheduler.__init__(self, *args, **kwargs)
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/celery/beat.py", line 266, in __init__
+leemasmart-saleor-beat-prod    |     self.setup_schedule()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 260, in setup_schedule
+leemasmart-saleor-beat-prod    |     self.install_default_entries(self.schedule)
+leemasmart-saleor-beat-prod    |                                  ^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 531, in schedule
+leemasmart-saleor-beat-prod    |     self._schedule = self.all_as_schedule()
+leemasmart-saleor-beat-prod    |                      ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 266, in all_as_schedule
+leemasmart-saleor-beat-prod    |     for model in self.enabled_models():
+leemasmart-saleor-beat-prod    |                  ^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 279, in enabled_models
+leemasmart-saleor-beat-prod    |     return list(self.enabled_models_qs())
+leemasmart-saleor-beat-prod    |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 290, in enabled_models_qs
+leemasmart-saleor-beat-prod    |     exclude_cron_tasks_query = self._get_crontab_exclude_query()
+leemasmart-saleor-beat-prod    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django_celery_beat/schedulers.py", line 343, in _get_crontab_exclude_query
+leemasmart-saleor-beat-prod    |     for timezone_name in self._get_unique_timezone_names()
+leemasmart-saleor-beat-prod    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 386, in __iter__
+leemasmart-saleor-beat-prod    |     self._fetch_all()
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+leemasmart-saleor-beat-prod    |     self._result_cache = list(self._iterable_class(self))
+leemasmart-saleor-beat-prod    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 273, in __iter__
+leemasmart-saleor-beat-prod    |     for row in compiler.results_iter(
+leemasmart-saleor-beat-prod    |                ^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1572, in results_iter
+leemasmart-saleor-beat-prod    |     results = self.execute_sql(
+leemasmart-saleor-beat-prod    |               ^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1623, in execute_sql
+leemasmart-saleor-beat-prod    |     cursor.execute(sql, params)
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+leemasmart-saleor-beat-prod    |     return super().execute(sql, params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+leemasmart-saleor-beat-prod    |     return self._execute_with_wrappers(
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+leemasmart-saleor-beat-prod    |     return executor(sql, params, many, context)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+leemasmart-saleor-beat-prod    |     with self.db.wrap_database_errors:
+leemasmart-saleor-beat-prod    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+leemasmart-saleor-beat-prod    |     raise dj_exc_value.with_traceback(traceback) from exc_value
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+leemasmart-saleor-beat-prod    |     return self.cursor.execute(sql, params)
+leemasmart-saleor-beat-prod    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+leemasmart-saleor-beat-prod    |   File "/usr/local/lib/python3.12/site-packages/psycopg/cursor.py", line 117, in execute
+leemasmart-saleor-beat-prod    |     raise ex.with_traceback(None)
+leemasmart-saleor-beat-prod    | django.db.utils.ProgrammingError: relation "django_celery_beat_crontabschedule" does not exist
+leemasmart-saleor-beat-prod    | LINE 1: ...django_celery_beat_crontabschedule"."minute" FROM "django_ce...
+leemasmart-saleor-beat-prod    | 

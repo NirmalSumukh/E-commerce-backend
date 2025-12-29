@@ -1,32 +1,21 @@
-import { Box, BoxProps } from "@saleor/macaw-ui-next";
+import React from "react";
 
-/**
- * @deprecated This icon uses Macaw-UI Next which is deprecated. Please use Lucide React icons instead.
- * @see https://lucide.dev/ for available icons
- * @example
- * import { XCircle } from "lucide-react";
- * // Use <XCircle /> instead
- */
 export const ErrorCircle = ({
   height = "12px",
   width = "12px",
   viewBox = "0 0 12 12",
-  ...props
 }: {
   height?: string;
   width?: string;
   viewBox?: string;
-} & BoxProps) => {
+}) => {
   return (
-    <Box
-      as="svg"
-      __width={width}
-      __height={height}
-      // @ts-expect-error viewBox is not defined as BoxProps, but it works correctly
+    <svg
+      width={width}
+      height={height}
       viewBox={viewBox}
-      __fill="none"
+      fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      {...props}
     >
       <g clipPath="url(#clip0_1226_7835)">
         <path
@@ -56,6 +45,6 @@ export const ErrorCircle = ({
           <rect width="12" height="12" fill="white" />
         </clipPath>
       </defs>
-    </Box>
+    </svg>
   );
 };

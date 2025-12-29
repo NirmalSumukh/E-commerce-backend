@@ -4,7 +4,7 @@ import reduce from "lodash/reduce";
 
 import { GiftCardBulkCreateFormData, GiftCardBulkCreateFormErrors } from "./types";
 
-const validateField = (
+export const validateField = (
   {
     expiryDate,
     expiryPeriodAmount,

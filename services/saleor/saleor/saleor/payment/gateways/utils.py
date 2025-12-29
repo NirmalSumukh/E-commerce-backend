@@ -16,8 +16,7 @@ def get_supported_currencies(config: "GatewayConfig", gateway_name: str) -> list
         currencies: list[str] = []
         warnings.warn(
             f"Supported currencies not configured for {gateway_name}, "
-            "please configure supported currencies for this gateway.",
-            stacklevel=1,
+            "please configure supported currencies for this gateway."
         )
     else:
         currencies = [c.strip() for c in supp_currencies.split(",")]

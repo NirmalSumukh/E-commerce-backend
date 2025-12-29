@@ -1,6 +1,7 @@
 import useDateLocalize from "@dashboard/hooks/useDateLocalize";
 import { Tooltip } from "@saleor/macaw-ui-next";
 import moment from "moment-timezone";
+import React from "react";
 
 import { LocaleConsumer } from "../Locale";
 import { Consumer } from "./DateContext";
@@ -10,7 +11,7 @@ interface DateProps {
   plain?: boolean;
 }
 
-const Date = ({ date, plain }: DateProps) => {
+export const Date: React.FC<DateProps> = ({ date, plain }) => {
   const localizeDate = useDateLocalize();
   const getHumanized = (value: string, locale: string, currentDate: number) =>
     moment(value).locale(locale).from(currentDate);
@@ -41,6 +42,5 @@ const Date = ({ date, plain }: DateProps) => {
     </LocaleConsumer>
   );
 };
-
 Date.displayName = "Date";
 export default Date;

@@ -1,14 +1,14 @@
 import base64
-import datetime
+from typing import Optional, Union
 
 import graphene
 
 from ...app import models
-from ...app.types import AppExtensionHttpMethod, AppExtensionTarget
+from ...app.types import AppExtensionTarget
 from ...core.exceptions import PermissionDenied
 from ...core.jwt import JWT_THIRDPARTY_ACCESS_TYPE
 from ...core.utils import build_absolute_uri
-from ...permission.auth_filters import AuthorizationFilters, is_staff_user
+from ...permission.auth_filters import AuthorizationFilters
 from ...permission.enums import AppPermission
 from ...permission.utils import message_one_of_permissions_required
 from ...thumbnail import PIL_IDENTIFIER_TO_MIME_TYPE
@@ -19,20 +19,25 @@ from ...thumbnail.utils import (
     get_thumbnail_format,
     get_thumbnail_size,
 )
-from ...webhook.circuit_breaker.breaker_board import (
-    initialize_breaker_board,
-)
 from ..account.utils import is_owner_or_has_one_of_perms
 from ..core import ResolveInfo, SaleorContext
 from ..core.connection import CountableConnection
 from ..core.context import get_database_connection_name
 from ..core.dataloaders import DataLoader
-from ..core.descriptions import ADDED_IN_319, ADDED_IN_321, ADDED_IN_322
+from ..core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_35,
+    ADDED_IN_38,
+    ADDED_IN_313,
+    ADDED_IN_314,
+    ADDED_IN_319,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
+)
 from ..core.doc_category import DOC_CATEGORY_APPS
 from ..core.federation import federated_entity, resolve_federation_references
 from ..core.scalars import DateTime
 from ..core.types import (
-    BaseEnum,
     BaseObjectType,
     IconThumbnailField,
     Job,
@@ -54,21 +59,12 @@ from .dataloaders import (
     ThumbnailByAppInstallationIdSizeAndFormatLoader,
     app_promise_callback,
 )
-from .enums import (
-    AppExtensionMountEnum,
-    AppExtensionTargetEnum,
-    AppTypeEnum,
-    CircuitBreakerState,
-    CircuitBreakerStateEnum,
-)
+from .enums import AppExtensionMountEnum, AppExtensionTargetEnum, AppTypeEnum
 from .resolvers import (
     resolve_access_token_for_app,
     resolve_access_token_for_app_extension,
     resolve_app_extension_url,
 )
-
-breaker_board = initialize_breaker_board()
-
 
 # Maximal thumbnail size for manifest preview
 MANIFEST_THUMBNAIL_MAX_SIZE = 512
@@ -92,7 +88,7 @@ def check_permission_for_access_to_meta(root: models.App, info: ResolveInfo, app
 
 def has_access_to_app_public_meta(root, info: ResolveInfo, app) -> bool:
     auth_token = info.context.decoded_auth_token or {}
-    app_id: str | int | None
+    app_id: Union[str, int, None]
     if auth_token.get("type") == JWT_THIRDPARTY_ACCESS_TYPE:
         _, app_id = from_global_id_or_error(auth_token["app"], "App")
     else:
@@ -138,64 +134,6 @@ class AppManifestExtension(BaseObjectType):
         return resolve_app_extension_url(root)
 
 
-class HttpMethod(BaseEnum):
-    POST = AppExtensionHttpMethod.POST
-    GET = AppExtensionHttpMethod.GET
-
-
-class NewTabTargetOptions(BaseObjectType):
-    method = graphene.Field(
-        HttpMethod,
-        required=True,
-        description="HTTP method for New Tab target (GET or POST)",
-    )
-
-    class Meta:
-        description = "Represents the NEW_TAB target options for an app extension."
-        doc_category = DOC_CATEGORY_APPS
-
-
-class WidgetTargetOptions(BaseObjectType):
-    method = graphene.Field(
-        HttpMethod,
-        required=True,
-        description="HTTP method for Widget target (GET or POST)",
-    )
-
-    class Meta:
-        description = "Represents the WIDGET target options for an app extension."
-        doc_category = DOC_CATEGORY_APPS
-
-
-class AppExtensionOptionsWidget(BaseObjectType):
-    widget_target = graphene.Field(
-        WidgetTargetOptions,
-        description="Options for displaying a Widget",
-        required=False,
-    )
-
-    class Meta:
-        description = "Represents the options for an app extension."
-        doc_category = DOC_CATEGORY_APPS
-
-
-class AppExtensionOptionsNewTab(BaseObjectType):
-    new_tab_target = graphene.Field(
-        NewTabTargetOptions,
-        description="Options controlling behavior of the NEW_TAB extension target",
-        required=False,
-    )
-
-    class Meta:
-        description = "Represents the options for an app extension."
-        doc_category = DOC_CATEGORY_APPS
-
-
-class AppExtensionPossibleOptions(graphene.Union):
-    class Meta:
-        types = (AppExtensionOptionsWidget, AppExtensionOptionsNewTab)
-
-
 class AppExtension(AppManifestExtension, ModelObjectType[models.AppExtension]):
     id = graphene.GlobalID(required=True, description="The ID of the app extension.")
     app = graphene.Field(
@@ -205,10 +143,6 @@ class AppExtension(AppManifestExtension, ModelObjectType[models.AppExtension]):
     )
     access_token = graphene.String(
         description="JWT token used to authenticate by third-party app extension."
-    )
-    options = graphene.Field(
-        AppExtensionPossibleOptions,
-        description="App extension options." + ADDED_IN_322,
     )
 
     class Meta:
@@ -235,27 +169,20 @@ class AppExtension(AppManifestExtension, ModelObjectType[models.AppExtension]):
 
     @staticmethod
     @app_promise_callback
-    def resolve_app(root, info: ResolveInfo, app_requestor):
-        # Resolve if app from context is the same as requested app
-        if app_requestor and app_requestor.id == root.app_id:
-            return AppByIdLoader(info.context).load(root.app_id)
+    def resolve_app(root, info: ResolveInfo, app):
+        app_id = None
+        if app and app.id == root.app_id:
+            app_id = root.app_id
+        else:
+            requestor = get_user_or_app_from_context(info.context)
+            if requestor and requestor.has_perm(AppPermission.MANAGE_APPS):
+                app_id = root.app_id
 
-        # Reject if app from context is different from requested app
-        if app_requestor and app_requestor.id != root.app_id:
-            raise PermissionDenied(permissions=[AuthorizationFilters.OWNER])
-
-        # Resolve app if a user from the context is authenticated
-        # At this point, it's always user, because we exit for app in checks above
-        maybe_user = get_user_or_app_from_context(info.context)
-
-        # Allow staff users to access app data, no MANAGE_APPS needed
-        if maybe_user and is_staff_user(info.context):
-            return AppByIdLoader(info.context).load(root.app_id)
-
-        # If none of the conditions are met, reject with permission denied
-        raise PermissionDenied(
-            permissions=[AppPermission.MANAGE_APPS, AuthorizationFilters.OWNER]
-        )
+        if not app_id:
+            raise PermissionDenied(
+                permissions=[AppPermission.MANAGE_APPS, AuthorizationFilters.OWNER]
+            )
+        return AppByIdLoader(info.context).load(app_id)
 
     @staticmethod
     def resolve_permissions(root: models.AppExtension, _info: ResolveInfo):
@@ -270,22 +197,6 @@ class AppExtension(AppManifestExtension, ModelObjectType[models.AppExtension]):
             return resolve_access_token_for_app_extension(info, root, app)
 
         return AppByIdLoader(info.context).load(root.app_id).then(_resolve_access_token)
-
-    @staticmethod
-    def resolve_options(root: models.AppExtension, _info: ResolveInfo):
-        http_method = root.http_target_method
-
-        if root.target == AppExtensionTarget.WIDGET:
-            return AppExtensionOptionsWidget(
-                widget_target=WidgetTargetOptions(method=http_method),
-            )
-
-        if root.target == AppExtensionTarget.NEW_TAB:
-            return AppExtensionOptionsNewTab(
-                new_tab_target=NewTabTargetOptions(method=http_method),
-            )
-
-        return None
 
 
 class AppExtensionCountableConnection(CountableConnection):
@@ -329,12 +240,18 @@ class AppManifestWebhook(BaseObjectType):
 
 class AppManifestRequiredSaleorVersion(BaseObjectType):
     constraint = graphene.String(
-        description="Required Saleor version as semver range.",
         required=True,
+        description=(
+            "Required Saleor version as semver range." + ADDED_IN_313 + PREVIEW_FEATURE
+        ),
     )
     satisfied = graphene.Boolean(
-        description="Informs if the Saleor version matches the required one.",
         required=True,
+        description=(
+            "Informs if the Saleor version matches the required one."
+            + ADDED_IN_313
+            + PREVIEW_FEATURE
+        ),
     )
 
     class Meta:
@@ -344,21 +261,25 @@ class AppManifestRequiredSaleorVersion(BaseObjectType):
 class AppManifestBrandLogo(BaseObjectType):
     default = IconThumbnailField(
         graphene.String,
-        description="Data URL with a base64 encoded logo image.",
         required=True,
+        description="Data URL with a base64 encoded logo image."
+        + ADDED_IN_314
+        + PREVIEW_FEATURE,
     )
 
     class Meta:
         doc_category = DOC_CATEGORY_APPS
-        description = "Represents the app's manifest brand data."
+        description = (
+            "Represents the app's manifest brand data." + ADDED_IN_314 + PREVIEW_FEATURE
+        )
 
     @staticmethod
     def resolve_default(
         root,
         _info: ResolveInfo,
         *,
-        size: int | None = None,
-        format: str | None = None,
+        size: Optional[int] = None,
+        format: Optional[str] = None,
     ):
         format = get_icon_thumbnail_format(format)
         # limit thumbnail max size as it is transferred
@@ -380,21 +301,23 @@ class AppManifestBrandLogo(BaseObjectType):
 class AppBrandLogo(BaseObjectType):
     default = IconThumbnailField(
         graphene.String,
-        description="URL to the default logo image.",
         required=True,
+        description="URL to the default logo image." + ADDED_IN_314 + PREVIEW_FEATURE,
     )
 
     class Meta:
         doc_category = DOC_CATEGORY_APPS
-        description = "Represents the app's brand logo data."
+        description = (
+            "Represents the app's brand logo data." + ADDED_IN_314 + PREVIEW_FEATURE
+        )
 
     @staticmethod
     def resolve_default(
-        root: models.App | models.AppInstallation,
+        root: Union[models.App, models.AppInstallation],
         info: ResolveInfo,
         *,
-        size: int | None = None,
-        format: str | None = None,
+        size: Optional[int] = None,
+        format: Optional[str] = None,
     ):
         if not root.brand_logo_default:
             return None
@@ -430,27 +353,33 @@ class AppBrand(BaseObjectType):
     logo = graphene.Field(
         AppBrandLogo,
         required=True,
-        description="App's logos details.",
+        description="App's logos details." + ADDED_IN_314 + PREVIEW_FEATURE,
     )
 
     class Meta:
-        description = "Represents the app's brand data."
+        description = (
+            "Represents the app's brand data." + ADDED_IN_314 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_APPS
 
     @staticmethod
-    def resolve_logo(root: models.App | models.AppInstallation, _info: ResolveInfo):
+    def resolve_logo(
+        root: Union[models.App, models.AppInstallation], _info: ResolveInfo
+    ):
         return root
 
 
 class AppManifestBrand(BaseObjectType):
     logo = graphene.Field(
         AppManifestBrandLogo,
-        description="App's logos details.",
         required=True,
+        description="App's logos details." + ADDED_IN_314 + PREVIEW_FEATURE,
     )
 
     class Meta:
-        description = "Represents the app's manifest brand data."
+        description = (
+            "Represents the app's manifest brand data." + ADDED_IN_314 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_APPS
 
 
@@ -473,17 +402,17 @@ class Manifest(BaseObjectType):
     app_url = graphene.String(description="App website rendered in the dashboard.")
     configuration_url = graphene.String(
         description="URL to iframe with the configuration for the app.",
-        deprecation_reason="Use `appUrl` instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `appUrl` instead.",
     )
     token_target_url = graphene.String(
         description=(
             "Endpoint used during process of app installation, [see installing an app.]"
-            "(https://docs.saleor.io/developer/extending/apps/installing-apps#installing-an-app)"
+            "(https://docs.saleor.io/docs/3.x/developer/extending/apps/installing-apps#installing-an-app)"
         )
     )
     data_privacy = graphene.String(
         description="Description of the data privacy defined for this app.",
-        deprecation_reason="Use `dataPrivacyUrl` instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `dataPrivacyUrl` instead.",
     )
     data_privacy_url = graphene.String(description="URL to the full privacy policy.")
     homepage_url = graphene.String(description="External URL to the app homepage.")
@@ -496,27 +425,34 @@ class Manifest(BaseObjectType):
         description=(
             "List of extensions that will be mounted in Saleor's dashboard. "
             "For details, please [see the extension section.]"
-            "(https://docs.saleor.io/developer/extending/apps/extending-dashboard-with-apps#key-concepts)"
+            "(https://docs.saleor.io/docs/3.x/developer/extending/apps/extending-dashboard-with-apps#key-concepts)"
         ),
     )
     webhooks = NonNullList(
         AppManifestWebhook,
-        description="List of the app's webhooks.",
+        description="List of the app's webhooks." + ADDED_IN_35,
         required=True,
     )
     audience = graphene.String(
         description=(
             "The audience that will be included in all JWT tokens for the app."
+            + ADDED_IN_38
         )
     )
     required_saleor_version = graphene.Field(
         AppManifestRequiredSaleorVersion,
-        description="Determines the app's required Saleor version as semver range.",
+        description=(
+            "Determines the app's required Saleor version as semver range."
+            + ADDED_IN_313
+            + PREVIEW_FEATURE
+        ),
     )
-    author = graphene.String(description="The App's author name.")
+    author = graphene.String(
+        description=("The App's author name." + ADDED_IN_313 + PREVIEW_FEATURE)
+    )
     brand = graphene.Field(
         AppManifestBrand,
-        description="App's brand data.",
+        description="App's brand data." + ADDED_IN_314 + PREVIEW_FEATURE,
     )
 
     class Meta:
@@ -591,7 +527,7 @@ class App(ModelObjectType[models.App]):
 
     data_privacy = graphene.String(
         description="Description of the data privacy defined for this app.",
-        deprecation_reason="Use `dataPrivacyUrl` instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `dataPrivacyUrl` instead.",
     )
     data_privacy_url = graphene.String(
         description="URL to details about the privacy policy on the app owner page."
@@ -600,31 +536,26 @@ class App(ModelObjectType[models.App]):
     support_url = graphene.String(description="Support page for the app.")
     configuration_url = graphene.String(
         description="URL to iframe with the configuration for the app.",
-        deprecation_reason="Use `appUrl` instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `appUrl` instead.",
     )
     app_url = graphene.String(description="URL to iframe with the app.")
     manifest_url = graphene.String(
-        description="URL to manifest used during app's installation."
+        description="URL to manifest used during app's installation." + ADDED_IN_35
     )
     version = graphene.String(description="Version number of the app.")
     access_token = graphene.String(
         description="JWT token used to authenticate by third-party app."
     )
-    author = graphene.String(description="The App's author name.")
+    author = graphene.String(
+        description=("The App's author name." + ADDED_IN_313 + PREVIEW_FEATURE)
+    )
     extensions = NonNullList(
         AppExtension,
-        description="App's dashboard extensions.",
+        description="App's dashboard extensions." + ADDED_IN_31,
         required=True,
     )
-    brand = graphene.Field(AppBrand, description="App's brand data.")
-    breaker_state = CircuitBreakerStateEnum(
-        description="Circuit breaker state, if open, sync webhooks operation is disrupted."
-        + ADDED_IN_321,
-        required=True,
-    )
-    breaker_last_state_change = DateTime(
-        description="Circuit breaker last state change date." + ADDED_IN_321,
-        required=False,
+    brand = graphene.Field(
+        AppBrand, description="App's brand data." + ADDED_IN_314 + PREVIEW_FEATURE
     )
 
     class Meta:
@@ -697,22 +628,6 @@ class App(ModelObjectType[models.App]):
     def resolve_brand(root: models.App, _info: ResolveInfo):
         if root.brand_logo_default:
             return root
-        return None
-
-    @staticmethod
-    def resolve_breaker_state(root: models.App, _info: ResolveInfo):
-        if breaker_board:
-            state, _ = breaker_board.storage.get_app_state(root.id)
-            return state
-        return CircuitBreakerState.CLOSED
-
-    @staticmethod
-    def resolve_breaker_last_state_change(root: models.App, _info: ResolveInfo):
-        if breaker_board:
-            _, changed_at = breaker_board.storage.get_app_state(root.id)
-            if changed_at:
-                return datetime.datetime.fromtimestamp(changed_at, tz=datetime.UTC)
-        return None
 
 
 class AppCountableConnection(CountableConnection):
@@ -730,7 +645,9 @@ class AppInstallation(ModelObjectType[models.AppInstallation]):
         required=True,
         description="The URL address of manifest for the app installation.",
     )
-    brand = graphene.Field(AppBrand, description="App's brand data.")
+    brand = graphene.Field(
+        AppBrand, description="App's brand data." + ADDED_IN_314 + PREVIEW_FEATURE
+    )
 
     class Meta:
         model = models.AppInstallation
@@ -741,4 +658,3 @@ class AppInstallation(ModelObjectType[models.AppInstallation]):
     def resolve_brand(root: models.AppInstallation, _info: ResolveInfo):
         if root.brand_logo_default:
             return root
-        return None

@@ -70,13 +70,12 @@ export const useGiftCardsFiltersAPIProvider = (): FilterAPIProvider => {
 
     return handler.fetch();
   };
-
-  const fetchAttributeOptions = async () => {
+  const fetchLeftOptions = async () => {
     return [];
   };
 
   return {
     fetchRightOptions,
-    fetchAttributeOptions,
+    fetchLeftOptions,
   };
 };

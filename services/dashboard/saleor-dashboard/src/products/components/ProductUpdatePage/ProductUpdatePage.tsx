@@ -1,11 +1,13 @@
 // @ts-strict-ignore
-import { AppWidgets } from "@dashboard/apps/components/AppWidgets/AppWidgets";
+import {
+  extensionMountPoints,
+  mapToMenuItemsForProductDetails,
+  useExtensions,
+} from "@dashboard/apps/hooks/useExtensions";
 import {
   getReferenceAttributeEntityTypeFromAttribute,
-  handleMetadataReferenceAssignment,
+  mergeAttributeValues,
 } from "@dashboard/attributes/utils/data";
-import { useUser } from "@dashboard/auth";
-import { hasPermission } from "@dashboard/auth/misc";
 import { ChannelData } from "@dashboard/channels/utils";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import AssignAttributeValueDialog from "@dashboard/components/AssignAttributeValueDialog";
@@ -18,9 +20,6 @@ import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Metadata } from "@dashboard/components/Metadata/Metadata";
 import { Savebar } from "@dashboard/components/Savebar";
 import { SeoForm } from "@dashboard/components/SeoForm";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import { getExtensionsItemsForProductDetails } from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import {
   ChannelFragment,
   PermissionEnum,
@@ -51,12 +50,9 @@ import { productImageUrl, productListPath, productListUrl } from "@dashboard/pro
 import { ChoiceWithAncestors, getChoicesWithAncestors } from "@dashboard/products/utils/utils";
 import { ProductVariantListError } from "@dashboard/products/views/ProductUpdate/handlers/errors";
 import { UseProductUpdateHandlerError } from "@dashboard/products/views/ProductUpdate/handlers/useProductUpdateHandler";
-import { TranslationsButton } from "@dashboard/translations/components/TranslationsButton/TranslationsButton";
-import { productUrl as createTranslateProductUrl } from "@dashboard/translations/urls";
-import { useCachedLocales } from "@dashboard/translations/useCachedLocales";
 import { FetchMoreProps, RelayToFlat } from "@dashboard/types";
-import { Box, Divider, Option } from "@saleor/macaw-ui-next";
-import { useMemo, useState } from "react";
+import { Box, Option } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { AttributeValuesMetadata, getChoices } from "../../utils/data";
@@ -69,7 +65,7 @@ import { messages } from "./messages";
 import ProductChannelsListingsDialog from "./ProductChannelsListingsDialog";
 import { ProductUpdateData, ProductUpdateHandlers, ProductUpdateSubmitData } from "./types";
 
-interface ProductUpdatePageProps {
+export interface ProductUpdatePageProps {
   channels: ChannelFragment[];
   productId: string;
   channelsErrors: ProductChannelListingErrorFragment[];
@@ -85,28 +81,22 @@ interface ProductUpdatePageProps {
   limits: RefreshLimitsQuery["shop"]["limits"];
   variants: ProductDetailsVariantFragment[];
   media: ProductFragment["media"];
-  product?: ProductDetailsQuery["product"];
+  product: ProductDetailsQuery["product"];
   header: string;
   saveButtonBarState: ConfirmButtonTransitionState;
   taxClasses: TaxClassBaseFragment[];
   fetchMoreTaxClasses: FetchMoreProps;
   referencePages?: RelayToFlat<SearchPagesQuery["search"]>;
   referenceProducts?: RelayToFlat<SearchProductsQuery["search"]>;
-  referenceCategories?: RelayToFlat<SearchCategoriesQuery["search"]>;
-  referenceCollections?: RelayToFlat<SearchCollectionsQuery["search"]>;
   assignReferencesAttributeId?: string;
   fetchMoreReferencePages?: FetchMoreProps;
   fetchMoreReferenceProducts?: FetchMoreProps;
-  fetchMoreReferenceCategories?: FetchMoreProps;
-  fetchMoreReferenceCollections?: FetchMoreProps;
   fetchMoreAttributeValues?: FetchMoreProps;
   isSimpleProduct: boolean;
   fetchCategories: (query: string) => void;
   fetchCollections: (query: string) => void;
   fetchReferencePages?: (data: string) => void;
   fetchReferenceProducts?: (data: string) => void;
-  fetchReferenceCategories?: (data: string) => void;
-  fetchReferenceCollections?: (data: string) => void;
   fetchAttributeValues: (query: string, attributeId: string) => void;
   refetch: () => Promise<any>;
   onAttributeValuesSearch: (id: string, query: string) => Promise<Option[]>;
@@ -123,7 +113,7 @@ interface ProductUpdatePageProps {
   onSeoClick?: () => any;
 }
 
-const ProductUpdatePage = ({
+export const ProductUpdatePage: React.FC<ProductUpdatePageProps> = ({
   productId,
   disabled,
   categories: categoryChoiceList,
@@ -148,8 +138,6 @@ const ProductUpdatePage = ({
   fetchMoreTaxClasses,
   referencePages = [],
   referenceProducts = [],
-  referenceCategories = [],
-  referenceCollections = [],
   onDelete,
   onImageDelete,
   onImageReorder,
@@ -166,22 +154,15 @@ const ProductUpdatePage = ({
   fetchMoreReferencePages,
   fetchReferenceProducts,
   fetchMoreReferenceProducts,
-  fetchReferenceCategories,
-  fetchMoreReferenceCategories,
-  fetchReferenceCollections,
-  fetchMoreReferenceCollections,
   fetchAttributeValues,
   fetchMoreAttributeValues,
   refetch,
   onCloseDialog,
   onAttributeSelectBlur,
-}: ProductUpdatePageProps) => {
+}) => {
   const intl = useIntl();
-  const { user } = useUser();
-  const canTranslate = user && hasPermission(PermissionEnum.MANAGE_TRANSLATIONS, user);
-  const { lastUsedLocaleOrFallback } = useCachedLocales();
   const navigate = useNavigator();
-  const [channelPickerOpen, setChannelPickerOpen] = useState(false);
+  const [channelPickerOpen, setChannelPickerOpen] = React.useState(false);
   const [selectedCategory, setSelectedCategory] = useStateFromProps(product?.category?.name || "");
   const [mediaUrlModalStatus, setMediaUrlModalStatus] = useStateFromProps(
     isMediaUrlModalVisible || false,
@@ -207,35 +188,36 @@ const ProductUpdatePage = ({
     data: ProductUpdateData,
     handlers: ProductUpdateHandlers,
   ) => {
-    handleMetadataReferenceAssignment(
+    handlers.selectAttributeReference(
       assignReferencesAttributeId,
-      attributeValues,
-      data.attributes,
-      handlers,
+      mergeAttributeValues(
+        assignReferencesAttributeId,
+        attributeValues.map(({ value }) => value),
+        data.attributes,
+      ),
     );
+    handlers.selectAttributeReferenceMetadata(assignReferencesAttributeId, attributeValues);
     onCloseDialog();
   };
-  const { PRODUCT_DETAILS_MORE_ACTIONS, PRODUCT_DETAILS_WIDGETS } = useExtensions(
-    extensionMountPoints.PRODUCT_DETAILS,
-  );
-  const productErrors = useMemo(
+  const { PRODUCT_DETAILS_MORE_ACTIONS } = useExtensions(extensionMountPoints.PRODUCT_DETAILS);
+  const productErrors = React.useMemo(
     () =>
       errors.filter(
         error => error.__typename === "ProductError",
       ) as ProductErrorWithAttributesFragment[],
     [errors],
   );
-  const productOrganizationErrors = useMemo(
+  const productOrganizationErrors = React.useMemo(
     () =>
       [...errors, ...channelsErrors].filter(err =>
         ["ProductChannelListingError", "ProductError"].includes(err.__typename),
       ) as Array<ProductErrorFragment | ProductChannelListingErrorFragment>,
     [errors, channelsErrors],
   );
-  const extensionMenuItems = getExtensionsItemsForProductDetails(PRODUCT_DETAILS_MORE_ACTIONS, {
-    productId: productId,
-    productSlug: product?.slug,
-  });
+  const extensionMenuItems = mapToMenuItemsForProductDetails(
+    PRODUCT_DETAILS_MORE_ACTIONS,
+    productId,
+  );
   const context = useDevModeContext();
   const openPlaygroundURL = () => {
     context.setDevModeContent(defaultGraphiQLQuery);
@@ -261,16 +243,10 @@ const ProductUpdatePage = ({
       hasVariants={hasVariants}
       referencePages={referencePages}
       referenceProducts={referenceProducts}
-      referenceCategories={referenceCategories}
-      referenceCollections={referenceCollections}
       fetchReferencePages={fetchReferencePages}
       fetchMoreReferencePages={fetchMoreReferencePages}
       fetchReferenceProducts={fetchReferenceProducts}
       fetchMoreReferenceProducts={fetchMoreReferenceProducts}
-      fetchReferenceCategories={fetchReferenceCategories}
-      fetchMoreReferenceCategories={fetchMoreReferenceCategories}
-      fetchReferenceCollections={fetchReferenceCollections}
-      fetchMoreReferenceCollections={fetchMoreReferenceCollections}
       assignReferencesAttributeId={assignReferencesAttributeId}
       disabled={disabled}
       refetch={refetch}
@@ -309,14 +285,6 @@ const ProductUpdatePage = ({
         return (
           <DetailPageLayout>
             <TopNav href={backLinkProductUrl} title={header}>
-              {canTranslate && (
-                <TranslationsButton
-                  marginRight={3}
-                  onClick={() =>
-                    navigate(createTranslateProductUrl(lastUsedLocaleOrFallback, productId))
-                  }
-                />
-              )}
               <TopNav.Menu
                 items={[
                   ...extensionMenuItems,
@@ -426,18 +394,6 @@ const ProductUpdatePage = ({
                   onFetchMore={fetchMoreTaxClasses}
                 />
               </Box>
-              {PRODUCT_DETAILS_WIDGETS.length > 0 && productId && (
-                <>
-                  <Divider />
-                  <AppWidgets
-                    extensions={PRODUCT_DETAILS_WIDGETS}
-                    params={{
-                      productId: productId,
-                      productSlug: product?.slug,
-                    }}
-                  />
-                </>
-              )}
             </DetailPageLayout.RightSidebar>
 
             <Savebar>
@@ -457,8 +413,6 @@ const ProductUpdatePage = ({
                 confirmButtonState={"default"}
                 products={referenceProducts}
                 pages={referencePages}
-                collections={referenceCollections}
-                categories={referenceCategories}
                 attribute={data.attributes.find(({ id }) => id === assignReferencesAttributeId)}
                 hasMore={handlers.fetchMoreReferences?.hasMore}
                 open={canOpenAssignReferencesAttributeDialog}
@@ -498,6 +452,5 @@ const ProductUpdatePage = ({
     </ProductUpdateForm>
   );
 };
-
 ProductUpdatePage.displayName = "ProductUpdatePage";
 export default ProductUpdatePage;

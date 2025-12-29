@@ -1,6 +1,7 @@
 import Money from "@dashboard/components/Money";
 import { TransactionBaseEventFragment } from "@dashboard/graphql";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import {
   EventStatus,

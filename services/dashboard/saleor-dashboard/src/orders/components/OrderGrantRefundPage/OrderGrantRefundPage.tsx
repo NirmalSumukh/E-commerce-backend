@@ -1,3 +1,4 @@
+// @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import { DashboardCard } from "@dashboard/components/Card";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
@@ -8,14 +9,12 @@ import { Savebar } from "@dashboard/components/Savebar";
 import {
   OrderDetailsGrantedRefundFragment,
   OrderDetailsGrantRefundFragment,
-  OrderLineGrantRefundFragment,
 } from "@dashboard/graphql";
 import useLocale from "@dashboard/hooks/useLocale";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { orderUrl } from "@dashboard/orders/urls";
 import { Box, Input, Skeleton, Text } from "@saleor/macaw-ui-next";
-import { useEffect, useMemo } from "react";
-import * as React from "react";
+import React, { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { getOrderTitleMessage } from "../OrderCardTitle/utils";
@@ -38,8 +37,8 @@ import {
   prepareLineData,
 } from "./utils";
 
-interface OrderGrantRefundPageProps {
-  order?: OrderDetailsGrantRefundFragment;
+export interface OrderGrantRefundPageProps {
+  order: OrderDetailsGrantRefundFragment;
   loading: boolean;
   submitState: ConfirmButtonTransitionState;
   onSubmit: (data: OrderGrantRefundFormData) => void;
@@ -47,14 +46,14 @@ interface OrderGrantRefundPageProps {
   initialData?: OrderDetailsGrantedRefundFragment;
 }
 
-const OrderGrantRefundPage = ({
+const OrderGrantRefundPage: React.FC<OrderGrantRefundPageProps> = ({
   order,
   loading,
   submitState,
   onSubmit,
   isEdit,
   initialData,
-}: OrderGrantRefundPageProps) => {
+}) => {
   const intl = useIntl();
   const { locale } = useLocale();
   const navigate = useNavigator();
@@ -91,7 +90,7 @@ const OrderGrantRefundPage = ({
         ? undefined
         : state.refundShipping,
   });
-  const totalSelectedPrice = order ? calculateTotalPrice(state, order) : 0;
+  const totalSelectedPrice = calculateTotalPrice(state, order);
   const amountValue = getRefundAmountValue({
     isEditedRefundAmount: grantedRefund !== undefined,
     isAmountInputDirty: isFormDirty.amount,
@@ -121,7 +120,7 @@ const OrderGrantRefundPage = ({
   return (
     <DetailPageLayout gridTemplateColumns={1}>
       <TopNav
-        href={order ? orderUrl(order?.id) : "#"}
+        href={orderUrl(order?.id)}
         title={
           <FormattedMessage
             {...(isEdit
@@ -167,16 +166,13 @@ const OrderGrantRefundPage = ({
                             {getFulfilmentSubtitle(order, fulfillment)}
                           </Text>
                         }
-                        lines={
-                          fulfillment.lines?.map(({ orderLine, id, quantity }) => {
-                            return {
-                              ...orderLine,
-                              id,
-                              quantity,
-                              // satisfy TypeScript but it should be fix properly
-                            } as OrderLineGrantRefundFragment;
-                          }) ?? []
-                        }
+                        lines={fulfillment.lines.map(({ orderLine, id, quantity }) => {
+                          return {
+                            ...orderLine,
+                            id,
+                            quantity,
+                          };
+                        })}
                       />
                     ))}
                   </>
@@ -219,15 +215,7 @@ const OrderGrantRefundPage = ({
       </form>
       <Savebar>
         <Savebar.Spacer />
-        <Savebar.CancelButton
-          onClick={() => {
-            if (!order) {
-              return;
-            }
-
-            navigate(orderUrl(order?.id));
-          }}
-        />
+        <Savebar.CancelButton onClick={() => navigate(orderUrl(order?.id))} />
         <Savebar.ConfirmButton transitionState={submitState} onClick={submit} disabled={loading}>
           {isEdit
             ? intl.formatMessage(grantRefundPageMessages.editRefundBtn)

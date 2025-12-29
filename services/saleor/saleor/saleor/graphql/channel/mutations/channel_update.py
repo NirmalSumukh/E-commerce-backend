@@ -21,8 +21,9 @@ from ....shipping.tasks import (
 from ....webhook.event_types import WebhookEventAsyncType
 from ...account.enums import CountryCodeEnum
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_31, ADDED_IN_35
 from ...core.doc_category import DOC_CATEGORY_CHANNELS
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import ChannelError, NonNullList
 from ...core.utils import WebhookEventInfo
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -44,7 +45,7 @@ class ChannelUpdateInput(ChannelInput):
         description=(
             "Default country for the channel. Default country can be "
             "used in checkout to determine the stock quantities or calculate taxes "
-            "when the country was not explicitly provided."
+            "when the country was not explicitly provided." + ADDED_IN_31
         )
     )
     remove_shipping_zones = NonNullList(
@@ -54,7 +55,7 @@ class ChannelUpdateInput(ChannelInput):
     )
     remove_warehouses = NonNullList(
         graphene.ID,
-        description="List of warehouses to unassign from the channel.",
+        description="List of warehouses to unassign from the channel." + ADDED_IN_35,
         required=False,
     )
 
@@ -62,7 +63,7 @@ class ChannelUpdateInput(ChannelInput):
         doc_category = DOC_CATEGORY_CHANNELS
 
 
-class ChannelUpdate(DeprecatedModelMutation):
+class ChannelUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(required=True, description="ID of a channel to update.")
         input = ChannelUpdateInput(
@@ -139,7 +140,7 @@ class ChannelUpdate(DeprecatedModelMutation):
         return cleaned_input
 
     @classmethod
-    def check_permissions(cls, context, permissions=None, **data):  # type: ignore[override]
+    def check_permissions(cls, context, permissions=None, **data):
         permissions = [ChannelPermissions.MANAGE_CHANNELS]
         has_permission = super().check_permissions(
             context, permissions, require_all_permissions=False, **data

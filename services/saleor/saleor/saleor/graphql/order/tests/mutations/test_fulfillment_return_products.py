@@ -12,6 +12,7 @@ from .....order.fetch import OrderLineInfo
 from .....order.models import FulfillmentStatus, Order
 from .....payment import ChargeStatus, PaymentError
 from .....payment.interface import RefundData
+from .....tests.utils import flush_post_commit_hooks
 from .....warehouse.models import Stock
 from ....core.utils import to_global_id_or_none
 from ....tests.utils import assert_no_permission, get_graphql_content
@@ -381,7 +382,7 @@ def test_fulfillment_return_products_order_lines(
     assert replace_order["origin"] == OrderOrigin.REISSUE.upper()
     assert replace_order["original"] == order_id
     replace_order = Order.objects.get(status=OrderStatus.DRAFT)
-    assert replace_order.lines_count == replace_order.lines.count() == 1
+    assert replace_order.lines.count() == 1
     replaced_line = replace_order.lines.get()
     assert replaced_line.variant_id == line_to_replace.variant_id
     assert (
@@ -679,7 +680,7 @@ def test_fulfillment_return_products_fulfillment_lines(
     assert replace_order["original"] == order_id
 
     replace_order = Order.objects.get(status=OrderStatus.DRAFT)
-    assert replace_order.lines_count == replace_order.lines.count() == 1
+    assert replace_order.lines.count() == 1
     replaced_line = replace_order.lines.get()
     assert replaced_line.variant_id == fulfillment_line_to_replace.order_line.variant_id
     assert (
@@ -1030,7 +1031,7 @@ def test_fulfillment_return_products_fulfillment_lines_and_order_lines(
     assert replace_order["original"] == order_id
 
     replace_order = Order.objects.get(status=OrderStatus.DRAFT)
-    assert replace_order.lines_count == replace_order.lines.count() == 1
+    assert replace_order.lines.count() == 1
     replaced_line = replace_order.lines.get()
     assert replaced_line.variant_id == fulfillment_line_to_replace.order_line.variant_id
     assert (
@@ -1135,6 +1136,7 @@ def test_fulfillment_return_and_replace_products_calls_order_refunded_and_webhoo
     staff_api_client.post_graphql(ORDER_FULFILL_RETURN_MUTATION, variables)
 
     # then
+    flush_post_commit_hooks()
     amount = order_line.unit_price_gross_amount * 2
     amount = amount.quantize(Decimal("0.001"))
 
@@ -1227,6 +1229,7 @@ def test_fulfillment_return_products_calls_order_refunded_and_webhooks(
     staff_api_client.post_graphql(ORDER_FULFILL_RETURN_MUTATION, variables)
 
     # then
+    flush_post_commit_hooks()
     amount = order_line.unit_price_gross_amount * (line_qty + fulfillment_line_qty)
     amount = amount.quantize(Decimal("0.001"))
 

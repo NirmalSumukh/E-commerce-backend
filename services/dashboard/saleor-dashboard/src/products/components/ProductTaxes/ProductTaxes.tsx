@@ -6,6 +6,7 @@ import { sectionNames } from "@dashboard/intl";
 import { taxesMessages } from "@dashboard/taxes/messages";
 import { FetchMoreProps } from "@dashboard/types";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ProductTaxesProps {
@@ -17,7 +18,7 @@ interface ProductTaxesProps {
   onFetchMore: FetchMoreProps;
 }
 
-const ProductTaxes = (props: ProductTaxesProps) => {
+const ProductTaxes: React.FC<ProductTaxesProps> = props => {
   const { value, disabled, taxClasses, taxClassDisplayName, onChange, onFetchMore } = props;
   const intl = useIntl();
 

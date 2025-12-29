@@ -86,7 +86,7 @@ def permission_required(
 
     if isinstance(requestor, User):
         return requestor.has_perms(perms)
-    if requestor:
+    elif requestor:
         # for now MANAGE_STAFF permission for app is not supported
         if AccountPermissions.MANAGE_STAFF in perms:
             return False

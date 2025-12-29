@@ -8,7 +8,7 @@ from .. import __version__ as saleor_version
 
 
 class JsonFormatter(BaseFormatter):
-    converter = time.gmtime  # type: ignore[assignment]
+    converter = time.gmtime
 
     def add_fields(self, log_record, record, message_dict):
         super().add_fields(log_record, record, message_dict)
@@ -22,17 +22,15 @@ class JsonFormatter(BaseFormatter):
 
 class JsonCeleryFormatter(JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
-        if record and hasattr(record, "data"):
-            if task_id := record.data.get("id"):
-                message_dict["celeryTaskId"] = task_id
-            if task_name := record.data.get("name"):
-                message_dict["celeryTaskName"] = task_name
-            if task_runtime := record.data.get("runtime"):
-                message_dict["celeryTaskRuntime"] = task_runtime
-
+        message_dict.update(
+            {
+                "celeryTaskId": record.data.get("id"),
+                "celeryTaskName": record.data.get("name"),
+                "celeryTaskRuntime": record.data.get("runtime"),
+            }
+        )
         super().add_fields(log_record, record, message_dict)
-        if "data" in log_record:
-            log_record.pop("data")
+        log_record.pop("data")
 
 
 class JsonCeleryTaskFormatter(JsonFormatter):

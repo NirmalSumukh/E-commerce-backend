@@ -12,17 +12,13 @@ from .checkout_create_from_order import checkout_create_from_order
 from .checkout_delivery_method_update import checkout_delivery_method_update
 from .checkout_email_update import checkout_update_email
 from .checkout_lines_add import checkout_lines_add
-from .checkout_lines_delete import checkout_lines_delete
 from .checkout_lines_update import checkout_lines_update
 from .checkout_payment_create import (
     checkout_dummy_payment_create,
     raw_checkout_dummy_payment_create,
 )
 from .checkout_remove_promo_code import checkout_remove_promo_code
-from .checkout_shipping_address_update import (
-    checkout_shipping_address_update,
-    raw_checkout_shipping_address_update,
-)
+from .checkout_shipping_address_update import checkout_shipping_address_update
 from .query_checkout import get_checkout
 
 __all__ = [
@@ -35,7 +31,6 @@ __all__ = [
     "checkout_delivery_method_update",
     "checkout_dummy_payment_create",
     "checkout_shipping_address_update",
-    "raw_checkout_shipping_address_update",
     "raw_checkout_dummy_payment_create",
     "checkout_lines_update",
     "draft_order_create",
@@ -47,5 +42,4 @@ __all__ = [
     "get_checkout",
     "checkout_remove_promo_code",
     "checkout_update_email",
-    "checkout_lines_delete",
 ]

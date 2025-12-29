@@ -1,6 +1,7 @@
 import { messages } from "@dashboard/discounts/components/DiscountRules/messages";
 import { Rule } from "@dashboard/discounts/models";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { RuleChannelChips } from "./components/RuleChannelChips";

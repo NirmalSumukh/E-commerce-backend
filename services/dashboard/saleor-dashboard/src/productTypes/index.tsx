@@ -3,6 +3,7 @@ import { Route } from "@dashboard/components/Router";
 import { sectionNames } from "@dashboard/intl";
 import { asSortParams } from "@dashboard/utils/sort";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -20,7 +21,7 @@ import ProductTypeCreateComponent from "./views/ProductTypeCreate";
 import ProductTypeListComponent from "./views/ProductTypeList";
 import ProductTypeUpdateComponent from "./views/ProductTypeUpdate";
 
-const ProductTypeList = () => {
+const ProductTypeList: React.FC<RouteComponentProps<{}>> = ({ location }) => {
   const qs = parseQs(location.search, {
     ignoreQueryPrefix: true,
     // As a product types list still keeps ids to remove in query params,
@@ -41,7 +42,9 @@ interface ProductTypeCreateRouteParams {
   id: string;
 }
 
-const ProductTypeCreate = ({ location }: RouteComponentProps<ProductTypeCreateRouteParams>) => {
+const ProductTypeCreate: React.FC<RouteComponentProps<ProductTypeCreateRouteParams>> = ({
+  location,
+}) => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductTypeAddUrlQueryParams = qs;
 
@@ -52,14 +55,16 @@ interface ProductTypeUpdateRouteParams {
   id: string;
 }
 
-const ProductTypeUpdate = ({ match }: RouteComponentProps<ProductTypeUpdateRouteParams>) => {
+const ProductTypeUpdate: React.FC<RouteComponentProps<ProductTypeUpdateRouteParams>> = ({
+  match,
+}) => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductTypeUrlQueryParams = qs;
 
   return <ProductTypeUpdateComponent id={decodeURIComponent(match.params.id)} params={params} />;
 };
 
-const ProductTypeRouter = () => {
+export const ProductTypeRouter: React.FC = () => {
   const intl = useIntl();
 
   return (
@@ -73,6 +78,5 @@ const ProductTypeRouter = () => {
     </>
   );
 };
-
 ProductTypeRouter.displayName = "ProductTypeRouter";
 export default ProductTypeRouter;

@@ -22,6 +22,7 @@ import useStateFromProps from "@dashboard/hooks/useStateFromProps";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { mapCountriesToChoices, mapEdgesToItems } from "@dashboard/utils/maps";
 import { warehouseListPath } from "@dashboard/warehouses/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import WarehouseInfo from "../WarehouseInfo";
@@ -32,7 +33,7 @@ export interface WarehouseDetailsPageFormData extends AddressTypeInput {
   isPrivate: boolean;
   clickAndCollectOption: WarehouseClickAndCollectOptionEnum;
 }
-interface WarehouseDetailsPageProps {
+export interface WarehouseDetailsPageProps {
   countries: CountryWithCodeFragment[];
   disabled: boolean;
   errors: WarehouseErrorFragment[];
@@ -42,7 +43,7 @@ interface WarehouseDetailsPageProps {
   onSubmit: (data: WarehouseDetailsPageFormData) => SubmitPromise;
 }
 
-const WarehouseDetailsPage = ({
+const WarehouseDetailsPage: React.FC<WarehouseDetailsPageProps> = ({
   countries,
   disabled,
   errors,
@@ -50,7 +51,7 @@ const WarehouseDetailsPage = ({
   warehouse,
   onDelete,
   onSubmit,
-}: WarehouseDetailsPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const [displayCountry, setDisplayCountry] = useStateFromProps(

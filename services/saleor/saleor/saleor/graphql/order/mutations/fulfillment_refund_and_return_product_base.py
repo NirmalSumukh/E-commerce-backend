@@ -97,9 +97,7 @@ class FulfillmentRefundAndReturnProductBase(BaseMutation):
         )
         fulfillment_lines = list(fulfillment_lines)
         cleaned_fulfillment_lines = []
-        for line, line_data in zip(
-            fulfillment_lines, fulfillment_lines_data, strict=False
-        ):
+        for line, line_data in zip(fulfillment_lines, fulfillment_lines_data):
             quantity = line_data["quantity"]
             if line.order_line.is_gift_card:
                 cls._raise_error_for_line(
@@ -111,7 +109,8 @@ class FulfillmentRefundAndReturnProductBase(BaseMutation):
                 )
             if line.quantity < quantity:
                 cls._raise_error_for_line(
-                    "Provided quantity is bigger than quantity from fulfillment line",
+                    "Provided quantity is bigger than quantity from "
+                    "fulfillment line",
                     "FulfillmentLine",
                     line.pk,
                     "fulfillment_line_id",
@@ -155,7 +154,7 @@ class FulfillmentRefundAndReturnProductBase(BaseMutation):
         )
         order_lines = list(order_lines)
         cleaned_order_lines = []
-        for line, line_data in zip(order_lines, lines_data, strict=False):
+        for line, line_data in zip(order_lines, lines_data):
             quantity = line_data["quantity"]
             if line.is_gift_card:
                 cls._raise_error_for_line(

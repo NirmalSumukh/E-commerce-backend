@@ -45,12 +45,11 @@ import {
   VariableEditor,
   WriteableEditorProps,
 } from "@graphiql/react";
-import { ComponentType, PropsWithChildren, ReactNode, useState } from "react";
-import * as React from "react";
+import React, { ComponentType, PropsWithChildren, ReactNode, useState } from "react";
 
 import { useDashboardTheme, useGraphiQLThemeSwitcher } from "../GraphiQL/styles";
 
-interface GraphiQLToolbarConfig {
+export interface GraphiQLToolbarConfig {
   /**
    * This content will be rendered after the built-in buttons of the toolbar.
    * Note that this will not apply if you provide a completely custom toolbar
@@ -64,7 +63,7 @@ interface GraphiQLToolbarConfig {
  *
  * https://graphiql-test.netlify.app/typedoc/modules/graphiql.html#graphiqlprops
  */
-type GraphiQLProps = Omit<GraphiQLProviderProps, "children"> & GraphiQLInterfaceProps;
+export type GraphiQLProps = Omit<GraphiQLProviderProps, "children"> & GraphiQLInterfaceProps;
 
 /**
  * The top-level React component for GraphiQL, intended to encompass the entire
@@ -73,7 +72,7 @@ type GraphiQLProps = Omit<GraphiQLProviderProps, "children"> & GraphiQLInterface
  * @see https://github.com/graphql/graphiql#usage
  */
 
-function GraphiQL({
+export function GraphiQL({
   dangerouslyAssumeSchemaIsValid,
   defaultQuery,
   defaultTabs,
@@ -151,7 +150,7 @@ type AddSuffix<Obj extends Record<string, any>, Suffix extends string> = {
   [Key in keyof Obj as `${string & Key}${Suffix}`]: Obj[Key];
 };
 
-type GraphiQLInterfaceProps = WriteableEditorProps &
+export type GraphiQLInterfaceProps = WriteableEditorProps &
   AddSuffix<Pick<UseQueryEditorArgs, "onEdit">, "Query"> &
   Pick<UseQueryEditorArgs, "onCopyQuery"> &
   AddSuffix<Pick<UseVariableEditorArgs, "onEdit">, "Variables"> &
@@ -185,7 +184,7 @@ type GraphiQLInterfaceProps = WriteableEditorProps &
     showPersistHeadersSettings?: boolean;
   };
 
-function GraphiQLInterface(props: GraphiQLInterfaceProps) {
+export function GraphiQLInterface(props: GraphiQLInterfaceProps) {
   const isHeadersEditorEnabled = props.isHeadersEditorEnabled ?? true;
   const editorContext = useEditorContext({ nonNull: true });
   const executionContext = useExecutionContext({ nonNull: true });
@@ -531,7 +530,6 @@ function GraphiQLInterface(props: GraphiQLInterfaceProps) {
           </div>
         </div>
       </div>
-      {/* @ts-expect-error legacy types */}
       <Dialog isOpen={showDialog === "short-keys"} onDismiss={() => setShowDialog(null)}>
         <div className="graphiql-dialog-header">
           <div className="graphiql-dialog-title">Short Keys</div>
@@ -628,7 +626,6 @@ function GraphiQLInterface(props: GraphiQLInterfaceProps) {
           </div>
         </div>
       </Dialog>
-      {/* @ts-expect-error legacy types */}
       <Dialog
         isOpen={showDialog === "settings"}
         onDismiss={() => {

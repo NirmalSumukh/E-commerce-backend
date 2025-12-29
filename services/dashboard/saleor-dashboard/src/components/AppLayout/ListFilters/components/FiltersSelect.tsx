@@ -1,21 +1,21 @@
 // @ts-strict-ignore
-import { FilterContent } from "@dashboard/components/Filter/FilterContent/FilterContent";
 import {
+  FilterContent,
   FilterElement,
   FilterErrorMessages,
   IFilter,
   InvalidFilters,
-} from "@dashboard/components/Filter/types";
+} from "@dashboard/components/Filter";
 import useFilter from "@dashboard/components/Filter/useFilter";
 import { extractInvalidFilters } from "@dashboard/components/Filter/utils";
 import { ClickAwayListener, Grow, Popper } from "@material-ui/core";
 import { DropdownButton, sprinkles } from "@saleor/macaw-ui-next";
-import { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { getSelectedFilterAmount } from "../utils";
 
-interface FilterProps<TFilterKeys extends string = string> {
+export interface FilterProps<TFilterKeys extends string = string> {
   currencySymbol?: string;
   errorMessages?: FilterErrorMessages<TFilterKeys>;
   menu: IFilter<TFilterKeys>;
@@ -30,7 +30,7 @@ export const FiltersSelect = <TFilterKeys extends string = string>({
   onFilterAttributeFocus,
   errorMessages,
 }: FilterProps<TFilterKeys>) => {
-  const anchor = useRef<HTMLDivElement>();
+  const anchor = React.useRef<HTMLDivElement>();
   const [isFilterMenuOpened, setFilterMenuOpened] = useState(false);
   const [filterErrors, setFilterErrors] = useState<InvalidFilters<string>>({});
   const [data, dispatch, reset] = useFilter(menu);

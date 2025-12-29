@@ -5,21 +5,20 @@ from ....core import JobStatus
 from ....invoice import events, models
 from ....invoice.error_codes import InvoiceErrorCode
 from ....order import events as order_events
-from ....order.search import update_order_search_vector
 from ....permission.enums import OrderPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import InvoiceError
 from ...core.utils import WebhookEventInfo
 from ...order.types import Order
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ..types import Invoice
+from ..utils import is_event_active_for_any_plugin
 
 
-class InvoiceRequest(DeprecatedModelMutation):
+class InvoiceRequest(ModelMutation):
     order = graphene.Field(Order, description="Order related to an invoice.")
 
     class Meta:
@@ -76,10 +75,7 @@ class InvoiceRequest(DeprecatedModelMutation):
         cls.check_channel_permissions(info, [order.channel_id])
         cls.clean_order(order)
         manager = get_plugin_manager_promise(info.context).get()
-
-        if not manager.is_event_active_for_any_plugin(
-            "invoice_request", channel_slug=order.channel.slug
-        ):
+        if not is_event_active_for_any_plugin("invoice_request", manager.all_plugins):
             raise ValidationError(
                 {
                     "orderId": ValidationError(
@@ -110,11 +106,10 @@ class InvoiceRequest(DeprecatedModelMutation):
                 user=info.context.user, app=app, order=order
             )
 
-        update_order_search_vector(order)
         events.invoice_requested_event(
             user=info.context.user,
             app=app,
             order=order,
             number=number,
         )
-        return InvoiceRequest(invoice=invoice, order=SyncWebhookControlContext(order))
+        return InvoiceRequest(invoice=invoice, order=order)

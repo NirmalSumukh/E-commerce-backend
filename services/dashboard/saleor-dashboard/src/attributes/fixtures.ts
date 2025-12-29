@@ -15,7 +15,6 @@ export const attribute: AttributeDetailsQuery["attribute"] = {
   filterableInStorefront: true,
   id: "UHJvZHVjdEF0dHJpYnV0ZTo5",
   inputType: AttributeInputTypeEnum.DROPDOWN,
-  referenceTypes: [],
   metadata: [
     {
       __typename: "MetadataItem",
@@ -97,11 +96,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -166,11 +160,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -273,11 +262,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -323,11 +307,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -411,11 +390,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -480,11 +454,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -568,11 +537,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -637,9 +601,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -780,9 +741,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -847,9 +805,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -914,9 +869,6 @@ export const attributes: Array<
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
     unit: null,
-    metadata: [],
-    privateMetadata: [],
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -981,11 +933,6 @@ export const attributes: Array<
     unit: null,
     inputType: AttributeInputTypeEnum.DROPDOWN,
     valueRequired: false,
-    metadata: [],
-    privateMetadata: [],
-    availableInGrid: false,
-    storefrontSearchPosition: 0,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection" as const,
       pageInfo: {
@@ -1114,8 +1061,4 @@ export const attributes: Array<
     },
     visibleInStorefront: true,
   },
-].map(a => ({
-  ...a,
-  availableInGrid: a.availableInGrid ?? false,
-  storefrontSearchPosition: a.storefrontSearchPosition ?? 0,
-}));
+];

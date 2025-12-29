@@ -1,9 +1,8 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { LanguageCodeEnum, SaleTranslationFragment } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import { TranslationsEntitiesPageProps } from "@dashboard/translations/types";
@@ -12,19 +11,20 @@ import {
   languageEntityUrl,
   TranslatableEntities,
 } from "@dashboard/translations/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsSalesPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsSalesPageProps extends TranslationsEntitiesPageProps {
   data: SaleTranslationFragment;
 }
 
-const fieldNames = {
+export const fieldNames = {
   name: "name",
 };
 
-const TranslationsSalesPage = ({
+const TranslationsSalesPage: React.FC<TranslationsSalesPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -35,9 +35,8 @@ const TranslationsSalesPage = ({
   onDiscard,
   onEdit,
   onSubmit,
-}: TranslationsSalesPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -57,11 +56,11 @@ const TranslationsSalesPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.sales, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.sales, translationId)
           }
         />
       </TopNav>

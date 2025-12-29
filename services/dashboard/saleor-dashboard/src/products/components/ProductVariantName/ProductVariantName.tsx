@@ -4,6 +4,7 @@ import { FormChange } from "@dashboard/hooks/useForm";
 import { commonMessages } from "@dashboard/intl";
 import { getFormErrors, getProductErrorMessage } from "@dashboard/utils/errors";
 import { Input } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ProductVariantNameProps {
@@ -13,7 +14,12 @@ interface ProductVariantNameProps {
   errors: ProductErrorFragment[];
 }
 
-const ProductVariantName = ({ value, onChange, disabled, errors }: ProductVariantNameProps) => {
+const ProductVariantName: React.FC<ProductVariantNameProps> = ({
+  value,
+  onChange,
+  disabled,
+  errors,
+}) => {
   const intl = useIntl();
 
   const formErrors = getFormErrors(["variantName"], errors);

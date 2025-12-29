@@ -1,9 +1,9 @@
-import datetime
+from datetime import timedelta
 
 import jwt
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.middleware.csrf import (  # type: ignore[attr-defined]
+from django.middleware.csrf import (  # type: ignore
     _get_new_csrf_string,
     _mask_cipher_secret,
     _unmask_cipher_token,
@@ -35,18 +35,18 @@ def get_user(payload):
 def get_payload(token):
     try:
         payload = jwt_decode(token)
-    except jwt.ExpiredSignatureError as e:
+    except jwt.ExpiredSignatureError:
         raise ValidationError(
             "Signature has expired", code=AccountErrorCode.JWT_SIGNATURE_EXPIRED.value
-        ) from e
-    except jwt.DecodeError as e:
+        )
+    except jwt.DecodeError:
         raise ValidationError(
             "Error decoding signature", code=AccountErrorCode.JWT_DECODE_ERROR.value
-        ) from e
-    except jwt.InvalidTokenError as e:
+        )
+    except jwt.InvalidTokenError:
         raise ValidationError(
             "Invalid token", code=AccountErrorCode.JWT_INVALID_TOKEN.value
-        ) from e
+        )
     return payload
 
 
@@ -63,9 +63,7 @@ def _does_token_match(token: str, csrf_token: str) -> bool:
 
 def update_user_last_login_if_required(user: User):
     time_now = timezone.now()
-    threshold_delta = datetime.timedelta(
-        seconds=settings.TOKEN_UPDATE_LAST_LOGIN_THRESHOLD
-    )
+    threshold_delta = timedelta(seconds=settings.TOKEN_UPDATE_LAST_LOGIN_THRESHOLD)
 
     if not user.last_login or user.last_login + threshold_delta < time_now:
         user.last_login = time_now

@@ -8,8 +8,6 @@ from ....checkout import AddressType
 from ....core.taxes import TaxError
 from ....core.tracing import traced_atomic_transaction
 from ....discount.utils.voucher import (
-    create_or_update_voucher_discount_objects_for_order,
-    get_customer_email_for_voucher_usage,
     increase_voucher_usage,
 )
 from ....order import OrderOrigin, OrderStatus, events, models
@@ -29,15 +27,19 @@ from ...account.mixins import AddressMetadataMixin
 from ...account.types import AddressInput
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import ADDED_IN_318, ADDED_IN_321, DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import (
+    ADDED_IN_36,
+    ADDED_IN_310,
+    ADDED_IN_314,
+    ADDED_IN_318,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_ORDERS
-from ...core.enums import LanguageCodeEnum
 from ...core.mutations import ModelWithRestrictedChannelAccessMutation
 from ...core.scalars import PositiveDecimal
 from ...core.types import BaseInputObjectType, NonNullList, OrderError
 from ...core.utils import from_global_id_or_error
-from ...meta.inputs import MetadataInput, MetadataInputDescription
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...product.types import ProductVariant
 from ...shipping.utils import get_shipping_model_by_object_id
@@ -48,7 +50,11 @@ from ..utils import (
     validate_variant_channel_listings,
 )
 from . import draft_order_cleaner
-from .utils import ShippingMethodUpdateMixin, get_variant_rule_info_map, save_addresses
+from .utils import (
+    ShippingMethodUpdateMixin,
+    get_variant_rule_info_map,
+    save_addresses,
+)
 
 
 class OrderLineInput(BaseInputObjectType):
@@ -69,7 +75,7 @@ class OrderLineCreateInput(OrderLineInput):
         default_value=False,
         description=(
             "Flag that allow force splitting the same variant into multiple lines "
-            "by skipping the matching logic. "
+            "by skipping the matching logic. " + ADDED_IN_36
         ),
     )
     price = PositiveDecimal(
@@ -78,6 +84,8 @@ class OrderLineCreateInput(OrderLineInput):
             "Custom price of the item."
             "When the line with the same variant "
             "will be provided multiple times, the last price will be used."
+            + ADDED_IN_314
+            + PREVIEW_FEATURE
         ),
     )
 
@@ -87,43 +95,19 @@ class OrderLineCreateInput(OrderLineInput):
 
 class DraftOrderInput(BaseInputObjectType):
     billing_address = AddressInput(description="Billing address of the customer.")
-    save_billing_address = graphene.Boolean(
-        description=(
-            "Indicates whether the billing address should be saved "
-            "to the user’s address book upon draft order completion. "
-            "Can only be set when a billing address is provided. If not specified "
-            "along with the address, the default behavior is to not save the address."
-        )
-        + ADDED_IN_321
-    )
     user = graphene.ID(
         description="Customer associated with the draft order.", name="user"
     )
     user_email = graphene.String(description="Email address of the customer.")
-    discount = PositiveDecimal(
-        description=(
-            f"Discount amount for the order."
-            f"{DEPRECATED_IN_3X_INPUT} Providing a value for the field has no effect. "
-            f"Use `orderDiscountAdd` mutation instead."
-        )
-    )
+    discount = PositiveDecimal(description="Discount amount for the order.")
     shipping_address = AddressInput(description="Shipping address of the customer.")
-    save_shipping_address = graphene.Boolean(
-        description=(
-            "Indicates whether the shipping address should be saved "
-            "to the user’s address book upon draft order completion."
-            "Can only be set when a shipping address is provided. If not specified "
-            "along with the address, the default behavior is to not save the address."
-        )
-        + ADDED_IN_321
-    )
     shipping_method = graphene.ID(
         description="ID of a selected shipping method.", name="shippingMethod"
     )
     voucher = graphene.ID(
         description="ID of the voucher associated with the order.",
         name="voucher",
-        deprecation_reason="Use `voucherCode` instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `voucherCode` instead.",
     )
     voucher_code = graphene.String(
         description="A code of the voucher associated with the order." + ADDED_IN_318,
@@ -141,25 +125,7 @@ class DraftOrderInput(BaseInputObjectType):
         ),
     )
     external_reference = graphene.String(
-        description="External ID of this order.", required=False
-    )
-    metadata = NonNullList(
-        MetadataInput,
-        description=f"Order public metadata. {ADDED_IN_321} "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
-        required=False,
-    )
-    private_metadata = NonNullList(
-        MetadataInput,
-        description=f"Order private metadata. {ADDED_IN_321} "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
-        required=False,
-    )
-
-    language_code = graphene.Argument(
-        LanguageCodeEnum,
-        required=False,
-        description=(f"Order language code.{ADDED_IN_321}"),
+        description="External ID of this order." + ADDED_IN_310, required=False
     )
 
     class Meta:
@@ -195,8 +161,6 @@ class DraftOrderCreate(
         permissions = (OrderPermissions.MANAGE_ORDERS,)
         error_type_class = OrderError
         error_type_field = "order_errors"
-        support_meta_field = True
-        support_private_meta_field = True
 
     @classmethod
     def get_instance_channel_id(cls, instance, **data):
@@ -252,7 +216,6 @@ class DraftOrderCreate(
         cls.clean_lines(cleaned_input, lines, channel)
         cleaned_input["status"] = OrderStatus.DRAFT
         cleaned_input["origin"] = OrderOrigin.DRAFT
-        cleaned_input["lines_count"] = len(cleaned_input.get("lines_data", []))
 
         cls.clean_addresses(
             info, instance, cleaned_input, shipping_address, billing_address, manager
@@ -272,8 +235,6 @@ class DraftOrderCreate(
         billing_address,
         manager,
     ):
-        save_shipping_address = cleaned_input.get("save_shipping_address")
-        save_billing_address = cleaned_input.get("save_billing_address")
         if shipping_address:
             shipping_address = cls.validate_address(
                 shipping_address,
@@ -281,20 +242,8 @@ class DraftOrderCreate(
                 instance=instance.shipping_address,
                 info=info,
             )
+            manager.change_user_address(shipping_address, "shipping", user=instance)
             cleaned_input["shipping_address"] = shipping_address
-            cleaned_input["draft_save_shipping_address"] = (
-                save_shipping_address or False
-            )
-        elif save_shipping_address is not None:
-            raise ValidationError(
-                {
-                    "save_shipping_address": ValidationError(
-                        "This option can only be selected if a shipping address "
-                        "is provided.",
-                        code=OrderErrorCode.MISSING_ADDRESS_DATA.value,
-                    )
-                }
-            )
         if billing_address:
             billing_address = cls.validate_address(
                 billing_address,
@@ -302,18 +251,8 @@ class DraftOrderCreate(
                 instance=instance.billing_address,
                 info=info,
             )
+            manager.change_user_address(billing_address, "billing", user=instance)
             cleaned_input["billing_address"] = billing_address
-            cleaned_input["draft_save_billing_address"] = save_billing_address or False
-        elif save_billing_address is not None:
-            raise ValidationError(
-                {
-                    "save_billing_address": ValidationError(
-                        "This option can only be selected if a billing address "
-                        "is provided.",
-                        code=OrderErrorCode.MISSING_ADDRESS_DATA.value,
-                    )
-                }
-            )
 
     @classmethod
     def clean_lines(cls, cleaned_input, lines, channel):
@@ -369,8 +308,8 @@ class DraftOrderCreate(
 
     @staticmethod
     def _save_lines(info, instance, lines_data, app, manager):
-        lines = []
         if lines_data:
+            lines = []
             for line_data in lines_data:
                 new_line = create_order_line(
                     instance,
@@ -388,7 +327,7 @@ class DraftOrderCreate(
             )
 
     @classmethod
-    def save(cls, info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
+    def save(cls, info: ResolveInfo, instance, cleaned_input):
         manager = get_plugin_manager_promise(info.context).get()
         app = get_app_promise(info.context).get()
 
@@ -401,11 +340,11 @@ class DraftOrderCreate(
                 cls._save_lines(
                     info, instance, cleaned_input.get("lines_data"), app, manager
                 )
-            except TaxError as e:
+            except TaxError as tax_error:
                 raise ValidationError(
-                    f"Unable to calculate taxes - {str(e)}",
+                    f"Unable to calculate taxes - {str(tax_error)}",
                     code=OrderErrorCode.TAX_ERROR.value,
-                ) from e
+                )
 
             if "shipping_method" in cleaned_input:
                 method = cleaned_input["shipping_method"]
@@ -413,8 +352,13 @@ class DraftOrderCreate(
                     ShippingMethodUpdateMixin.clear_shipping_method_from_order(instance)
                 else:
                     ShippingMethodUpdateMixin.process_shipping_method(
-                        instance, method, manager, update_shipping_discount=False
+                        instance, method, manager
                     )
+
+            if instance.undiscounted_base_shipping_price_amount is None:
+                instance.undiscounted_base_shipping_price_amount = (
+                    instance.base_shipping_price_amount
+                )
 
             if "voucher" in cleaned_input:
                 cls.handle_order_voucher(
@@ -439,24 +383,13 @@ class DraftOrderCreate(
             )
 
     @classmethod
-    def handle_order_voucher(
-        cls,
-        cleaned_input,
-        instance: models.Order,
-    ):
-        voucher = cleaned_input["voucher"]
-
-        # create or update voucher discount object
-        create_or_update_voucher_discount_objects_for_order(instance)
-
-        # handle voucher usage
-        user_email = get_customer_email_for_voucher_usage(instance)
-
+    def handle_order_voucher(cls, cleaned_input, instance):
+        user_email = instance.user_email or instance.user and instance.user.email
         channel = instance.channel
         if not channel.include_draft_order_in_voucher_usage:
             return
 
-        if voucher:
+        if voucher := cleaned_input["voucher"]:
             code_instance = cleaned_input.pop("voucher_code_instance", None)
             increase_voucher_usage(
                 voucher,
@@ -464,8 +397,3 @@ class DraftOrderCreate(
                 user_email,
                 increase_voucher_customer_usage=False,
             )
-
-    @classmethod
-    def success_response(cls, order):
-        """Return a success response."""
-        return DraftOrderCreate(order=SyncWebhookControlContext(order))

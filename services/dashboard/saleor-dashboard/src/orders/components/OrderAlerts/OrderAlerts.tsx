@@ -1,4 +1,5 @@
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { MessageDescriptor, useIntl } from "react-intl";
 
 interface OrderAlertsProps {
@@ -7,7 +8,7 @@ interface OrderAlertsProps {
   values?: Record<string, any>;
 }
 
-const OrderAlerts = ({ alertsHeader, alerts, values }: OrderAlertsProps) => {
+export const OrderAlerts: React.FC<OrderAlertsProps> = ({ alertsHeader, alerts, values }) => {
   const intl = useIntl();
   const formattedAlerts = alerts.map((alert, index) => {
     if (typeof alert === "string") {
@@ -47,6 +48,5 @@ const OrderAlerts = ({ alertsHeader, alerts, values }: OrderAlertsProps) => {
     </>
   );
 };
-
 OrderAlerts.displayName = "OrderAlerts";
 export default OrderAlerts;

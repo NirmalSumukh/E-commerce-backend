@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
 
@@ -46,7 +48,9 @@ def get_transaction_item(
     return instance
 
 
-def clean_customer_ip_address(info, customer_ip_address: str | None, error_code: str):
+def clean_customer_ip_address(
+    info, customer_ip_address: Optional[str], error_code: str
+):
     """Get customer IP address.
 
     The customer IP address is required for some payment gateways. By default, the
@@ -63,13 +67,13 @@ def clean_customer_ip_address(info, customer_ip_address: str | None, error_code:
         raise PermissionDenied(permissions=[PaymentPermissions.HANDLE_PAYMENTS])
     try:
         validate_ipv46_address(customer_ip_address)
-    except ValidationError as e:
+    except ValidationError as error:
         raise ValidationError(
             {
                 "customer_ip_address": ValidationError(
-                    message=e.message,
+                    message=error.message,
                     code=error_code,
                 )
             }
-        ) from e
+        )
     return customer_ip_address

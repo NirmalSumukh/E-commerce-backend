@@ -1,4 +1,5 @@
 import { Switch, ViewListIcon, ViewTilesIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import { ProductListViewType } from "../ProductListPage";
 

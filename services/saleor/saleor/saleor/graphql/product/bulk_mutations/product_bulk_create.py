@@ -1,7 +1,8 @@
-import datetime
 from collections import defaultdict
+from datetime import datetime
 
 import graphene
+import pytz
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.db.models import F
@@ -9,7 +10,6 @@ from django.utils.text import slugify
 from graphene.utils.str_converters import to_camel_case
 from text_unidecode import unidecode
 
-from ....core.exceptions import UnsupportedMediaProviderException
 from ....core.http_client import HTTPClient
 from ....core.tracing import traced_atomic_transaction
 from ....core.utils import prepare_unique_slug
@@ -25,13 +25,13 @@ from ....warehouse.models import Warehouse
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
 from ...attribute.types import AttributeValueInput
-from ...attribute.utils.attribute_assignment import AttributeAssignmentMixin
-from ...core.context import ChannelContext
-from ...core.descriptions import RICH_CONTENT
+from ...attribute.utils import ProductAttributeAssignmentMixin
+from ...channel import ChannelContext
+from ...core.descriptions import ADDED_IN_313, PREVIEW_FEATURE, RICH_CONTENT
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.enums import ErrorPolicyEnum
 from ...core.fields import JSONString
-from ...core.mutations import BaseMutation, DeprecatedModelMutation
+from ...core.mutations import BaseMutation, ModelMutation
 from ...core.scalars import DateTime, WeightScalar
 from ...core.types import (
     BaseInputObjectType,
@@ -44,7 +44,7 @@ from ...core.types import (
 from ...core.utils import get_duplicated_values
 from ...core.validators import clean_seo_fields
 from ...core.validators.file import clean_image_file, is_image_url, validate_image_url
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ..mutations.product.product_create import ProductCreateInput
 from ..types import Product
@@ -140,14 +140,12 @@ class ProductBulkCreateInput(ProductCreateInput):
     rating = graphene.Float(description="Defines the product rating value.")
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the product metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description="Fields required to update the product metadata.",
         required=False,
     )
     private_metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the product private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description=("Fields required to update the product private metadata."),
         required=False,
     )
     external_reference = graphene.String(
@@ -203,7 +201,7 @@ class ProductBulkCreate(BaseMutation):
         )
 
     class Meta:
-        description = "Creates products."
+        description = "Creates products." + ADDED_IN_313 + PREVIEW_FEATURE
         doc_category = DOC_CATEGORY_PRODUCTS
         permissions = (ProductPermissions.MANAGE_PRODUCTS,)
         error_type_class = ProductBulkCreateError
@@ -292,7 +290,7 @@ class ProductBulkCreate(BaseMutation):
         if attributes := cleaned_input.get("attributes"):
             try:
                 attributes_qs = cleaned_input["product_type"].product_attributes.all()
-                attributes = AttributeAssignmentMixin.clean_input(
+                attributes = ProductAttributeAssignmentMixin.clean_input(
                     attributes, attributes_qs
                 )
                 cleaned_input["attributes"] = attributes
@@ -355,16 +353,14 @@ class ProductBulkCreate(BaseMutation):
         if is_available_for_purchase is False:
             channel_data["available_for_purchase_at"] = None
         elif is_available_for_purchase is True and not available_for_purchase_at:
-            channel_data["available_for_purchase_at"] = datetime.datetime.now(
-                tz=datetime.UTC
-            )
+            channel_data["available_for_purchase_at"] = datetime.now(pytz.UTC)
         else:
             channel_data["available_for_purchase_at"] = available_for_purchase_at
 
     @staticmethod
     def set_published_at(channel_data):
         if channel_data.get("is_published") and not channel_data.get("published_at"):
-            channel_data["published_at"] = datetime.datetime.now(tz=datetime.UTC)
+            channel_data["published_at"] = datetime.now(pytz.UTC)
 
     @classmethod
     def clean_product_channel_listings(
@@ -460,7 +456,7 @@ class ProductBulkCreate(BaseMutation):
             if alt and len(alt) > ALT_CHAR_LIMIT:
                 index_error_map[product_index].append(
                     ProductBulkCreateError(
-                        path=f"media.{index}.alt",
+                        path=f"media.{index}",
                         message=f"Alt field exceeds the character "
                         f"limit of {ALT_CHAR_LIMIT}.",
                         code=ProductBulkCreateErrorCode.INVALID.value,
@@ -479,46 +475,22 @@ class ProductBulkCreate(BaseMutation):
                         product_index, exc, index_error_map, f"media.{index}"
                     )
                     continue
-            elif media_url:
-                if is_image_url(media_url):
-                    try:
-                        validate_image_url(
-                            media_url,
-                            "media_url",
-                            ProductBulkCreateErrorCode.INVALID.value,
-                        )
-                    except ValidationError as exc:
-                        cls.add_indexes_to_errors(
-                            product_index, exc, index_error_map, f"media.{index}"
-                        )
-                        continue
-                    filename = get_filename_from_url(media_url)
-                    image_data = HTTPClient.send_request(
-                        "GET", media_url, stream=True, timeout=30, allow_redirects=False
+            elif media_url and is_image_url(media_url):
+                try:
+                    validate_image_url(
+                        media_url, "media_url", ProductBulkCreateErrorCode.INVALID.value
                     )
-                    image_data = File(image_data.raw, filename)
-                    media_input["image"] = image_data
-                else:
-                    try:
-                        oembed_data, supported_media_type = get_oembed_data(media_url)
-                        oembed_data["supported_media_type"] = supported_media_type
-                    except UnsupportedMediaProviderException as exc:
-                        validation_error = ValidationError(
-                            {
-                                "media_url": ValidationError(
-                                    exc.message,
-                                    code=ProductBulkCreateErrorCode.UNSUPPORTED_MEDIA_PROVIDER.value,
-                                )
-                            }
-                        )
-                        cls.add_indexes_to_errors(
-                            product_index,
-                            validation_error,
-                            index_error_map,
-                            f"media.{index}",
-                        )
-                        continue
-                    media_input["oembed_data"] = oembed_data
+                except ValidationError as exc:
+                    cls.add_indexes_to_errors(
+                        product_index, exc, index_error_map, f"media.{index}"
+                    )
+                    continue
+                filename = get_filename_from_url(media_url)
+                image_data = HTTPClient.send_request(
+                    "GET", media_url, stream=True, timeout=30, allow_redirects=False
+                )
+                image_data = File(image_data.raw, filename)
+                media_input["image"] = image_data
 
             media_to_create.append(media_input)
 
@@ -605,7 +577,7 @@ class ProductBulkCreate(BaseMutation):
         base_fields_errors_count = 0
 
         try:
-            cleaned_input = DeprecatedModelMutation.clean_input(
+            cleaned_input = ModelMutation.clean_input(
                 info, None, data, input_cls=ProductBulkCreateInput
             )
         except ValidationError as exc:
@@ -703,23 +675,13 @@ class ProductBulkCreate(BaseMutation):
                 )
                 continue
             try:
-                metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-                private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-                    "private_metadata", None
-                )
-
-                metadata_collection = cls.create_metadata_from_graphql_input(
-                    metadata_list, error_field_name="metadata"
-                )
-                private_metadata_collection = cls.create_metadata_from_graphql_input(
-                    private_metadata_list,
-                    error_field_name="private_metadata",
-                )
+                metadata_list = cleaned_input.pop("metadata", None)
+                private_metadata_list = cleaned_input.pop("private_metadata", None)
 
                 instance = models.Product()
                 instance = cls.construct_instance(instance, cleaned_input)
                 cls.validate_and_update_metadata(
-                    instance, metadata_collection, private_metadata_collection
+                    instance, metadata_list, private_metadata_list
                 )
                 cls.clean_instance(info, instance)
                 instance.search_index_dirty = True
@@ -768,31 +730,16 @@ class ProductBulkCreate(BaseMutation):
     def create_variants(cls, info, product, variants_inputs, index, index_error_map):
         variants_instances_data = []
 
-        for variant_data in variants_inputs:
+        for variant_index, variant_data in enumerate(variants_inputs):
             if variant_data:
                 try:
-                    metadata_list: list[MetadataInput] = variant_data.pop(
-                        "metadata", None
-                    )
-                    private_metadata_list: list[MetadataInput] = variant_data.pop(
-                        "private_metadata", None
-                    )
-
-                    metadata_collection = cls.create_metadata_from_graphql_input(
-                        metadata_list, error_field_name="metadata"
-                    )
-                    private_metadata_collection = (
-                        cls.create_metadata_from_graphql_input(
-                            private_metadata_list,
-                            error_field_name="private_metadata",
-                        )
-                    )
-
+                    metadata_list = variant_data.pop("metadata", None)
+                    private_metadata_list = variant_data.pop("private_metadata", None)
                     variant = models.ProductVariant()
                     variant.product = product
                     variant = cls.construct_instance(variant, variant_data)
                     cls.validate_and_update_metadata(
-                        variant, metadata_collection, private_metadata_collection
+                        variant, metadata_list, private_metadata_list
                     )
                     variant.full_clean(exclude=["product"])
 
@@ -854,7 +801,7 @@ class ProductBulkCreate(BaseMutation):
         models.ProductChannelListing.objects.bulk_create(listings_to_create)
 
         for product, attributes in attributes_to_save:
-            AttributeAssignmentMixin.save(product, attributes)
+            ProductAttributeAssignmentMixin.save(product, attributes)
 
         if variants_input_data:
             variants = cls.save_variants(info, variants_input_data)
@@ -906,7 +853,7 @@ class ProductBulkCreate(BaseMutation):
     def prepare_media(cls, info, product, media_inputs, media_to_create):
         for media_input in media_inputs:
             alt = media_input.get("alt", "")
-
+            media_url = media_input.get("media_url")
             if img_data := media_input.get("image"):
                 media_to_create.append(
                     models.ProductMedia(
@@ -916,16 +863,18 @@ class ProductBulkCreate(BaseMutation):
                         type=ProductMediaTypes.IMAGE,
                     )
                 )
-            if oembed_data := media_input.get("oembed_data"):
-                media_to_create.append(
-                    models.ProductMedia(
-                        external_url=oembed_data["url"],
-                        alt=oembed_data.get("title", alt),
-                        product=product,
-                        type=oembed_data["supported_media_type"],
-                        oembed_data=oembed_data,
+            if media_url:
+                if not is_image_url(media_url):
+                    oembed_data, media_type = get_oembed_data(media_url, "media_url")
+                    media_to_create.append(
+                        models.ProductMedia(
+                            external_url=oembed_data["url"],
+                            alt=oembed_data.get("title", alt),
+                            product=product,
+                            type=media_type,
+                            oembed_data=oembed_data,
+                        )
                     )
-                )
 
     @classmethod
     def post_save_actions(cls, info, products, variants, channels):
@@ -941,7 +890,7 @@ class ProductBulkCreate(BaseMutation):
             cls.call_event(manager.product_variant_created, variant, webhooks=webhooks)
 
         if products:
-            channel_ids = {channel.id for channel in channels}
+            channel_ids = set([channel.id for channel in channels])
             cls.call_event(mark_active_catalogue_promotion_rules_as_dirty, channel_ids)
 
     @classmethod
@@ -957,7 +906,7 @@ class ProductBulkCreate(BaseMutation):
         )
 
         # check error policy
-        if any(index_error_map.values()):
+        if any([True if error else False for error in index_error_map.values()]):
             if error_policy == ErrorPolicyEnum.REJECT_EVERYTHING.value:
                 results = get_results(instances_data_with_errors_list, True)
                 return ProductBulkCreate(count=0, results=results)

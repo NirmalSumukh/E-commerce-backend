@@ -73,6 +73,7 @@ def test_checkout_complete(
     payment_dummy,
     address,
     shipping_method,
+    django_capture_on_commit_callbacks,
 ):
     # given
     assert not gift_card.last_used_on
@@ -116,7 +117,8 @@ def test_checkout_complete(
     variables = {"checkoutId": checkout_id, "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -149,9 +151,9 @@ def test_checkout_complete(
     assert gift_card.current_balance == zero_money(gift_card.currency)
     assert gift_card.last_used_on
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())
 
 
@@ -238,6 +240,7 @@ def test_checkout_complete_for_token_as_input(
     payment_dummy,
     address,
     shipping_method,
+    django_capture_on_commit_callbacks,
 ):
     # given
     assert not gift_card.last_used_on
@@ -280,7 +283,8 @@ def test_checkout_complete_for_token_as_input(
     variables = {"token": checkout.token, "redirectUrl": redirect_url}
 
     # when
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = user_api_client.post_graphql(MUTATION_CHECKOUT_COMPLETE, variables)
 
     # then
     content = get_graphql_content(response)
@@ -313,7 +317,7 @@ def test_checkout_complete_for_token_as_input(
     assert gift_card.current_balance == zero_money(gift_card.currency)
     assert gift_card.last_used_on
 
-    assert not Checkout.objects.filter(pk=checkout.pk).exists(), (
-        "Checkout should have been deleted"
-    )
+    assert not Checkout.objects.filter(
+        pk=checkout.pk
+    ).exists(), "Checkout should have been deleted"
     order_confirmed_mock.assert_called_once_with(order, webhooks=set())

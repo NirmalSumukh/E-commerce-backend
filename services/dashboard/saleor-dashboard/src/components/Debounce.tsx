@@ -1,13 +1,13 @@
 // @ts-strict-ignore
-import * as React from "react";
+import React from "react";
 
-interface DebounceProps<T> {
+export interface DebounceProps<T> {
   children: (props: (...args: T[]) => void) => React.ReactNode;
   debounceFn: (...args: T[]) => void;
   time?: number;
 }
 
-class Debounce<T> extends React.Component<DebounceProps<T>> {
+export class Debounce<T> extends React.Component<DebounceProps<T>> {
   timer = null;
 
   handleDebounce = (...args: T[]) => {
@@ -28,5 +28,4 @@ class Debounce<T> extends React.Component<DebounceProps<T>> {
     return this.props.children(this.handleDebounce);
   }
 }
-
 export default Debounce;

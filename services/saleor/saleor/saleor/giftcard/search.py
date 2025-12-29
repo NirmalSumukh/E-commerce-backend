@@ -1,8 +1,9 @@
+from typing import Union
+
 from django.contrib.postgres.search import SearchQuery
 from django.db.models import Q, QuerySet, Value, prefetch_related_objects
 
 from ..account.models import User
-from ..core.db.connection import allow_writer
 from ..core.postgres import FlatConcatSearchVector, NoValidationSearchVector
 from .models import GiftCard
 
@@ -32,7 +33,7 @@ def prepare_gift_card_search_vector_value(
     return search_vectors
 
 
-def mark_gift_cards_search_index_as_dirty(gift_cards: list[GiftCard] | QuerySet):
+def mark_gift_cards_search_index_as_dirty(gift_cards: Union[list[GiftCard], QuerySet]):
     for gift_card in gift_cards:
         gift_card.search_index_dirty = True
     GiftCard.objects.bulk_update(gift_cards, ["search_index_dirty"])
@@ -49,7 +50,6 @@ def mark_gift_cards_search_index_as_dirty_by_users(users: list[User]):
     mark_gift_cards_search_index_as_dirty(gift_cards)
 
 
-@allow_writer()
 def update_gift_cards_search_vector(gift_cards: list[GiftCard]):
     prefetch_related_objects(gift_cards, *GIFTCARD_FIELDS_TO_PREFETCH)
     for gift_card in gift_cards:

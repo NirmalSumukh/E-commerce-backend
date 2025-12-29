@@ -89,6 +89,8 @@ def test_use_multiple_gift_cards_in_checkout_core_1105(
         lines,
         channel_slug,
         email="testEmail@example.com",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
     assert checkout_data["isShippingRequired"] is True

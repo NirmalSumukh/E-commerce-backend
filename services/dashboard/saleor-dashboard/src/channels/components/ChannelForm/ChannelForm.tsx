@@ -13,12 +13,13 @@ import {
   StockSettingsInput,
   TransactionFlowStrategyEnum,
 } from "@dashboard/graphql";
-import { useClipboard } from "@dashboard/hooks/useClipboard";
+import useClipboard from "@dashboard/hooks/useClipboard";
 import { ChangeEvent, FormChange } from "@dashboard/hooks/useForm";
 import { commonMessages } from "@dashboard/intl";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getChannelsErrorMessage from "@dashboard/utils/errors/channels";
 import { Box, Button, CopyIcon, Input, Option, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { AllowUnpaidOrders } from "./AllowUnpaidOrders";
@@ -44,7 +45,7 @@ export interface FormData extends StockSettingsInput {
   automaticallyCompleteCheckouts: boolean;
 }
 
-interface ChannelFormProps {
+export interface ChannelFormProps {
   data: FormData;
   disabled: boolean;
   currencyCodes?: Option[];
@@ -60,7 +61,7 @@ interface ChannelFormProps {
   onAutomaticallyCompleteCheckoutsChange: () => void;
 }
 
-export const ChannelForm = ({
+export const ChannelForm: React.FC<ChannelFormProps> = ({
   currencyCodes,
   data,
   disabled,
@@ -74,7 +75,7 @@ export const ChannelForm = ({
   onMarkAsPaidStrategyChange,
   onTransactionFlowStrategyChange,
   onAutomaticallyCompleteCheckoutsChange,
-}: ChannelFormProps) => {
+}) => {
   const intl = useIntl();
   const [, copy] = useClipboard();
   const formErrors = getFormErrors<keyof FormData, ChannelErrorFragment>(

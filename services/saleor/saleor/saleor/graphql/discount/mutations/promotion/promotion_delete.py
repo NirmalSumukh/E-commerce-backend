@@ -10,6 +10,7 @@ from .....product.utils.product import (
 )
 from .....webhook.event_types import WebhookEventAsyncType
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_317, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ....core.types import Error
 from ....core.utils import WebhookEventInfo
@@ -29,7 +30,7 @@ class PromotionDelete(ModelDeleteMutation):
         )
 
     class Meta:
-        description = "Deletes a promotion."
+        description = "Deletes a promotion." + ADDED_IN_317 + PREVIEW_FEATURE
         model = models.Promotion
         object_type = Promotion
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)

@@ -1,6 +1,7 @@
 import datetime
 
 import graphene
+import pytz
 from django.core.exceptions import ValidationError
 
 from .....core.utils.date_time import convert_to_utc_date_time
@@ -9,12 +10,12 @@ from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import CollectionErrorCode
 from .....product.tasks import collection_product_updated_task
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
-from ....core.descriptions import DEPRECATED_IN_3X_INPUT, RICH_CONTENT
+from ....core.descriptions import ADDED_IN_38, DEPRECATED_IN_3X_INPUT, RICH_CONTENT
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
 from ....core.fields import JSONString
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.scalars import Date
 from ....core.types import (
     BaseInputObjectType,
@@ -25,7 +26,7 @@ from ....core.types import (
 )
 from ....core.validators import clean_seo_fields, validate_slug_and_generate_if_needed
 from ....core.validators.file import clean_image_file
-from ....meta.inputs import MetadataInput, MetadataInputDescription
+from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ...types import Collection
 
@@ -51,14 +52,16 @@ class CollectionInput(BaseInputObjectType):
     )
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the collection metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description=(
+            "Fields required to update the collection metadata." + ADDED_IN_38
+        ),
         required=False,
     )
     private_metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the collection private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description=(
+            "Fields required to update the collection private metadata." + ADDED_IN_38
+        ),
         required=False,
     )
 
@@ -77,7 +80,7 @@ class CollectionCreateInput(CollectionInput):
         doc_category = DOC_CATEGORY_PRODUCTS
 
 
-class CollectionCreate(DeprecatedModelMutation):
+class CollectionCreate(ModelMutation):
     class Arguments:
         input = CollectionCreateInput(
             required=True, description="Fields required to create a collection."
@@ -100,15 +103,15 @@ class CollectionCreate(DeprecatedModelMutation):
             cleaned_input = validate_slug_and_generate_if_needed(
                 instance, "name", cleaned_input
             )
-        except ValidationError as e:
-            e.code = CollectionErrorCode.REQUIRED.value
-            raise ValidationError({"slug": e}) from e
+        except ValidationError as error:
+            error.code = CollectionErrorCode.REQUIRED.value
+            raise ValidationError({"slug": error})
         if data.get("background_image"):
             clean_image_file(cleaned_input, "background_image", CollectionErrorCode)
         is_published = cleaned_input.get("is_published")
         publication_date = cleaned_input.get("publication_date")
         if is_published and not publication_date:
-            cleaned_input["published_at"] = datetime.datetime.now(tz=datetime.UTC)
+            cleaned_input["published_at"] = datetime.datetime.now(pytz.UTC)
         elif publication_date:
             cleaned_input["published_at"] = convert_to_utc_date_time(publication_date)
         clean_seo_fields(cleaned_input)

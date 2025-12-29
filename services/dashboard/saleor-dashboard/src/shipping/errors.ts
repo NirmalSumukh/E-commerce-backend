@@ -21,6 +21,18 @@ const messages = defineMessages({
   },
 });
 
+export function getShippingPriceRateErrorMessage(
+  err: ShippingErrorFragment,
+  intl: IntlShape,
+): string {
+  switch (err?.code) {
+    case ShippingErrorCode.MAX_LESS_THAN_MIN:
+      return intl.formatMessage(messages.price);
+    default:
+      getShippingErrorMessage(err, intl);
+  }
+}
+
 export function getShippingWeightRateErrorMessage(
   err: ShippingErrorFragment,
   intl: IntlShape,

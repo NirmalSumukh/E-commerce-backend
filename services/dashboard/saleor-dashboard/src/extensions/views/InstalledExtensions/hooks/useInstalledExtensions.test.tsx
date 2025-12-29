@@ -3,9 +3,17 @@ import { EventDeliveryStatusEnum } from "@dashboard/graphql";
 import { render, screen } from "@testing-library/react";
 import { renderHook } from "@testing-library/react-hooks";
 import moment from "moment-timezone";
-import * as React from "react";
+import React from "react";
 
 import { getExtensionInfo, useInstalledExtensions } from "./useInstalledExtensions";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+  defineMessages: jest.fn(x => x),
+}));
 
 jest.mock("@dashboard/components/Link", () => {
   // eslint-disable-next-line react/display-name
@@ -18,12 +26,6 @@ jest.mock("@dashboard/hooks/useHasManagedAppsPermission", () => ({
   useHasManagedAppsPermission: jest.fn(() => ({
     hasManagedAppsPermission: true,
   })),
-}));
-
-const useUserPermissionsMock = jest.fn(() => [{ code: "MANAGE_PLUGINS" }, { code: "MANAGE_APPS" }]);
-
-jest.mock("@dashboard/auth/hooks/useUserPermissions", () => ({
-  useUserPermissions: () => useUserPermissionsMock(),
 }));
 
 jest.mock("@dashboard/graphql", () => ({
@@ -105,14 +107,8 @@ jest.mock("@dashboard/featureFlags", () => ({
 }));
 
 describe("InstalledExtensions / hooks / useInstalledExtensions", () => {
-  afterEach(() => {
-    useUserPermissionsMock.mockClear();
-  });
-
-  it("should return list of installed extensions with plugins when user has MANAGE_PLUGINS permission", () => {
+  it("should return list of installed extensions", () => {
     // Arrange
-    useUserPermissionsMock.mockReturnValue([{ code: "MANAGE_PLUGINS" }, { code: "MANAGE_APPS" }]);
-
     const { result } = renderHook(() => useInstalledExtensions());
 
     // Assert
@@ -123,50 +119,26 @@ describe("InstalledExtensions / hooks / useInstalledExtensions", () => {
           name: "Test App",
           logo: expect.any(Object),
           info: null,
-          href: expect.any(String),
+          actions: expect.any(Object),
         },
         {
           id: "2",
           name: "Test App 2",
           logo: expect.any(Object),
           info: expect.any(Object),
-          href: expect.any(String),
+          actions: expect.any(Object),
         },
         {
           id: "plug1",
           name: "Test Plugin",
           logo: expect.any(Object),
           info: null,
-          href: expect.any(String),
+          actions: expect.any(Object),
         },
       ],
       installedAppsLoading: false,
       refetchInstalledApps: expect.any(Function),
     });
-  });
-
-  it("should not return plugins when user doesn't have MANAGE_PLUGINS permission", () => {
-    // Arrange
-    useUserPermissionsMock.mockReturnValue([{ code: "MANAGE_CHANNELS" }]);
-
-    const { result } = renderHook(() => useInstalledExtensions());
-
-    // Assert
-    // Should only return apps, not plugins
-    expect(result.current.installedExtensions).toHaveLength(2);
-    expect(result.current.installedExtensions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: "1", name: "Test App" }),
-        expect.objectContaining({ id: "2", name: "Test App 2" }),
-      ]),
-    );
-
-    // Should not include any plugins
-    expect(result.current.installedExtensions.some(ext => ext.id === "plug1")).toBe(false);
-    expect(result.current.installedExtensions.some(ext => ext.id.startsWith("plug"))).toBe(false);
-
-    // Loading state should be false when apps are loaded, even without MANAGE_PLUGINS permission
-    expect(result.current.installedAppsLoading).toBe(false);
   });
 });
 
@@ -184,7 +156,7 @@ describe("InstalledExtensions / hooks / useInstalledExtensions / getExtensionInf
 
     // Assert
     expect(
-      screen.getByText("Extension disabled. Activate the extension from the settings."),
+      screen.getByText("App disabled. Activate the app from the settings."),
     ).toBeInTheDocument();
   });
 

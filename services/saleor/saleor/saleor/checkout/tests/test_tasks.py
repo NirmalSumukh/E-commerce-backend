@@ -1,5 +1,5 @@
-import datetime
 import logging
+from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 from uuid import UUID
@@ -11,7 +11,7 @@ from django.db.utils import DatabaseError, IntegrityError
 from django.utils import timezone
 
 from ...core.taxes import zero_money
-from ...order import OrderEvents
+from ...order import OrderChargeStatus, OrderEvents
 from ...order.models import Order
 from ...plugins.manager import get_plugins_manager
 from ...product.models import ProductChannelListing, ProductVariantChannelListing
@@ -40,15 +40,15 @@ def test_delete_expired_anonymous_checkouts(checkouts_list, variant, customer_us
     expired_anonymous_checkout = checkouts_list[0]
     expired_anonymous_checkout.email = None
     expired_anonymous_checkout.user = None
-    expired_anonymous_checkout.created_at = now - datetime.timedelta(days=40)
-    expired_anonymous_checkout.last_change = now - datetime.timedelta(days=35)
+    expired_anonymous_checkout.created_at = now - timedelta(days=40)
+    expired_anonymous_checkout.last_change = now - timedelta(days=35)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_anonymous_checkout,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_anonymous_checkout.channel_id, Decimal(11)
+                expired_anonymous_checkout.channel_id, Decimal("11")
             ),
         )
     )
@@ -56,15 +56,15 @@ def test_delete_expired_anonymous_checkouts(checkouts_list, variant, customer_us
     not_expired_checkout_1 = checkouts_list[1]
     not_expired_checkout_1.email = None
     not_expired_checkout_1.user = None
-    not_expired_checkout_1.created_at = now - datetime.timedelta(days=35)
-    not_expired_checkout_1.last_change = now - datetime.timedelta(days=29)
+    not_expired_checkout_1.created_at = now - timedelta(days=35)
+    not_expired_checkout_1.last_change = now - timedelta(days=29)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_1,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_1.channel_id, Decimal(11)
+                not_expired_checkout_1.channel_id, Decimal("11")
             ),
         )
     )
@@ -72,15 +72,15 @@ def test_delete_expired_anonymous_checkouts(checkouts_list, variant, customer_us
     not_expired_checkout_2 = checkouts_list[2]
     not_expired_checkout_2.email = None
     not_expired_checkout_2.user = customer_user
-    not_expired_checkout_2.created_at = now - datetime.timedelta(days=45)
-    not_expired_checkout_2.last_change = now - datetime.timedelta(days=40)
+    not_expired_checkout_2.created_at = now - timedelta(days=45)
+    not_expired_checkout_2.last_change = now - timedelta(days=40)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_2,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_2.channel_id, Decimal(11)
+                not_expired_checkout_2.channel_id, Decimal("11")
             ),
         )
     )
@@ -88,21 +88,21 @@ def test_delete_expired_anonymous_checkouts(checkouts_list, variant, customer_us
     not_expired_checkout_3 = checkouts_list[3]
     not_expired_checkout_3.email = "test@example.com"
     not_expired_checkout_3.user = None
-    not_expired_checkout_3.created_at = now - datetime.timedelta(days=45)
-    not_expired_checkout_3.last_change = now - datetime.timedelta(days=40)
+    not_expired_checkout_3.created_at = now - timedelta(days=45)
+    not_expired_checkout_3.last_change = now - timedelta(days=40)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_3,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_3.channel_id, Decimal(11)
+                not_expired_checkout_3.channel_id, Decimal("11")
             ),
         )
     )
 
     empty_checkout = checkouts_list[4]
-    empty_checkout.last_change = now - datetime.timedelta(hours=8)
+    empty_checkout.last_change = now - timedelta(hours=8)
     assert empty_checkout.lines.count() == 0
 
     CheckoutLine.objects.bulk_create(lines_to_create)
@@ -140,15 +140,15 @@ def test_delete_expired_user_checkouts(checkouts_list, variant, customer_user):
     expired_user_checkout_1 = checkouts_list[0]
     expired_user_checkout_1.email = None
     expired_user_checkout_1.user = customer_user
-    expired_user_checkout_1.created_at = now - datetime.timedelta(days=100)
-    expired_user_checkout_1.last_change = now - datetime.timedelta(days=98)
+    expired_user_checkout_1.created_at = now - timedelta(days=100)
+    expired_user_checkout_1.last_change = now - timedelta(days=98)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_user_checkout_1,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_user_checkout_1.channel_id, Decimal(11)
+                expired_user_checkout_1.channel_id, Decimal("11")
             ),
         )
     )
@@ -156,15 +156,15 @@ def test_delete_expired_user_checkouts(checkouts_list, variant, customer_user):
     expired_user_checkout_2 = checkouts_list[1]
     expired_user_checkout_2.email = "test@example.com"
     expired_user_checkout_2.user = None
-    expired_user_checkout_2.created_at = now - datetime.timedelta(days=100)
-    expired_user_checkout_2.last_change = now - datetime.timedelta(days=91)
+    expired_user_checkout_2.created_at = now - timedelta(days=100)
+    expired_user_checkout_2.last_change = now - timedelta(days=91)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_user_checkout_2,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_user_checkout_2.channel_id, Decimal(11)
+                expired_user_checkout_2.channel_id, Decimal("11")
             ),
         )
     )
@@ -172,15 +172,15 @@ def test_delete_expired_user_checkouts(checkouts_list, variant, customer_user):
     not_expired_checkout_1 = checkouts_list[2]
     not_expired_checkout_1.email = None
     not_expired_checkout_1.user = None
-    not_expired_checkout_1.created_at = now - datetime.timedelta(days=35)
-    not_expired_checkout_1.last_change = now - datetime.timedelta(days=29)
+    not_expired_checkout_1.created_at = now - timedelta(days=35)
+    not_expired_checkout_1.last_change = now - timedelta(days=29)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_1,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_1.channel_id, Decimal(11)
+                not_expired_checkout_1.channel_id, Decimal("11")
             ),
         )
     )
@@ -188,15 +188,15 @@ def test_delete_expired_user_checkouts(checkouts_list, variant, customer_user):
     not_expired_checkout_2 = checkouts_list[3]
     not_expired_checkout_2.email = "test@example.com"
     not_expired_checkout_2.user = None
-    not_expired_checkout_2.created_at = now - datetime.timedelta(days=100)
-    not_expired_checkout_2.last_change = now - datetime.timedelta(days=60)
+    not_expired_checkout_2.created_at = now - timedelta(days=100)
+    not_expired_checkout_2.last_change = now - timedelta(days=60)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_2,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_2.channel_id, Decimal(11)
+                not_expired_checkout_2.channel_id, Decimal("11")
             ),
         )
     )
@@ -204,15 +204,15 @@ def test_delete_expired_user_checkouts(checkouts_list, variant, customer_user):
     not_expired_checkout_3 = checkouts_list[4]
     not_expired_checkout_3.email = None
     not_expired_checkout_3.user = customer_user
-    not_expired_checkout_3.created_at = now - datetime.timedelta(days=100)
-    not_expired_checkout_3.last_change = now - datetime.timedelta(days=89)
+    not_expired_checkout_3.created_at = now - timedelta(days=100)
+    not_expired_checkout_3.last_change = now - timedelta(days=89)
     lines_to_create.append(
         CheckoutLine(
             checkout=not_expired_checkout_3,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                not_expired_checkout_3.channel_id, Decimal(11)
+                not_expired_checkout_3.channel_id, Decimal("11")
             ),
         )
     )
@@ -244,21 +244,21 @@ def test_delete_empty_checkouts(checkouts_list, customer_user, variant):
     checkout_count = Checkout.objects.count()
 
     empty_checkout_1 = checkouts_list[0]
-    empty_checkout_1.last_change = now - datetime.timedelta(hours=8)
+    empty_checkout_1.last_change = now - timedelta(hours=8)
     assert empty_checkout_1.lines.count() == 0
 
     empty_checkout_2 = checkouts_list[1]
     empty_checkout_2.email = "test@example.com"
     empty_checkout_2.user = customer_user
-    empty_checkout_2.last_change = now - datetime.timedelta(hours=8)
+    empty_checkout_2.last_change = now - timedelta(hours=8)
     assert empty_checkout_2.lines.count() == 0
 
     empty_checkout_3 = checkouts_list[2]
-    empty_checkout_3.last_change = now - datetime.timedelta(hours=2)
+    empty_checkout_3.last_change = now - timedelta(hours=2)
     assert empty_checkout_3.lines.count() == 0
 
     not_empty_checkout = checkouts_list[3]
-    not_empty_checkout.last_change = now - datetime.timedelta(days=2)
+    not_empty_checkout.last_change = now - timedelta(days=2)
     not_empty_checkout.lines.create(
         checkout=not_empty_checkout,
         variant=variant,
@@ -296,36 +296,36 @@ def test_delete_expired_checkouts(checkouts_list, customer_user, variant):
 
     expired_anonymous_checkout = checkouts_list[0]
     expired_anonymous_checkout.email = None
-    expired_anonymous_checkout.created_at = now - datetime.timedelta(days=40)
-    expired_anonymous_checkout.last_change = now - datetime.timedelta(days=35)
+    expired_anonymous_checkout.created_at = now - timedelta(days=40)
+    expired_anonymous_checkout.last_change = now - timedelta(days=35)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_anonymous_checkout,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_anonymous_checkout.channel_id, Decimal(11)
+                expired_anonymous_checkout.channel_id, Decimal("11")
             ),
         )
     )
 
     expired_user_checkout = checkouts_list[2]
     expired_user_checkout.user = customer_user
-    expired_user_checkout.created_at = now - datetime.timedelta(days=100)
-    expired_user_checkout.last_change = now - datetime.timedelta(days=95)
+    expired_user_checkout.created_at = now - timedelta(days=100)
+    expired_user_checkout.last_change = now - timedelta(days=95)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_user_checkout,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_user_checkout.channel_id, Decimal(11)
+                expired_user_checkout.channel_id, Decimal("11")
             ),
         )
     )
 
     empty_checkout = checkouts_list[4]
-    empty_checkout.last_change = now - datetime.timedelta(hours=8)
+    empty_checkout.last_change = now - timedelta(hours=8)
     assert empty_checkout.lines.count() == 0
 
     CheckoutLine.objects.bulk_create(lines_to_create)
@@ -396,15 +396,18 @@ def test_delete_expired_checkouts_doesnt_delete_when_transaction_amount_exists(
 
     expired_anonymous_checkout = checkouts_list[0]
     expired_anonymous_checkout.email = None
-    expired_anonymous_checkout.created_at = now - datetime.timedelta(days=40)
-    expired_anonymous_checkout.last_change = now - datetime.timedelta(days=35)
+    expired_anonymous_checkout.created_at = now - timedelta(days=40)
+    expired_anonymous_checkout.last_change = now - timedelta(days=35)
+    expired_anonymous_checkout.lines.create(
+        checkout=expired_anonymous_checkout, variant=variant, quantity=1
+    )
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_anonymous_checkout,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_anonymous_checkout.channel_id, Decimal(11)
+                expired_anonymous_checkout.channel_id, Decimal("11")
             ),
         )
     )
@@ -420,7 +423,7 @@ def test_delete_expired_checkouts_doesnt_delete_when_transaction_amount_exists(
     )
 
     empty_checkout = checkouts_list[1]
-    empty_checkout.last_change = now - datetime.timedelta(hours=8)
+    empty_checkout.last_change = now - timedelta(hours=8)
     assert empty_checkout.lines.count() == 0
     empty_checkout.payment_transactions.create(
         authorized_value=Decimal(authorized),
@@ -436,15 +439,15 @@ def test_delete_expired_checkouts_doesnt_delete_when_transaction_amount_exists(
     expired_user_checkout = checkouts_list[2]
     expired_user_checkout.email = None
     expired_user_checkout.user = customer_user
-    expired_user_checkout.created_at = now - datetime.timedelta(days=100)
-    expired_user_checkout.last_change = now - datetime.timedelta(days=98)
+    expired_user_checkout.created_at = now - timedelta(days=100)
+    expired_user_checkout.last_change = now - timedelta(days=98)
     lines_to_create.append(
         CheckoutLine(
             checkout=expired_user_checkout,
             variant=variant,
             quantity=1,
             undiscounted_unit_price_amount=variant_listings_map.get(
-                expired_user_checkout.channel_id, Decimal(11)
+                expired_user_checkout.channel_id, Decimal("11")
             ),
         )
     )
@@ -512,7 +515,7 @@ def test_delete_checkouts_until_done(mocked_task: mock.MagicMock, channel_USD):
             for checkout_id in range(7)
         ]
     )
-    Checkout.objects.update(last_change=timezone.now() - datetime.timedelta(hours=7))
+    Checkout.objects.update(last_change=timezone.now() - timedelta(hours=7))
 
     task_params = {
         "batch_size": 2,
@@ -527,9 +530,9 @@ def test_delete_checkouts_until_done(mocked_task: mock.MagicMock, channel_USD):
     )
     assert deleted_count == 6
     assert has_more is True
-    assert Checkout.objects.count() == 1, (
-        "Should have deleted 6 checkouts thus only 1 should be left"
-    )
+    assert (
+        Checkout.objects.count() == 1
+    ), "Should have deleted 6 checkouts thus only 1 should be left"
 
     # Should have triggered a new task to delete more checkouts
     mocked_task.assert_called_once_with(**task_params, invocation_count=2)
@@ -541,9 +544,9 @@ def test_delete_checkouts_until_done(mocked_task: mock.MagicMock, channel_USD):
     )
     assert deleted_count == 1
     assert has_more is False
-    assert Checkout.objects.count() == 0, (
-        "Should have deleted the last remaining checkout (one)"
-    )
+    assert (
+        Checkout.objects.count() == 0
+    ), "Should have deleted the last remaining checkout (one)"
 
     # Shouldn't have triggered a new task as nothing is left to be deleted.
     mocked_task.assert_not_called()
@@ -566,7 +569,7 @@ def test_aborts_deleting_checkouts_when_invocation_count_exhausted(
             for checkout_id in range(3)
         ]
     )
-    Checkout.objects.update(last_change=timezone.now() - datetime.timedelta(hours=7))
+    Checkout.objects.update(last_change=timezone.now() - timedelta(hours=7))
 
     mocked_task.assert_not_called()
     task_params = {
@@ -613,8 +616,20 @@ def test_automatic_checkout_completion_task_transaction_flow(
     parent_logger = task_logger.parent
     parent_logger.propagate = True
 
+    manager = get_plugins_manager(allow_replica=False)
+    lines, _ = fetch_checkout_lines(checkout)
+    checkout_info = fetch_checkout_info(checkout, lines, manager)
+    total = calculations.checkout_total(
+        manager=manager,
+        checkout_info=checkout_info,
+        lines=lines,
+        address=checkout.shipping_address,
+    )
     transaction_item_generator(
-        checkout_id=checkout.pk, charged_value=checkout.total.gross.amount
+        checkout_id=checkout.pk, charged_value=total.gross.amount
+    )
+    update_checkout_payment_statuses(
+        checkout, zero_money(checkout.currency), checkout_has_lines=True
     )
 
     # when
@@ -625,6 +640,7 @@ def test_automatic_checkout_completion_task_transaction_flow(
     assert not Checkout.objects.filter(pk=checkout_pk).exists()
     order = Order.objects.filter(checkout_token=checkout_pk).first()
     assert order
+    assert order.charge_status == OrderChargeStatus.FULL
     assert order.events.filter(
         type=OrderEvents.PLACED_AUTOMATICALLY_FROM_PAID_CHECKOUT
     ).exists()
@@ -862,7 +878,7 @@ def test_automatic_checkout_completion_task_checkout_error_task_retried(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -941,7 +957,7 @@ def test_automatic_checkout_completion_task_checkout_deleted_in_meantime(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,

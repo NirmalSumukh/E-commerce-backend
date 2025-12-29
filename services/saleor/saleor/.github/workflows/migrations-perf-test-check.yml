@@ -15,10 +15,10 @@ jobs:
   # - skip migrations perf test - whenever migrations don't require performance
   #   tests(e.g. when migrations are run in celery tasks)
   # - migrations perf test - whenever migrations require performance tests
-  check-migrations-perf-test-decision:
+  changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: Check if the decision about migrations perf test was made
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip migrations perf test') && !contains(github.event.pull_request.labels.*.name, 'migrations perf test') }}
         run: exit 1

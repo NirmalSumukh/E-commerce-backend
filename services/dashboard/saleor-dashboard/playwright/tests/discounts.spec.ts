@@ -108,8 +108,7 @@ const rewardValue = "10";
 const channelName = CHANNELS.channelPLN.name;
 
 for (const { promotionRule, predicateValue } of predicateValues) {
-  // Skipping tests as after update to React 18 playwright has issues with selecting channels from promotion rule dropdown.
-  test.skip(`TC: SALEOR_155 Create ${promotionRule} rule for ${predicateValue} in a catalogue promotion #discounts #e2e`, async () => {
+  test(`TC: SALEOR_155 Create ${promotionRule} rule for ${predicateValue} in a catalogue promotion #discounts #e2e`, async () => {
     await discounts.gotoExistingDiscount(promotion.id);
     await discounts.ruleSection.waitFor({
       state: "visible",
@@ -156,8 +155,7 @@ const notEqConditions = [conditionLte, conditionGte];
 const orderPromotion = DISCOUNTS.orderPromotion;
 
 for (const { conditionType, value, conditionDesc } of notEqConditions) {
-  // Skipping tests as after update to React 18 playwright has issues with selecting channels from promotion rule dropdown.
-  test.skip(`TC: SALEOR_157 Create subtotal type rule with multiple conditions with ${conditionDesc} in order promotion #discounts #e2e`, async () => {
+  test(`TC: SALEOR_157 Create subtotal type rule with multiple conditions with ${conditionDesc} in order promotion #discounts #e2e`, async () => {
     await discounts.gotoExistingDiscount(orderPromotion.id);
     await discounts.ruleSection.waitFor({
       state: "visible",
@@ -180,7 +178,7 @@ for (const { conditionType, value, conditionDesc } of notEqConditions) {
     await discounts.promotionRuleDialog.typeRuleConditionValue("100.00");
     await discounts.promotionRuleDialog.clickAddRuleConditionButton();
     await discounts.promotionRuleDialog.clickRuleConditionPredicateDropdown();
-    await discounts.promotionRuleDialog.selectPredicate("Total price");
+    await discounts.promotionRuleDialog.selectPredicate("Total price", 1);
     await discounts.promotionRuleDialog.selectRuleConditionType(conditionType);
     await discounts.promotionRuleDialog.typeRuleConditionValue(value, 1);
     await discounts.promotionRuleDialog.clickSaveRuleButton();
@@ -198,8 +196,7 @@ const condition2 = { condition: "Total", gte: "20.00", lte: "50.00" };
 const conditionsBetween = [condition1, condition2];
 
 for (const { condition, lte, gte } of conditionsBetween) {
-  // Skipping tests as after update to React 18 playwright has issues with selecting channels from promotion rule dropdown.
-  test.skip(`TC: SALEOR_160 Create gift reward rule with ${condition} between ${gte} and ${lte} in order promotion #discounts #e2e`, async () => {
+  test(`TC: SALEOR_160 Create gift reward rule with ${condition} between ${gte} and ${lte} in order promotion #discounts #e2e`, async () => {
     await discounts.gotoExistingDiscount(orderPromotion.id);
     await discounts.ruleSection.waitFor({
       state: "visible",
@@ -253,7 +250,7 @@ for (const rule of orderRules) {
     if (await discounts.promotionRuleDialog.ruleConditionRow.isVisible()) {
       await discounts.promotionRuleDialog.clickAddRuleConditionButton();
       await discounts.promotionRuleDialog.clickRuleConditionPredicateDropdown();
-      await discounts.promotionRuleDialog.selectPredicate("Total price");
+      await discounts.promotionRuleDialog.selectPredicate("Total price", 1);
       await discounts.promotionRuleDialog.typeRuleConditionValue("13.33", 1);
       await discounts.promotionRuleDialog.typeRewardValue("1.00");
       await discounts.promotionRuleDialog.clickSaveEditedRuleButton();

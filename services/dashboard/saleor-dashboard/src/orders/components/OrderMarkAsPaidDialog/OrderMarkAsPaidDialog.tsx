@@ -5,10 +5,10 @@ import useModalDialogErrors from "@dashboard/hooks/useModalDialogErrors";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import { TextField } from "@material-ui/core";
 import { Box, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface OrderMarkAsPaidDialogProps {
+export interface OrderMarkAsPaidDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   errors: OrderErrorFragment[];
   open: boolean;
@@ -18,7 +18,7 @@ interface OrderMarkAsPaidDialogProps {
   handleTransactionReference: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const OrderMarkAsPaidDialog = ({
+const OrderMarkAsPaidDialog: React.FC<OrderMarkAsPaidDialogProps> = ({
   confirmButtonState,
   errors: apiErrors,
   handleTransactionReference,
@@ -26,7 +26,7 @@ const OrderMarkAsPaidDialog = ({
   onConfirm,
   open,
   transactionReference,
-}: OrderMarkAsPaidDialogProps) => {
+}) => {
   const intl = useIntl();
   const errors = useModalDialogErrors(apiErrors, open);
 
@@ -43,11 +43,13 @@ const OrderMarkAsPaidDialog = ({
       onConfirm={onConfirm}
     >
       <Box display="grid" gap={4}>
-        <FormattedMessage id="sfEbeB" defaultMessage="You're going to mark this order as paid." />{" "}
+        <FormattedMessage id="sfEbeB" defaultMessage="You're going to mark this order as paid." />
+
         <FormattedMessage
           id="rwOx2s"
           defaultMessage="Please provide a transaction reference using the input below:"
         />
+
         <TextField
           fullWidth
           name="transactionReference"
@@ -60,6 +62,7 @@ const OrderMarkAsPaidDialog = ({
           onChange={handleTransactionReference}
           data-test-id="transaction-reference-input"
         />
+
         {errors.length > 0 && (
           <Box display="grid" gap={1}>
             {errors.map((err, index) => (

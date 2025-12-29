@@ -1,8 +1,7 @@
-import datetime
 import json
 import uuid
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import graphene
 from django.core.serializers.json import DjangoJSONEncoder
@@ -12,7 +11,6 @@ from graphene.utils.str_converters import to_camel_case as str_to_camel_case
 from graphql import get_operation_ast
 
 from ...core.utils import build_absolute_uri
-from ...core.utils.url import sanitize_url_for_logging
 from .. import traced_payload_generator
 from ..event_types import WebhookEventSyncType
 from .exceptions import ApiCallTruncationError, EventDeliveryAttemptTruncationError
@@ -20,6 +18,7 @@ from .obfuscation import (
     anonymize_event_payload,
     anonymize_gql_operation_response,
     filter_and_hide_headers,
+    obfuscate_url,
 )
 from .payload_schema import (
     ApiCallPayload,
@@ -40,6 +39,8 @@ from .payload_schema import (
 from .sensitive_data import SENSITIVE_GQL_FIELDS
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from ...core.models import EventDeliveryAttempt
     from .utils import GraphQLOperationResponse
 
@@ -88,7 +89,7 @@ GQL_OPERATION_PLACEHOLDER = GraphQLOperation(
 GQL_OPERATION_PLACEHOLDER_SIZE = len(dump_payload(GQL_OPERATION_PLACEHOLDER))
 
 
-def serialize_headers(headers: dict[str, str] | None) -> HttpHeaders:
+def serialize_headers(headers: Optional[dict[str, str]]) -> HttpHeaders:
     if headers:
         return list(filter_and_hide_headers(headers).items())
     return []
@@ -193,7 +194,7 @@ def generate_api_call_payload(
 @traced_payload_generator
 def generate_event_delivery_attempt_payload(
     attempt: "EventDeliveryAttempt",
-    next_retry: datetime.datetime | None,
+    next_retry: Optional["datetime"],
     bytes_limit: int,
 ) -> bytes:
     if not attempt.delivery:
@@ -237,7 +238,7 @@ def generate_event_delivery_attempt_payload(
         webhook=Webhook(
             id=graphene.Node.to_global_id("Webhook", attempt.delivery.webhook.pk),
             name=attempt.delivery.webhook.name or "",
-            target_url=sanitize_url_for_logging(attempt.delivery.webhook.target_url),
+            target_url=obfuscate_url(attempt.delivery.webhook.target_url),
             subscription_query=TRUNC_PLACEHOLDER,
         ),
         app=App(

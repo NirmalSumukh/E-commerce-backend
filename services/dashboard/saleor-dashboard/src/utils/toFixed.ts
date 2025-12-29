@@ -1,4 +1,4 @@
-export function toFixed(num: string | number, fixed: number): string {
+export function toFixed(num: string | number, fixed: number) {
   if (num === "" || num === null) {
     return "";
   }

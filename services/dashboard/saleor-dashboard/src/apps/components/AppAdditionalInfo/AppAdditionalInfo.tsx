@@ -1,18 +1,15 @@
 import { AppPermissionFragment } from "@dashboard/graphql";
 import { Box, InfoIcon, Text, Tooltip } from "@saleor/macaw-ui-next";
 import moment from "moment";
-import { PropsWithChildren } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { messages } from "./messages";
 
-export const AppAdditionalInfo = ({
-  permissions,
-  created,
-}: PropsWithChildren<{
+export const AppAdditionalInfo: React.FC<{
   permissions?: AppPermissionFragment[] | null;
   created: string | null;
-}>) => {
+}> = ({ permissions, created }) => {
   return (
     <Tooltip>
       <Tooltip.Trigger>

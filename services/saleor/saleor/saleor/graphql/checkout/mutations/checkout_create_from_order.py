@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 import graphene
 from django.contrib.sites.models import Site
@@ -13,7 +13,7 @@ from ....product.models import ProductVariant
 from ....warehouse.availability import check_stock_and_preorder_quantity_bulk
 from ....warehouse.reservations import get_reservation_length, is_reservation_enabled
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import ADDED_IN_314, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_CHECKOUT
 from ...core.mutations import BaseMutation
 from ...core.types import BaseObjectType, Error, common
@@ -73,7 +73,9 @@ class CheckoutCreateFromOrder(BaseMutation):
         )
 
     class Meta:
-        description = "Creates a new checkout from existing order."
+        description = (
+            "Create new checkout from existing order." + ADDED_IN_314 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_CHECKOUT
         error_type_class = CheckoutCreateFromOrderError
 
@@ -201,7 +203,7 @@ class CheckoutCreateFromOrder(BaseMutation):
         variant_ids_set: set[int],
         order_lines: list[order_models.OrderLine],
         variant_errors: list[dict[str, Any]],
-        global_quantity_limit: int | None,
+        global_quantity_limit: Optional[int],
     ) -> set[int]:
         variant_ids_to_exclude = []
         error_codes = CheckoutCreateFromOrderUnavailableVariantErrorCode
@@ -230,10 +232,12 @@ class CheckoutCreateFromOrder(BaseMutation):
         cls,
         order: order_models.Order,
         order_lines: list[order_models.OrderLine],
-        global_quantity_limit: int | None,
+        global_quantity_limit: Optional[int],
     ) -> tuple[set[int], list[order_models.OrderLine], list[dict[str, Any]]]:
         variant_errors: list[dict[str, Any]] = []
-        variant_ids_set = {line.variant_id for line in order_lines if line.variant_id}
+        variant_ids_set = set(
+            [line.variant_id for line in order_lines if line.variant_id]
+        )
         channel_id = (order.channel_id,)
         channel_id = cast(int, channel_id)
 
@@ -334,7 +338,7 @@ class CheckoutCreateFromOrder(BaseMutation):
                 item.variant.pk: item for item in e.items if item.variant
             }
             variant_ids_set = variant_ids_set - set(
-                variants_with_insufficient_stock.keys()
+                list(variants_with_insufficient_stock.keys())
             )
             error_codes = CheckoutCreateFromOrderUnavailableVariantErrorCode
             for line in available_order_lines:
@@ -422,6 +426,5 @@ class CheckoutCreateFromOrder(BaseMutation):
             )
         apply_gift_reward_if_applicable_on_checkout_creation(checkout)
         return CheckoutCreateFromOrder(
-            checkout=SyncWebhookControlContext(node=checkout),
-            unavailable_variants=variant_errors,
+            checkout=checkout, unavailable_variants=variant_errors
         )

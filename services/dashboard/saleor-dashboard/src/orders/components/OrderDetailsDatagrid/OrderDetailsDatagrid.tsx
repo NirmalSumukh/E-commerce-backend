@@ -11,7 +11,7 @@ import useListSettings from "@dashboard/hooks/useListSettings";
 import { productPath } from "@dashboard/products/urls";
 import { ListViews } from "@dashboard/types";
 import { ExternalLinkIcon } from "@saleor/macaw-ui-next";
-import { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
@@ -23,14 +23,12 @@ interface OrderDetailsDatagridProps {
   lines: OrderLineFragment[];
   loading: boolean;
   onShowMetadata: (id: string) => void;
-  enableVerticalBorder?: boolean;
 }
 
 export const OrderDetailsDatagrid = ({
   lines,
   loading,
   onShowMetadata,
-  enableVerticalBorder = true,
 }: OrderDetailsDatagridProps) => {
   const intl = useIntl();
   const datagrid = useDatagridChangeState();
@@ -87,7 +85,6 @@ export const OrderDetailsDatagrid = ({
         columnSelect="single"
         freezeColumns={1}
         availableColumns={visibleColumns}
-        verticalBorder={enableVerticalBorder}
         emptyText={intl.formatMessage(orderMessages.emptyText)}
         getCellContent={getCellContent}
         getCellError={() => false}

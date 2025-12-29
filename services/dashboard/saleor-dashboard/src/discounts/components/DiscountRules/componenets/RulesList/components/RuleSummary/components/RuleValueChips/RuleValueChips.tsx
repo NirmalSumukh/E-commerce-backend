@@ -5,6 +5,7 @@ import { Rule } from "@dashboard/discounts/models";
 import { RewardTypeEnum, RewardValueTypeEnum } from "@dashboard/graphql";
 import useLocale from "@dashboard/hooks/useLocale";
 import { Chip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface RuleValueChipsProps {

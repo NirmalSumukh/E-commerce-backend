@@ -9,7 +9,6 @@ from ....permission.enums import OrderPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.types import OrderError
@@ -75,7 +74,4 @@ class FulfillmentUpdateTracking(BaseMutation):
         if notify_customer:
             send_fulfillment_update(order, fulfillment, manager)
 
-        return FulfillmentUpdateTracking(
-            fulfillment=SyncWebhookControlContext(node=fulfillment),
-            order=SyncWebhookControlContext(order),
-        )
+        return FulfillmentUpdateTracking(fulfillment=fulfillment, order=order)

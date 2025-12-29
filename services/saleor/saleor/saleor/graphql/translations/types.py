@@ -1,4 +1,3 @@
-from itertools import chain
 from typing import TypeVar
 
 import graphene
@@ -17,25 +16,20 @@ from ...permission.enums import (
     ProductPermissions,
     ShippingPermissions,
 )
-from ...permission.utils import all_permissions_required
 from ...product import models as product_models
 from ...shipping import models as shipping_models
 from ...site import models as site_models
-from ..attribute.dataloaders.assigned_attributes import (
-    AttributesByAttributeId,
-    AttributesByPageIdAndLimitLoader,
-    AttributesByProductIdAndLimitLoader,
-    AttributesByProductVariantIdAndSelectionAndLimitLoader,
-    AttributesVisibleToCustomerByPageIdAndLimitLoader,
-    AttributesVisibleToCustomerByProductIdAndLimitLoader,
-    AttributesVisibleToCustomerByProductVariantIdAndSelectionAndLimitLoader,
-    AttributeValueByIdLoader,
-    AttributeValuesByPageIdAndAttributeIdAndLimitLoader,
-    AttributeValuesByProductIdAndAttributeIdAndLimitLoader,
-    AttributeValuesByVariantIdAndAttributeIdAndLimitLoader,
+from ..attribute.dataloaders import AttributesByAttributeId, AttributeValueByIdLoader
+from ..channel import ChannelContext
+from ..core.context import get_database_connection_name
+from ..core.descriptions import (
+    ADDED_IN_39,
+    ADDED_IN_314,
+    ADDED_IN_317,
+    DEPRECATED_IN_3X_FIELD,
+    DEPRECATED_IN_3X_TYPE,
+    RICH_CONTENT,
 )
-from ..core.context import ChannelContext, get_database_connection_name
-from ..core.descriptions import ADDED_IN_321, DEPRECATED_IN_3X_TYPE, RICH_CONTENT
 from ..core.enums import LanguageCodeEnum
 from ..core.fields import JSONString, PermissionsField
 from ..core.tracing import traced_resolver
@@ -49,28 +43,34 @@ from ..discount.dataloaders import (
 from ..menu.dataloaders import MenuItemByIdLoader
 from ..page.dataloaders import (
     PageByIdLoader,
+    SelectedAttributesAllByPageIdLoader,
+    SelectedAttributesVisibleInStorefrontPageIdLoader,
 )
 from ..product.dataloaders import (
     CategoryByIdLoader,
     CollectionByIdLoader,
     ProductByIdLoader,
     ProductVariantByIdLoader,
+    SelectedAttributesAllByProductIdLoader,
+    SelectedAttributesByProductVariantIdLoader,
+    SelectedAttributesVisibleInStorefrontByProductIdLoader,
 )
 from ..shipping.dataloaders import ShippingMethodByIdLoader
+from ..utils import get_user_or_app_from_context
 from .fields import TranslationField
 
-type ATTRIBUTE_ID = int
 
+def get_translatable_attribute_values(attributes: list) -> list[AttributeValue]:
+    """Filter the list of passed attributes.
 
-def get_translatable_attribute_values(
-    attributes: list[attribute_models.Attribute],
-) -> list[ATTRIBUTE_ID]:
-    attribute_ids = []
-    for attribute in attributes:
-        if attribute.input_type not in AttributeInputType.TRANSLATABLE_ATTRIBUTES:
-            continue
-        attribute_ids.append(attribute.id)
-    return attribute_ids
+    Return those which are translatable attributes.
+    """
+    translatable_values: list[AttributeValue] = []
+    for assignment in attributes:
+        attr = assignment["attribute"]
+        if attr.input_type in AttributeInputType.TRANSLATABLE_ATTRIBUTES:
+            translatable_values.extend(assignment["values"])
+    return translatable_values
 
 
 T = TypeVar("T", bound=Model)
@@ -115,7 +115,8 @@ class AttributeValueTranslation(
     plain_text = graphene.String(description="Translated plain text attribute value .")
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.AttributeValueTranslatableContent",
-        description="Represents the attribute value fields to translate.",
+        description="Represents the attribute value fields to translate."
+        + ADDED_IN_314,
     )
 
     class Meta:
@@ -137,7 +138,7 @@ class AttributeTranslation(BaseTranslationType[attribute_models.AttributeTransla
     name = graphene.String(required=True, description="Translated attribute name.")
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.AttributeTranslatableContent",
-        description="Represents the attribute fields to translate.",
+        description="Represents the attribute fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -155,7 +156,8 @@ class AttributeTranslatableContent(ModelObjectType[attribute_models.Attribute]):
         required=True, description="The ID of the attribute translatable content."
     )
     attribute_id = graphene.ID(
-        required=True, description="The ID of the attribute to translate."
+        required=True,
+        description="The ID of the attribute to translate." + ADDED_IN_314,
     )
     name = graphene.String(
         required=True, description="Name of the attribute to translate."
@@ -164,7 +166,9 @@ class AttributeTranslatableContent(ModelObjectType[attribute_models.Attribute]):
     attribute = graphene.Field(
         "saleor.graphql.attribute.types.Attribute",
         description="Custom attribute of a product.",
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
 
     class Meta:
@@ -177,7 +181,7 @@ class AttributeTranslatableContent(ModelObjectType[attribute_models.Attribute]):
 
     @staticmethod
     def resolve_attribute(root: attribute_models.Attribute, _info):
-        return ChannelContext(node=root, channel_slug=None)
+        return root
 
     @staticmethod
     def resolve_attribute_id(root: attribute_models.Attribute, _info):
@@ -192,7 +196,7 @@ class AttributeValueTranslatableContent(
     )
     attribute_value_id = graphene.ID(
         required=True,
-        description="The ID of the attribute value to translate.",
+        description="The ID of the attribute value to translate." + ADDED_IN_314,
     )
     name = graphene.String(
         required=True,
@@ -206,11 +210,13 @@ class AttributeValueTranslatableContent(
     attribute_value = graphene.Field(
         "saleor.graphql.attribute.types.AttributeValue",
         description="Represents a value of an attribute.",
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
     attribute = graphene.Field(
         AttributeTranslatableContent,
-        description="Associated attribute that can be translated.",
+        description="Associated attribute that can be translated." + ADDED_IN_39,
     )
 
     class Meta:
@@ -223,7 +229,7 @@ class AttributeValueTranslatableContent(
 
     @staticmethod
     def resolve_attribute_value(root: attribute_models.AttributeValue, _info):
-        return ChannelContext(node=root, channel_slug=None)
+        return root
 
     @staticmethod
     def resolve_attribute(root: attribute_models.AttributeValue, info):
@@ -245,7 +251,8 @@ class ProductVariantTranslation(
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.ProductVariantTranslatableContent",
-        description="Represents the product variant fields to translate.",
+        description="Represents the product variant fields to translate."
+        + ADDED_IN_314,
     )
 
     class Meta:
@@ -265,7 +272,8 @@ class ProductVariantTranslatableContent(ModelObjectType[product_models.ProductVa
         required=True, description="The ID of the product variant translatable content."
     )
     product_variant_id = graphene.ID(
-        required=True, description="The ID of the product variant to translate."
+        required=True,
+        description="The ID of the product variant to translate." + ADDED_IN_314,
     )
     name = graphene.String(
         required=True,
@@ -279,7 +287,9 @@ class ProductVariantTranslatableContent(ModelObjectType[product_models.ProductVa
         description=(
             "Represents a version of a product such as different size or color."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
     attribute_values = NonNullList(
         AttributeValueTranslatableContent,
@@ -301,34 +311,10 @@ class ProductVariantTranslatableContent(ModelObjectType[product_models.ProductVa
 
     @staticmethod
     def resolve_attribute_values(root: product_models.ProductVariant, info):
-        def with_attribute_values(attribute_values: list[list[AttributeValue]]):
-            return list(chain.from_iterable(attribute_values))
-
-        def with_attributes(attributes: list[attribute_models.Attribute]):
-            attribute_ids = get_translatable_attribute_values(attributes)
-            limit = None
-            return (
-                AttributeValuesByVariantIdAndAttributeIdAndLimitLoader(info.context)
-                .load_many(
-                    [(root.id, attribute_id, limit) for attribute_id in attribute_ids]
-                )
-                .then(with_attribute_values)
-            )
-
-        variant_selection = None
-        limit = None
-        if all_permissions_required(info.context, [ProductPermissions.MANAGE_PRODUCTS]):
-            return (
-                AttributesByProductVariantIdAndSelectionAndLimitLoader(info.context)
-                .load((root.id, variant_selection, limit))
-                .then(with_attributes)
-            )
         return (
-            AttributesVisibleToCustomerByProductVariantIdAndSelectionAndLimitLoader(
-                info.context
-            )
-            .load((root.id, variant_selection, limit))
-            .then(with_attributes)
+            SelectedAttributesByProductVariantIdLoader(info.context)
+            .load(root.id)
+            .then(get_translatable_attribute_values)
         )
 
     @staticmethod
@@ -342,18 +328,19 @@ class ProductTranslation(BaseTranslationType[product_models.ProductTranslation])
     )
     seo_title = graphene.String(description="Translated SEO title.")
     seo_description = graphene.String(description="Translated SEO description.")
-    slug = graphene.String(description="Translated product slug." + ADDED_IN_321)
     name = graphene.String(description="Translated product name.")
     description = JSONString(
         description="Translated description of the product." + RICH_CONTENT
     )
     description_json = JSONString(
         description="Translated description of the product." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.ProductTranslatableContent",
-        description="Represents the product fields to translate.",
+        description="Represents the product fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -377,24 +364,27 @@ class ProductTranslatableContent(ModelObjectType[product_models.Product]):
     )
     product_id = graphene.ID(
         required=True,
-        description="The ID of the product to translate.",
+        description="The ID of the product to translate." + ADDED_IN_314,
     )
     seo_title = graphene.String(description="SEO title to translate.")
     seo_description = graphene.String(description="SEO description to translate.")
-    slug = graphene.String(description="Slug to translate." + ADDED_IN_321)
     name = graphene.String(required=True, description="Product's name to translate.")
     description = JSONString(
         description="Product's description to translate." + RICH_CONTENT
     )
     description_json = JSONString(
         description="Description of the product." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translation = TranslationField(ProductTranslation, type_name="product")
     product = graphene.Field(
         "saleor.graphql.product.types.products.Product",
         description="Represents an individual item for sale in the storefront.",
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
     attribute_values = NonNullList(
         AttributeValueTranslatableContent,
@@ -421,32 +411,23 @@ class ProductTranslatableContent(ModelObjectType[product_models.Product]):
 
     @staticmethod
     def resolve_attribute_values(root: product_models.Product, info):
-        def with_attribute_values(attribute_values: list[list[AttributeValue]]):
-            return list(chain.from_iterable(attribute_values))
-
-        def with_attributes(attributes: list[attribute_models.Attribute]):
-            attribute_ids = get_translatable_attribute_values(attributes)
-            limit = None
+        requestor = get_user_or_app_from_context(info.context)
+        if (
+            requestor
+            and requestor.is_active
+            and requestor.has_perm(ProductPermissions.MANAGE_PRODUCTS)
+        ):
             return (
-                AttributeValuesByProductIdAndAttributeIdAndLimitLoader(info.context)
-                .load_many(
-                    [(root.id, attribute_id, limit) for attribute_id in attribute_ids]
-                )
-                .then(with_attribute_values)
+                SelectedAttributesAllByProductIdLoader(info.context)
+                .load(root.id)
+                .then(get_translatable_attribute_values)
             )
-
-        if all_permissions_required(info.context, [ProductPermissions.MANAGE_PRODUCTS]):
+        else:
             return (
-                AttributesByProductIdAndLimitLoader(info.context)
-                .load((root.id, None))
-                .then(with_attributes)
+                SelectedAttributesVisibleInStorefrontByProductIdLoader(info.context)
+                .load(root.id)
+                .then(get_translatable_attribute_values)
             )
-
-        return (
-            AttributesVisibleToCustomerByProductIdAndLimitLoader(info.context)
-            .load((root.id, None))
-            .then(with_attributes)
-        )
 
     @staticmethod
     def resolve_product_id(root: product_models.Product, _info):
@@ -459,18 +440,19 @@ class CollectionTranslation(BaseTranslationType[product_models.CollectionTransla
     )
     seo_title = graphene.String(description="Translated SEO title.")
     seo_description = graphene.String(description="Translated SEO description.")
-    slug = graphene.String(description="Translated collection slug." + ADDED_IN_321)
     name = graphene.String(description="Translated collection name.")
     description = JSONString(
         description="Translated description of the collection." + RICH_CONTENT
     )
     description_json = JSONString(
         description="Translated description of the collection." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.CollectionTranslatableContent",
-        description="Represents the collection fields to translate.",
+        description="Represents the collection fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -493,24 +475,28 @@ class CollectionTranslatableContent(ModelObjectType[product_models.Collection]):
         required=True, description="The ID of the collection translatable content."
     )
     collection_id = graphene.ID(
-        required=True, description="The ID of the collection to translate."
+        required=True,
+        description="The ID of the collection to translate." + ADDED_IN_314,
     )
     seo_title = graphene.String(description="SEO title to translate.")
     seo_description = graphene.String(description="SEO description to translate.")
-    slug = graphene.String(description="Slug to translate" + ADDED_IN_321)
     name = graphene.String(required=True, description="Collection's name to translate.")
     description = JSONString(
         description="Collection's description to translate." + RICH_CONTENT
     )
     description_json = JSONString(
         description="Description of the collection." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translation = TranslationField(CollectionTranslation, type_name="collection")
     collection = graphene.Field(
         "saleor.graphql.product.types.collections.Collection",
         description="Represents a collection of products.",
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
 
     class Meta:
@@ -551,18 +537,19 @@ class CategoryTranslation(BaseTranslationType[product_models.CategoryTranslation
     )
     seo_title = graphene.String(description="Translated SEO title.")
     seo_description = graphene.String(description="Translated SEO description.")
-    slug = graphene.String(description="Translated category slug." + ADDED_IN_321)
     name = graphene.String(description="Translated category name.")
     description = JSONString(
         description="Translated description of the category." + RICH_CONTENT
     )
     description_json = JSONString(
         description="Translated description of the category." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.CategoryTranslatableContent",
-        description="Represents the category fields to translate.",
+        description="Represents the category fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -586,11 +573,10 @@ class CategoryTranslatableContent(ModelObjectType[product_models.Category]):
     )
     category_id = graphene.ID(
         required=True,
-        description="The ID of the category to translate.",
+        description="The ID of the category to translate." + ADDED_IN_314,
     )
     seo_title = graphene.String(description="SEO title to translate.")
     seo_description = graphene.String(description="SEO description to translate.")
-    slug = graphene.String(description="Slug to translate." + ADDED_IN_321)
     name = graphene.String(
         required=True, description="Name of the category translatable content."
     )
@@ -599,13 +585,17 @@ class CategoryTranslatableContent(ModelObjectType[product_models.Category]):
     )
     description_json = JSONString(
         description="Description of the category." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     translation = TranslationField(CategoryTranslation, type_name="category")
     category = graphene.Field(
         "saleor.graphql.product.types.categories.Category",
         description="Represents a single category of products.",
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
 
     class Meta:
@@ -633,16 +623,15 @@ class PageTranslation(BaseTranslationType[page_models.PageTranslation]):
     id = graphene.GlobalID(required=True, description="The ID of the page translation.")
     seo_title = graphene.String(description="Translated SEO title.")
     seo_description = graphene.String(description="Translated SEO description.")
-    slug = graphene.String(description="Translated page slug." + ADDED_IN_321)
     title = graphene.String(description="Translated page title.")
     content = JSONString(description="Translated content of the page." + RICH_CONTENT)
     content_json = JSONString(
         description="Translated description of the page." + RICH_CONTENT,
-        deprecation_reason="Use the `content` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use the `content` field instead.",
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.PageTranslatableContent",
-        description="Represents the page fields to translate.",
+        description="Represents the page fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -664,15 +653,16 @@ class PageTranslatableContent(ModelObjectType[page_models.Page]):
     id = graphene.GlobalID(
         required=True, description="The ID of the page translatable content."
     )
-    page_id = graphene.ID(required=True, description="The ID of the page to translate.")
+    page_id = graphene.ID(
+        required=True, description="The ID of the page to translate." + ADDED_IN_314
+    )
     seo_title = graphene.String(description="SEO title to translate.")
     seo_description = graphene.String(description="SEO description to translate.")
-    slug = graphene.String(description="Slug to translate." + ADDED_IN_321)
     title = graphene.String(required=True, description="Page title to translate.")
     content = JSONString(description="Content of the page to translate." + RICH_CONTENT)
     content_json = JSONString(
         description="Content of the page." + RICH_CONTENT,
-        deprecation_reason="Use the `content` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use the `content` field instead.",
     )
     translation = TranslationField(PageTranslation, type_name="page")
     page = graphene.Field(
@@ -681,7 +671,9 @@ class PageTranslatableContent(ModelObjectType[page_models.Page]):
             "A static page that can be manually added by a shop operator "
             "through the dashboard."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
     attribute_values = NonNullList(
         AttributeValueTranslatableContent,
@@ -698,15 +690,12 @@ class PageTranslatableContent(ModelObjectType[page_models.Page]):
 
     @staticmethod
     def resolve_page(root: page_models.Page, info):
-        page = (
+        return (
             page_models.Page.objects.using(get_database_connection_name(info.context))
             .visible_to_user(info.context.user)
             .filter(pk=root.id)
             .first()
         )
-        if not page:
-            return None
-        return ChannelContext(page, channel_slug=None)
 
     @staticmethod
     def resolve_content_json(root: page_models.Page, _info):
@@ -715,25 +704,23 @@ class PageTranslatableContent(ModelObjectType[page_models.Page]):
 
     @staticmethod
     def resolve_attribute_values(root: page_models.Page, info):
-        def with_attribute_values(attribute_values: list[list[AttributeValue]]):
-            return list(chain.from_iterable(attribute_values))
-
-        def with_attributes(attributes):
-            attribute_ids = get_translatable_attribute_values(attributes)
-            limit = None
+        requestor = get_user_or_app_from_context(info.context)
+        if (
+            requestor
+            and requestor.is_active
+            and requestor.has_perm(PagePermissions.MANAGE_PAGES)
+        ):
             return (
-                AttributeValuesByPageIdAndAttributeIdAndLimitLoader(info.context)
-                .load_many(
-                    [(root.id, attribute_id, limit) for attribute_id in attribute_ids]
-                )
-                .then(with_attribute_values)
+                SelectedAttributesAllByPageIdLoader(info.context)
+                .load(root.id)
+                .then(get_translatable_attribute_values)
             )
-
-        if all_permissions_required(info.context, [PagePermissions.MANAGE_PAGES]):
-            dataloader = AttributesByPageIdAndLimitLoader(info.context)
         else:
-            dataloader = AttributesVisibleToCustomerByPageIdAndLimitLoader(info.context)
-        return dataloader.load((root.id, None)).then(with_attributes)
+            return (
+                SelectedAttributesVisibleInStorefrontPageIdLoader(info.context)
+                .load(root.id)
+                .then(get_translatable_attribute_values)
+            )
 
     @staticmethod
     def resolve_page_id(root: page_models.Page, _info):
@@ -747,7 +734,7 @@ class VoucherTranslation(BaseTranslationType[discount_models.VoucherTranslation]
     name = graphene.String(description="Translated voucher name.")
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.VoucherTranslatableContent",
-        description="Represents the voucher fields to translate.",
+        description="Represents the voucher fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -765,7 +752,8 @@ class VoucherTranslatableContent(ModelObjectType[discount_models.Voucher]):
         required=True, description="The ID of the voucher translatable content."
     )
     voucher_id = graphene.ID(
-        required=True, description="The ID of the voucher to translate."
+        required=True,
+        description="The ID of the voucher to translate." + ADDED_IN_314,
     )
     name = graphene.String(description="Voucher name to translate.")
     translation = TranslationField(VoucherTranslation, type_name="voucher")
@@ -776,7 +764,9 @@ class VoucherTranslatableContent(ModelObjectType[discount_models.Voucher]):
             "collections or specific products. They can be used during checkout by "
             "providing valid voucher codes."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
         permissions=[DiscountPermissions.MANAGE_DISCOUNTS],
     )
 
@@ -802,7 +792,7 @@ class SaleTranslation(BaseTranslationType[discount_models.PromotionTranslation])
     name = graphene.String(description="Translated name of sale.")
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.SaleTranslatableContent",
-        description="Represents the sale fields to translate.",
+        description="Represents the sale fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -823,7 +813,10 @@ class SaleTranslatableContent(ModelObjectType[discount_models.Promotion]):
     id = graphene.GlobalID(
         required=True, description="The ID of the sale translatable content."
     )
-    sale_id = graphene.ID(required=True, description="The ID of the sale to translate.")
+    sale_id = graphene.ID(
+        required=True,
+        description="The ID of the sale to translate." + ADDED_IN_314,
+    )
     name = graphene.String(required=True, description="Name of the sale to translate.")
     translation = TranslationField(SaleTranslation, type_name="sale")
     sale = PermissionsField(
@@ -832,7 +825,9 @@ class SaleTranslatableContent(ModelObjectType[discount_models.Promotion]):
             "Sales allow creating discounts for categories, collections "
             "or products and are visible to all the customers."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
         permissions=[DiscountPermissions.MANAGE_DISCOUNTS],
     )
 
@@ -876,7 +871,7 @@ class MenuItemTranslation(BaseTranslationType[menu_models.MenuItemTranslation]):
     name = graphene.String(required=True, description="Translated menu item name.")
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.MenuItemTranslatableContent",
-        description="Represents the menu item fields to translate.",
+        description="Represents the menu item fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
@@ -894,7 +889,8 @@ class MenuItemTranslatableContent(ModelObjectType[menu_models.MenuItem]):
         required=True, description="The ID of the menu item translatable content."
     )
     menu_item_id = graphene.ID(
-        required=True, description="The ID of the menu item to translate."
+        required=True,
+        description="The ID of the menu item to translate." + ADDED_IN_314,
     )
     name = graphene.String(
         required=True, description="Name of the menu item to translate."
@@ -906,7 +902,9 @@ class MenuItemTranslatableContent(ModelObjectType[menu_models.MenuItem]):
             "Represents a single item of the related menu. Can store categories, "
             "collection or pages."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
     )
 
     class Meta:
@@ -938,7 +936,8 @@ class ShippingMethodTranslation(
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.ShippingMethodTranslatableContent",
-        description="Represents the shipping method fields to translate.",
+        description="Represents the shipping method fields to translate."
+        + ADDED_IN_314,
     )
 
     class Meta:
@@ -960,7 +959,8 @@ class ShippingMethodTranslatableContent(
         required=True, description="The ID of the shipping method translatable content."
     )
     shipping_method_id = graphene.ID(
-        required=True, description="The ID of the shipping method to translate."
+        required=True,
+        description="The ID of the shipping method to translate." + ADDED_IN_314,
     )
     name = graphene.String(
         required=True, description="Shipping method name to translate."
@@ -977,7 +977,9 @@ class ShippingMethodTranslatableContent(
             "Shipping method are the methods you'll use to get customer's orders "
             " to them. They are directly exposed to the customers."
         ),
-        deprecation_reason="Get model fields from the root level queries.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Get model fields from the root level queries."
+        ),
         permissions=[
             ShippingPermissions.MANAGE_SHIPPING,
         ],
@@ -1010,13 +1012,13 @@ class PromotionTranslation(BaseTranslationType[discount_models.PromotionTranslat
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.PromotionTranslatableContent",
-        description="Represents the promotion fields to translate.",
+        description="Represents the promotion fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
         model = discount_models.Promotion
         interfaces = [graphene.relay.Node]
-        description = "Represents promotion translations."
+        description = "Represents promotion translations." + ADDED_IN_317
 
     @staticmethod
     def resolve_translatable_content(root: discount_models.PromotionTranslation, info):
@@ -1039,7 +1041,7 @@ class PromotionTranslatableContent(ModelObjectType[discount_models.Promotion]):
         interfaces = [graphene.relay.Node]
         description = (
             "Represents promotion's original translatable fields "
-            "and related translations."
+            "and related translations." + ADDED_IN_317
         )
 
     @staticmethod
@@ -1059,13 +1061,13 @@ class PromotionRuleTranslation(
     )
     translatable_content = graphene.Field(
         "saleor.graphql.translations.types.PromotionRuleTranslatableContent",
-        description="Represents the promotion rule fields to translate.",
+        description="Represents the promotion rule fields to translate." + ADDED_IN_314,
     )
 
     class Meta:
         model = discount_models.PromotionRule
         interfaces = [graphene.relay.Node]
-        description = "Represents promotion rule translations."
+        description = "Represents promotion rule translations." + ADDED_IN_317
 
     @staticmethod
     def resolve_translatable_content(
@@ -1079,7 +1081,8 @@ class PromotionRuleTranslatableContent(ModelObjectType[discount_models.Promotion
         required=True, description="ID of the promotion rule translatable content."
     )
     promotion_rule_id = graphene.ID(
-        required=True, description="ID of the promotion rule to translate."
+        required=True,
+        description="ID of the promotion rule to translate." + ADDED_IN_314,
     )
     name = graphene.String(description="Name of the promotion rule.")
     description = JSONString(
@@ -1092,7 +1095,7 @@ class PromotionRuleTranslatableContent(ModelObjectType[discount_models.Promotion
         interfaces = [graphene.relay.Node]
         description = (
             "Represents promotion rule's original translatable fields "
-            "and related translations."
+            "and related translations." + ADDED_IN_317
         )
 
     @staticmethod

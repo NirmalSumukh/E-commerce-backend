@@ -30,7 +30,7 @@ import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getParsedDataForJsonStringField } from "@dashboard/utils/richText/misc";
 import { Box } from "@saleor/macaw-ui-next";
 import isEqual from "lodash/isEqual";
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { PAGINATE_BY } from "../../config";
@@ -43,12 +43,18 @@ import {
 import { CategoryUpdateData } from "../components/CategoryUpdatePage/form";
 import { categoryListUrl, categoryUrl, CategoryUrlDialog, CategoryUrlQueryParams } from "../urls";
 
-interface CategoryDetailsProps {
+export interface CategoryDetailsProps {
   params: CategoryUrlQueryParams;
   id: string;
 }
 
-const CategoryDetails = ({ id, params }: CategoryDetailsProps) => {
+export function getActiveTab(tabName: string): CategoryPageTab {
+  return tabName === CategoryPageTab.products
+    ? CategoryPageTab.products
+    : CategoryPageTab.categories;
+}
+
+export const CategoryDetails: React.FC<CategoryDetailsProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -384,5 +390,4 @@ const CategoryDetails = ({ id, params }: CategoryDetailsProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default CategoryDetails;

@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 import graphene
 from django.core.management import BaseCommand, CommandError
@@ -69,10 +69,10 @@ class Command(BaseCommand):
                 allow_redirects=False,
             )
         except RequestException as e:
-            raise CommandError(f"Request failed. Exception: {e}") from e
+            raise CommandError(f"Request failed. Exception: {e}")
         response.raise_for_status()
 
-    def handle(self, *args: Any, **options: Any) -> str | None:
+    def handle(self, *args: Any, **options: Any) -> Optional[str]:
         name = options["name"]
         is_active = options["activate"]
         target_url = options["target_url"]

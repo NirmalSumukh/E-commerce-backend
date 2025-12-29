@@ -1,11 +1,14 @@
-import datetime
 import json
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 from urllib.parse import urljoin
 
+import opentracing
+import opentracing.tags
 import requests
 from django.core.cache import cache
 from requests.auth import HTTPBasicAuth
@@ -15,7 +18,6 @@ from ...checkout import base_calculations
 from ...checkout.utils import get_address_for_checkout_taxes, is_shipping_required
 from ...core.http_client import HTTPClient
 from ...core.taxes import TaxError
-from ...core.telemetry import saleor_attributes, tracer
 from ...discount import DiscountType, VoucherType
 from ...discount.utils.voucher import is_order_level_voucher
 from ...order import base_calculations as base_order_calculations
@@ -151,9 +153,9 @@ def api_get_request(
 
 
 def _validate_address_details(
-    shipping_address: Address | None,
+    shipping_address: Optional[Address],
     is_shipping_required: bool,
-    address: Address | None,
+    address: Optional[Address],
     delivery_method,
 ):
     if not is_shipping_required and address:
@@ -170,9 +172,9 @@ def _validate_order(order: "Order") -> bool:
     if not order.lines.exists():
         return False
     shipping_required = order.is_shipping_required()
-    delivery_method: None | ShippingMethod | Warehouse
-    address: Address | None
-    shipping_address: Address | None
+    delivery_method: Union[None, ShippingMethod, Warehouse]
+    address: Optional[Address]
+    shipping_address: Optional[Address]
     if order.collection_point:
         collection_point = order.collection_point
         delivery_method = collection_point
@@ -197,20 +199,20 @@ def _validate_order(order: "Order") -> bool:
 
 
 def _validate_checkout(
-    checkout_info: "CheckoutInfo", lines: list["CheckoutLineInfo"]
+    checkout_info: "CheckoutInfo", lines: Iterable["CheckoutLineInfo"]
 ) -> bool:
     """Validate the checkout object if it is ready to generate a request to avatax."""
     if not lines:
         return False
 
     shipping_required = is_shipping_required(lines)
-    shipping_address = checkout_info.get_delivery_method_info().shipping_address
+    shipping_address = checkout_info.delivery_method_info.shipping_address
     address = shipping_address or checkout_info.billing_address
     return _validate_address_details(
         shipping_address,
         shipping_required,
         address,
-        checkout_info.get_delivery_method_info().delivery_method,
+        checkout_info.delivery_method_info.delivery_method,
     )
 
 
@@ -236,11 +238,11 @@ def append_line_to_data(
     tax_code: str,
     item_code: str,
     prices_entered_with_tax: bool,
-    name: str | None = None,
-    discounted: bool | None = False,
-    tax_override_data: dict | None = None,
-    ref1: str | None = None,
-    ref2: str | None = None,
+    name: Optional[str] = None,
+    discounted: Optional[bool] = False,
+    tax_override_data: Optional[dict] = None,
+    ref1: Optional[str] = None,
+    ref2: Optional[str] = None,
 ):
     line_data = {
         "quantity": quantity,
@@ -263,10 +265,10 @@ def append_line_to_data(
 
 def append_shipping_to_data(
     data: list[dict],
-    shipping_price_amount: Decimal | None,
+    shipping_price_amount: Optional[Decimal],
     shipping_tax_code: str,
     prices_entered_with_tax: bool,
-    discounted: bool | None = False,
+    discounted: Optional[bool] = False,
 ):
     if shipping_price_amount is not None:
         append_line_to_data(
@@ -282,12 +284,12 @@ def append_shipping_to_data(
 
 def generate_request_data_from_checkout_lines(
     checkout_info: "CheckoutInfo",
-    lines_info: list["CheckoutLineInfo"],
+    lines_info: Iterable["CheckoutLineInfo"],
     config: AvataxConfiguration,
-) -> list[dict[str, str | int | bool | None]]:
-    data: list[dict[str, str | int | bool | None]] = []
+) -> list[dict[str, Union[str, int, bool, None]]]:
+    data: list[dict[str, Union[str, int, bool, None]]] = []
 
-    charge_taxes = get_charge_taxes_for_checkout(checkout_info)
+    charge_taxes = get_charge_taxes_for_checkout(checkout_info, lines_info)
     prices_entered_with_tax = checkout_info.tax_configuration.prices_entered_with_tax
 
     voucher = checkout_info.voucher
@@ -344,12 +346,12 @@ def generate_request_data_from_checkout_lines(
         }
 
         append_line_to_data(
-            **append_line_to_data_kwargs,  # type: ignore[arg-type]
+            **append_line_to_data_kwargs,
             amount=checkout_line_total.amount,
             ref1=line_info.variant.sku,
         )
 
-    delivery_method = checkout_info.get_delivery_method_info().delivery_method
+    delivery_method = checkout_info.delivery_method_info.delivery_method
     if delivery_method:
         price = getattr(delivery_method, "price", None)
         is_shipping_discount = (
@@ -369,8 +371,8 @@ def generate_request_data_from_checkout_lines(
 
 def get_order_lines_data(
     order: "Order", config: AvataxConfiguration, discounted: bool
-) -> list[dict[str, str | int | bool | None]]:
-    data: list[dict[str, str | int | bool | None]] = []
+) -> list[dict[str, Union[str, int, bool, None]]]:
+    data: list[dict[str, Union[str, int, bool, None]]] = []
     lines = order.lines.prefetch_related(
         "variant__product__category",
         "variant__product__collections",
@@ -403,7 +405,7 @@ def get_order_lines_data(
             undiscounted_amount = prices_data.undiscounted_price.net.amount
             price_with_discounts_amount = prices_data.price_with_discounts.net.amount
 
-        append_line_to_data_kwargs: dict[str, Any] = {
+        append_line_to_data_kwargs = {
             "data": data,
             "quantity": line.quantity,
             # This is a workaround for Avatax and sending a lines with amount 0. Like
@@ -458,7 +460,7 @@ def generate_request_data(
     customer_email: str,
     config: AvataxConfiguration,
     currency: str,
-    discount: Decimal | None = None,
+    discount: Optional[Decimal] = None,
 ):
     ship_from = {
         "line1": config.from_street_address,
@@ -485,7 +487,7 @@ def generate_request_data(
         "type": transaction_type,
         "lines": lines,
         "code": transaction_token,
-        "date": str(datetime.datetime.now(tz=datetime.UTC).date()),
+        "date": str(date.today()),
         # https://developer.avalara.com/avatax/dev-guide/transactions/simple-transaction/
         "customerCode": 0,
         # https://developer.avalara.com/avatax/dev-guide/discounts-and-overrides/discounts/
@@ -500,7 +502,7 @@ def generate_request_data(
 
 def generate_request_data_from_checkout(
     checkout_info: "CheckoutInfo",
-    lines_info: list["CheckoutLineInfo"],
+    lines_info: Iterable["CheckoutLineInfo"],
     config: AvataxConfiguration,
     transaction_token=None,
     transaction_type=TransactionType.ORDER,
@@ -533,7 +535,7 @@ def _get_checkout_discount_amount(checkout_info, lines):
     Return the discount amount from the entire order or shipping voucher, or from
     order promotion discount if there is no voucher and any promotion is eligible.
     """
-    discount_amount = Decimal(0)
+    discount_amount = Decimal("0")
     if (voucher := checkout_info.voucher) or checkout_info.discounts:
         # for apply_once_per_order vouchers the discount is already applied on lines
         applicable_discount = True
@@ -553,7 +555,7 @@ def _get_checkout_discount_amount(checkout_info, lines):
         discount_amount = (
             checkout_info.checkout.discount_amount
             if applicable_discount
-            else Decimal(0)
+            else Decimal("0")
         )
     return discount_amount
 
@@ -564,8 +566,12 @@ def _fetch_new_taxes_data(
     transaction_url = urljoin(
         get_api_url(config.use_sandbox), "transactions/createoradjust"
     )
-    with tracer.start_as_current_span("avatax.transactions.crateoradjust") as span:
-        span.set_attribute(saleor_attributes.COMPONENT, "tax")
+    with opentracing.global_tracer().start_active_span(
+        "avatax.transactions.crateoradjust"
+    ) as scope:
+        span = scope.span
+        span.set_tag(opentracing.tags.COMPONENT, "tax")
+        span.set_tag("service.name", "avatax")
         response = api_post_request(transaction_url, data, config)
     if response and "error" not in response:
         cache.set(data_cache_key, (data, response), CACHE_TIME)
@@ -599,7 +605,7 @@ def get_cached_response_or_fetch(
 
 def get_checkout_tax_data(
     checkout_info: "CheckoutInfo",
-    lines_info: list["CheckoutLineInfo"],
+    lines_info: Iterable["CheckoutLineInfo"],
     config: AvataxConfiguration,
 ) -> dict[str, Any]:
     data = generate_request_data_from_checkout(checkout_info, lines_info, config)
@@ -614,7 +620,7 @@ def get_order_request_data(order: "Order", config: AvataxConfiguration):
         else TransactionType.ORDER
     )
     discount_amount = get_total_order_discount_excluding_shipping(order).amount
-    discounted_lines = discount_amount != Decimal(0)
+    discounted_lines = discount_amount != Decimal("0")
     lines = get_order_lines_data(order, config, discounted=discounted_lines)
     # if there is no lines to sent we do not want to send the request to avalara
     if not lines:
@@ -671,8 +677,12 @@ def get_cached_tax_codes_or_fetch(
     tax_codes = cache.get(TAX_CODES_CACHE_KEY, {})
     if not tax_codes:
         tax_codes_url = urljoin(get_api_url(config.use_sandbox), "definitions/taxcodes")
-        with tracer.start_as_current_span("avatax.definitions.taxcodes") as span:
-            span.set_attribute(saleor_attributes.COMPONENT, "tax")
+        with opentracing.global_tracer().start_active_span(
+            "avatax.definitions.taxcodes"
+        ) as scope:
+            span = scope.span
+            span.set_tag(opentracing.tags.COMPONENT, "tax")
+            span.set_tag("service.name", "avatax")
             response = api_get_request(
                 tax_codes_url, config.username_or_account, config.password_or_license
             )
@@ -694,7 +704,7 @@ def _get_product_tax_code(product: "Product", product_type: "ProductType"):
 
 
 def retrieve_tax_code_from_meta(
-    obj: "TaxClass", default: str | None = DEFAULT_TAX_CODE
+    obj: "TaxClass", default: Optional[str] = DEFAULT_TAX_CODE
 ):
     tax_code = obj.get_value_from_metadata(META_CODE_KEY, default)
     return tax_code

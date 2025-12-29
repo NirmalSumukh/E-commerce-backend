@@ -1,7 +1,8 @@
+import copy
 from decimal import Decimal
 from operator import attrgetter
 from re import match
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 from uuid import uuid4
 
 from django.conf import settings
@@ -11,15 +12,15 @@ from django.core.validators import MinValueValidator
 from django.db import connection, models
 from django.db.models import F, JSONField, Max
 from django.db.models.expressions import Exists, OuterRef
+from django.forms.models import model_to_dict
 from django.utils.timezone import now
 from django_measurement.models import MeasurementField
+from django_prices.models import MoneyField, TaxedMoneyField
 from measurement.measures import Weight
 
 from ..app.models import App
 from ..channel.models import Channel
-from ..core.db.fields import MoneyField, TaxedMoneyField
 from ..core.models import ModelWithExternalReference, ModelWithMetadata
-from ..core.taxes import TAX_ERROR_FIELD_LENGTH
 from ..core.units import WeightUnits
 from ..core.utils.json_serializer import CustomJsonEncoder
 from ..core.weight import zero_weight
@@ -154,10 +155,6 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
         null=True,
         on_delete=models.SET_NULL,
     )
-    # The flag is only applicable to draft orders and should be null for orders
-    # with a status other than `DRAFT`.
-    draft_save_billing_address = models.BooleanField(null=True, blank=True)
-    draft_save_shipping_address = models.BooleanField(null=True, blank=True)
     user_email = models.EmailField(blank=True, default="")
     original = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.SET_NULL
@@ -232,7 +229,8 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     undiscounted_base_shipping_price_amount = models.DecimalField(
         max_digits=settings.DEFAULT_MAX_DIGITS,
         decimal_places=settings.DEFAULT_DECIMAL_PLACES,
-        default=Decimal("0.0"),
+        null=True,
+        blank=True,
     )
     # Shipping price before applying any discounts
     undiscounted_base_shipping_price = MoneyField(
@@ -250,16 +248,14 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     )
     shipping_tax_class_name = models.CharField(max_length=255, blank=True, null=True)
     shipping_tax_class_private_metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
+        blank=True, null=True, default=dict, encoder=CustomJsonEncoder
     )
     shipping_tax_class_metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
+        blank=True, null=True, default=dict, encoder=CustomJsonEncoder
     )
 
     # Token of a checkout instance that this order was created from
     checkout_token = models.CharField(max_length=36, blank=True)
-
-    lines_count = models.PositiveIntegerField()
 
     total_net_amount = models.DecimalField(
         max_digits=settings.DEFAULT_MAX_DIGITS,
@@ -358,9 +354,7 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     # this field is used only for draft/unconfirmed orders
     should_refresh_prices = models.BooleanField(default=True)
     tax_exemption = models.BooleanField(default=False)
-    tax_error = models.CharField(
-        max_length=TAX_ERROR_FIELD_LENGTH, null=True, blank=True
-    )
+    tax_error = models.CharField(max_length=255, null=True, blank=True)
 
     objects = OrderManager()
 
@@ -395,16 +389,6 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
                 name="order_user_email_user_id_idx",
             ),
             BTreeIndex(fields=["checkout_token"], name="checkout_token_btree_idx"),
-            BTreeIndex(fields=["lines_count"], name="lines_count_idx"),
-            BTreeIndex(
-                fields=["total_gross_amount"],
-                name="order_totalgrossamount_idx",
-            ),
-            BTreeIndex(
-                fields=["total_net_amount"],
-                name="order_totalnetamount_idx",
-            ),
-            BTreeIndex(fields=["status"], name="order_status_idx"),
         ]
 
     def is_fully_paid(self):
@@ -414,11 +398,10 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
         return self.total_charged_amount > 0
 
     def get_customer_email(self):
-        if self.user_email:
-            return self.user_email
         if self.user_id:
+            # we know that when user_id is set, user is set as well
             return cast("User", self.user).email
-        return None
+        return self.user_email
 
     def __repr__(self):
         return f"<Order #{self.id!r}>"
@@ -426,7 +409,7 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     def __str__(self):
         return f"#{self.id}"
 
-    def get_last_payment(self) -> Payment | None:
+    def get_last_payment(self) -> Optional[Payment]:
         # Skipping a partial payment is a temporary workaround for storing a basic data
         # about partial payment from Adyen plugin. This is something that will removed
         # in 3.1 by introducing a partial payments feature.
@@ -460,13 +443,8 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     def get_subtotal(self):
         return get_subtotal(self.lines.all(), self.currency)
 
-    def is_shipping_required(
-        self, database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME
-    ):
-        return any(
-            line.is_shipping_required
-            for line in self.lines.using(database_connection_name).all()
-        )
+    def is_shipping_required(self):
+        return any(line.is_shipping_required for line in self.lines.all())
 
     def get_total_quantity(self):
         return sum([line.quantity for line in self.lines.all()])
@@ -537,6 +515,23 @@ class Order(ModelWithMetadata, ModelWithExternalReference):
     def total_balance(self):
         return self.total_charged - self.total.gross
 
+    @property
+    def comparison_fields(self):
+        return [
+            "discount",
+            "voucher",
+            "voucher_code",
+            "customer_note",
+            "redirect_url",
+            "external_reference",
+            "user",
+            "user_email",
+            "channel",
+        ]
+
+    def serialize_for_comparison(self):
+        return copy.deepcopy(model_to_dict(self, fields=self.comparison_fields))
+
 
 class OrderLineQueryset(models.QuerySet["OrderLine"]):
     def digital(self):
@@ -580,10 +575,6 @@ class OrderLine(ModelWithMetadata):
     product_sku = models.CharField(max_length=255, null=True, blank=True)
     # str with GraphQL ID used as fallback when product SKU is not available
     product_variant_id = models.CharField(max_length=255, null=True, blank=True)
-
-    # denormalized product type id
-    product_type_id = models.IntegerField(null=True, blank=True)
-
     is_shipping_required = models.BooleanField()
     is_gift_card = models.BooleanField()
     quantity = models.IntegerField(validators=[MinValueValidator(1)])
@@ -637,7 +628,7 @@ class OrderLine(ModelWithMetadata):
     unit_price = TaxedMoneyField(
         net_amount_field="unit_price_net_amount",
         gross_amount_field="unit_price_gross_amount",
-        currency_field="currency",
+        currency="currency",
     )
 
     total_price_net_amount = models.DecimalField(
@@ -661,7 +652,7 @@ class OrderLine(ModelWithMetadata):
     total_price = TaxedMoneyField(
         net_amount_field="total_price_net_amount",
         gross_amount_field="total_price_gross_amount",
-        currency_field="currency",
+        currency="currency",
     )
 
     undiscounted_unit_price_gross_amount = models.DecimalField(
@@ -677,7 +668,7 @@ class OrderLine(ModelWithMetadata):
     undiscounted_unit_price = TaxedMoneyField(
         net_amount_field="undiscounted_unit_price_net_amount",
         gross_amount_field="undiscounted_unit_price_gross_amount",
-        currency_field="currency",
+        currency="currency",
     )
 
     undiscounted_total_price_gross_amount = models.DecimalField(
@@ -693,7 +684,7 @@ class OrderLine(ModelWithMetadata):
     undiscounted_total_price = TaxedMoneyField(
         net_amount_field="undiscounted_total_price_net_amount",
         gross_amount_field="undiscounted_total_price_gross_amount",
-        currency_field="currency",
+        currency="currency",
     )
 
     base_unit_price_amount = models.DecimalField(
@@ -725,10 +716,10 @@ class OrderLine(ModelWithMetadata):
     )
     tax_class_name = models.CharField(max_length=255, blank=True, null=True)
     tax_class_private_metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
+        blank=True, null=True, default=dict, encoder=CustomJsonEncoder
     )
     tax_class_metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
+        blank=True, null=True, default=dict, encoder=CustomJsonEncoder
     )
 
     is_price_overridden = models.BooleanField(null=True, blank=True)
@@ -739,19 +730,10 @@ class OrderLine(ModelWithMetadata):
     # Fulfilled when sale was applied to product in the line
     sale_id = models.CharField(max_length=255, null=True, blank=True)
 
-    # The date time when the line should refresh its prices.
-    # It depends on channel.draft_order_line_price_freeze_period setting.
-    draft_base_price_expire_at = models.DateTimeField(blank=True, null=True)
-
     objects = OrderLineManager()
 
     class Meta(ModelWithMetadata.Meta):
         ordering = ("created_at", "id")
-
-        indexes = [
-            *ModelWithMetadata.Meta.indexes,
-            BTreeIndex(fields=["product_type_id"], name="product_type_id_btree_idx"),
-        ]
 
     def __str__(self):
         return (
@@ -805,10 +787,6 @@ class Fulfillment(ModelWithMetadata):
 
     class Meta(ModelWithMetadata.Meta):
         ordering = ("pk",)
-        indexes = [
-            *ModelWithMetadata.Meta.indexes,
-            BTreeIndex(fields=["status"], name="fulfillment_status_idx"),
-        ]
 
     def __str__(self):
         return f"Fulfillment #{self.composed_id}"
@@ -899,7 +877,6 @@ class OrderEvent(models.Model):
         indexes = [
             BTreeIndex(fields=["related"], name="order_orderevent_related_id_idx"),
             models.Index(fields=["type"]),
-            BTreeIndex(fields=["date"], name="order_orderevent_date_idx"),
         ]
 
     def __repr__(self):
@@ -915,16 +892,13 @@ class OrderGrantedRefund(models.Model):
     amount_value = models.DecimalField(
         max_digits=settings.DEFAULT_MAX_DIGITS,
         decimal_places=settings.DEFAULT_DECIMAL_PLACES,
-        default=Decimal(0),
+        default=Decimal("0"),
     )
     amount = MoneyField(amount_field="amount_value", currency_field="currency")
     currency = models.CharField(
         max_length=settings.DEFAULT_CURRENCY_CODE_LENGTH,
     )
     reason = models.TextField(blank=True, default="")
-    reason_reference = models.ForeignKey(
-        "page.Page", related_name="+", on_delete=models.SET_NULL, null=True, blank=True
-    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         blank=True,

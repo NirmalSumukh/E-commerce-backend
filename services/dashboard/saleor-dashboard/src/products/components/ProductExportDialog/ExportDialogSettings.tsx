@@ -8,18 +8,19 @@ import { ChangeEvent } from "@dashboard/hooks/useForm";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getExportErrorMessage from "@dashboard/utils/errors/export";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ExportSettingsInput } from "./types";
 
 export type ExportItemsQuantity = Record<"all" | "filter", number>;
 
-interface ExportScopeLabels {
+export interface ExportScopeLabels {
   allItems: string;
   selectedItems: string;
 }
 
-interface ExportDialogSettingsProps {
+export interface ExportDialogSettingsProps {
   data: ExportSettingsInput;
   errors: ExportErrorFragment[];
   itemsQuantity: ExportItemsQuantity;
@@ -30,7 +31,7 @@ interface ExportDialogSettingsProps {
 }
 
 const formFields: Array<keyof ExportSettingsInput> = ["fileType", "scope"];
-const ExportDialogSettings = ({
+const ExportDialogSettings: React.FC<ExportDialogSettingsProps> = ({
   data,
   errors,
   onChange,
@@ -38,7 +39,7 @@ const ExportDialogSettings = ({
   itemsQuantity,
   exportScopeLabels,
   allowScopeSelection = true,
-}: ExportDialogSettingsProps) => {
+}) => {
   const intl = useIntl();
   const formErrors = getFormErrors(formFields, errors);
   const productExportTypeChoices: Array<RadioGroupFieldChoice<FileTypesEnum>> = [

@@ -5,7 +5,7 @@ from ....account import models as account_models
 from ....core.error_codes import ShopErrorCode
 from ....permission.enums import SitePermissions
 from ...account.types import StaffNotificationRecipient
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import ShopError
 
 
@@ -23,7 +23,7 @@ class StaffNotificationRecipientInput(graphene.InputObjectType):
     )
 
 
-class StaffNotificationRecipientCreate(DeprecatedModelMutation):
+class StaffNotificationRecipientCreate(ModelMutation):
     class Arguments:
         input = StaffNotificationRecipientInput(
             required=True,
@@ -39,7 +39,7 @@ class StaffNotificationRecipientCreate(DeprecatedModelMutation):
         error_type_field = "shop_errors"
 
     @classmethod
-    def clean_input(cls, info, instance, data, *, input_cls=None):
+    def clean_input(cls, info, instance, data):
         cleaned_input = super().clean_input(info, instance, data)
         cls.validate_input(instance, cleaned_input)
         email = cleaned_input.pop("email", None)

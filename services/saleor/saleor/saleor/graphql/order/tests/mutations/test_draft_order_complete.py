@@ -1,11 +1,11 @@
-import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
-from unittest.mock import ANY, call, patch
+from unittest.mock import call, patch
 
 import graphene
+import pytz
 from django.db.models import Sum
 from django.test import override_settings
-from django.utils import timezone
 from freezegun import freeze_time
 from prices import Money, TaxedMoney
 
@@ -15,16 +15,16 @@ from .....core.prices import quantize_price
 from .....core.taxes import zero_taxed_money
 from .....discount import DiscountValueType
 from .....discount.models import VoucherCustomer
-from .....discount.utils.voucher import (
-    create_or_update_voucher_discount_objects_for_order,
-)
 from .....order import OrderOrigin, OrderStatus
 from .....order import events as order_events
-from .....order.actions import call_order_event, order_created
+from .....order.actions import (
+    call_order_event,
+    order_created,
+)
 from .....order.calculations import fetch_order_prices_if_expired
 from .....order.error_codes import OrderErrorCode
 from .....order.interface import OrderTaxedPricesData
-from .....order.models import OrderEvent, OrderLine
+from .....order.models import OrderEvent
 from .....payment.model_helpers import get_subtotal
 from .....plugins import PLUGIN_IDENTIFIER_PREFIX
 from .....plugins.base_plugin import ExcludedShippingMethod
@@ -76,9 +76,6 @@ DRAFT_ORDER_COMPLETE_MUTATION = """
 
 
 @patch(
-    "saleor.graphql.order.mutations.draft_order_complete.store_user_addresses_from_draft_order",
-)
-@patch(
     "saleor.graphql.order.mutations.draft_order_complete.order_created",
     wraps=order_created,
 )
@@ -86,18 +83,13 @@ DRAFT_ORDER_COMPLETE_MUTATION = """
 def test_draft_order_complete(
     product_variant_out_of_stock_webhook_mock,
     order_created_mock,
-    store_user_addresses_from_draft_order_mock,
     staff_api_client,
     permission_group_manage_orders,
     staff_user,
     draft_order,
-    customer_user,
 ):
     # given
     order = draft_order
-    order.user = customer_user
-    order.save(update_fields=["user"])
-
     permission_group_manage_orders.user_set.add(staff_api_client.user)
 
     # Ensure no events were created
@@ -105,8 +97,6 @@ def test_draft_order_complete(
 
     # Ensure no allocation were created
     assert not Allocation.objects.filter(order_line__order=order).exists()
-
-    user_orders_count = customer_user.number_of_orders
 
     order_id = graphene.Node.to_global_id("Order", order.id)
     variables = {"id": order_id}
@@ -144,10 +134,6 @@ def test_draft_order_complete(
         Stock.objects.last()
     )
     assert order_created_mock.called
-    store_user_addresses_from_draft_order_mock.assert_called_once()
-
-    customer_user.refresh_from_db()
-    assert customer_user.number_of_orders == user_orders_count + 1
 
 
 def test_draft_order_complete_no_automatically_confirm_all_new_orders(
@@ -270,7 +256,6 @@ def test_draft_order_complete_with_voucher(
     order.voucher_code = code_instance.code
     order.should_refresh_prices = True
     order.save(update_fields=["voucher", "voucher_code", "should_refresh_prices"])
-    create_or_update_voucher_discount_objects_for_order(order)
 
     voucher_listing = voucher.channel_listings.get(channel=order.channel)
     discount_value = voucher_listing.discount_value
@@ -947,8 +932,7 @@ def test_draft_order_complete_unavailable_for_purchase(
 
     product = order.lines.first().variant.product
     product.channel_listings.update(
-        available_for_purchase_at=datetime.datetime.now(tz=datetime.UTC)
-        + datetime.timedelta(days=5)
+        available_for_purchase_at=datetime.now(pytz.UTC) + timedelta(days=5)
     )
 
     order_id = graphene.Node.to_global_id("Order", order.id)
@@ -1095,12 +1079,10 @@ def test_draft_order_complete_fails_with_invalid_tax_app(
     draft_order,
     channel_USD,
     tax_app,
-    tax_data_response_factory,
+    tax_data_response,  # noqa: F811
 ):
     # given
-    mock_request.return_value = tax_data_response_factory(
-        lines_length=draft_order.lines.count()
-    )
+    mock_request.return_value = tax_data_response
     permission_group_manage_orders.user_set.add(staff_api_client.user)
 
     order = draft_order
@@ -1128,25 +1110,26 @@ def test_draft_order_complete_fails_with_invalid_tax_app(
 
     order.refresh_from_db()
     assert not order.should_refresh_prices
-    assert order.tax_error == "Configured tax app doesn't exist."
+    assert order.tax_error == "Empty tax data."
 
 
 @freeze_time()
 @override_settings(PLUGINS=["saleor.plugins.webhook.plugin.WebhookPlugin"])
+@patch("saleor.order.calculations.validate_tax_data")
 @patch("saleor.webhook.transport.synchronous.transport.send_webhook_request_sync")
 def test_draft_order_complete_force_tax_calculation_when_tax_error_was_saved(
     mock_request,
+    mock_validate_tax_data,
     staff_api_client,
     permission_group_manage_orders,
     draft_order,
     channel_USD,
     tax_app,
-    tax_data_response_factory,  # noqa: F811
+    tax_data_response,  # noqa: F811
 ):
     # given
-    mock_request.return_value = tax_data_response_factory(
-        lines_length=draft_order.lines.count()
-    )
+    mock_request.return_value = tax_data_response
+    mock_validate_tax_data.return_value = False
     permission_group_manage_orders.user_set.add(staff_api_client.user)
 
     order = draft_order
@@ -1180,20 +1163,21 @@ def test_draft_order_complete_force_tax_calculation_when_tax_error_was_saved(
 
 @freeze_time()
 @override_settings(PLUGINS=["saleor.plugins.webhook.plugin.WebhookPlugin"])
+@patch("saleor.order.calculations.validate_tax_data")
 @patch("saleor.webhook.transport.synchronous.transport.send_webhook_request_sync")
 def test_draft_order_complete_calls_correct_tax_app(
     mock_request,
+    mock_validate_tax_data,
     staff_api_client,
     permission_group_manage_orders,
     draft_order,
     channel_USD,
     tax_app,
-    tax_data_response_factory,  # noqa: F811
+    tax_data_response,  # noqa: F811
 ):
     # given
-    mock_request.return_value = tax_data_response_factory(
-        lines_length=draft_order.lines.count()
-    )
+    mock_request.return_value = tax_data_response
+    mock_validate_tax_data.return_value = False
     permission_group_manage_orders.user_set.add(staff_api_client.user)
 
     order = draft_order
@@ -1297,9 +1281,6 @@ DRAFT_ORDER_COMPLETE_WITH_DISCOUNTS_MUTATION = """
                     amount {
                         amount
                     }
-                    total {
-                        amount
-                    }
                     valueType
                     type
                     reason
@@ -1319,17 +1300,6 @@ DRAFT_ORDER_COMPLETE_WITH_DISCOUNTS_MUTATION = """
                     unitDiscountReason
                     unitDiscountType
                     isGift
-                    discounts{
-                        valueType
-                        value
-                        reason
-                        total{
-                          amount
-                        }
-                        unit{
-                            amount
-                        }
-                    }
                 }
             }
         }
@@ -1376,8 +1346,8 @@ def test_draft_order_complete_with_catalogue_and_order_discount(
 
     order_discount = order_data["discounts"][0]
     assert order_discount["amount"]["amount"] == 25.00 == rule_total_value
-    assert order_discount["total"]["amount"] == 25.00 == rule_total_value
     assert order_discount["reason"] == f"Promotion: {order_promotion_id}"
+    assert order_discount["amount"]["amount"] == 25.00 == rule_total_value
     assert order_discount["valueType"] == DiscountValueType.FIXED.upper()
 
     lines_db = order.lines.all()
@@ -1400,7 +1370,6 @@ def test_draft_order_complete_with_catalogue_and_order_discount(
     assert line_1["unitDiscount"]["amount"] == 0.00
     assert line_1["unitDiscountReason"] is None
     assert line_1["unitDiscountValue"] == 0.00
-    assert len(line_1["discounts"]) == 0
 
     line_2_total = quantize_price(
         line_2_db.undiscounted_total_price_net_amount
@@ -1408,23 +1377,11 @@ def test_draft_order_complete_with_catalogue_and_order_discount(
         - line_2_order_discount_portion,
         currency,
     )
-
-    expected_discount_reason = f"Promotion: {catalogue_promotion_id}"
-    expected_unit_discount_amount = rule_catalogue_value
-
     assert line_2["totalPrice"]["net"]["amount"] == float(line_2_total)
-
-    assigned_discount_objects = line_2["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_discount_reason
-    assert assigned_discount["valueType"] == DiscountValueType.FIXED.upper()
-    assert (
-        assigned_discount["total"]["amount"]
-        == expected_unit_discount_amount * line_2_db.quantity
-    )
-    assert assigned_discount["unit"]["amount"] == expected_unit_discount_amount
-    assert assigned_discount["value"] == rule_catalogue_value
+    assert line_2["unitDiscount"]["amount"] == rule_catalogue_value
+    assert line_2["unitDiscountReason"] == f"Promotion: {catalogue_promotion_id}"
+    assert line_2["unitDiscountType"] == DiscountValueType.FIXED.upper()
+    assert line_2["unitDiscountValue"] == rule_catalogue_value
 
     total = (
         order.undiscounted_total_net_amount
@@ -1489,46 +1446,23 @@ def test_draft_order_complete_with_catalogue_and_gift_discount(
     assert line_1["unitDiscount"]["amount"] == 0.00
     assert line_1["unitDiscountReason"] is None
     assert line_1["unitDiscountValue"] == 0.00
-    assert len(line_1["discounts"]) == 0
 
     line_2_total = quantize_price(
         line_2_db.undiscounted_total_price_net_amount
         - rule_catalogue_value * line_2_db.quantity,
         currency,
     )
-    expected_line_2_discount_reason = f"Promotion: {catalogue_promotion_id}"
-    expected_line_2_unit_discount_amount = rule_catalogue_value
-
     assert line_2["totalPrice"]["net"]["amount"] == line_2_total
-
-    assigned_discount_objects = line_2["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_discount = assigned_discount_objects[0]
-    assert assigned_discount["reason"] == expected_line_2_discount_reason
-    assert assigned_discount["valueType"] == DiscountValueType.FIXED.upper()
-    assert (
-        assigned_discount["total"]["amount"]
-        == expected_line_2_unit_discount_amount * line_2_db.quantity
-    )
-    assert assigned_discount["unit"]["amount"] == expected_line_2_unit_discount_amount
-    assert assigned_discount["value"] == rule_catalogue_value
-
-    expected_gift_line_discount_reason = f"Promotion: {gift_promotion_id}"
+    assert line_2["unitDiscount"]["amount"] == rule_catalogue_value
+    assert line_2["unitDiscountReason"] == f"Promotion: {catalogue_promotion_id}"
+    assert line_2["unitDiscountType"] == DiscountValueType.FIXED.upper()
+    assert line_2["unitDiscountValue"] == rule_catalogue_value
 
     assert gift_line["totalPrice"]["net"]["amount"] == 0.00
     assert gift_line["unitDiscount"]["amount"] == gift_price
-    assert gift_line["unitDiscountReason"] == expected_gift_line_discount_reason
+    assert gift_line["unitDiscountReason"] == f"Promotion: {gift_promotion_id}"
     assert gift_line["unitDiscountType"] == DiscountValueType.FIXED.upper()
     assert gift_line["unitDiscountValue"] == gift_price
-
-    assigned_gift_line_discount_objects = gift_line["discounts"]
-    assert len(assigned_discount_objects) == 1
-    assigned_gift_line_discount = assigned_gift_line_discount_objects[0]
-    assert assigned_gift_line_discount["reason"] == expected_gift_line_discount_reason
-    assert assigned_gift_line_discount["valueType"] == DiscountValueType.FIXED.upper()
-    assert assigned_gift_line_discount["unit"]["amount"] == gift_price
-    assert assigned_gift_line_discount["total"]["amount"] == gift_price
-    assert assigned_gift_line_discount["value"] == gift_price
 
     total = (
         order.undiscounted_total_net_amount - rule_catalogue_value * line_2_db.quantity
@@ -1540,7 +1474,7 @@ def test_draft_order_complete_with_catalogue_and_gift_discount(
 def test_draft_order_complete_with_invalid_address(
     staff_api_client,
     permission_group_manage_orders,
-    customer_user,
+    staff_user,
     draft_order,
     address,
 ):
@@ -1557,11 +1491,7 @@ def test_draft_order_complete_with_invalid_address(
 
     order.shipping_address = address.get_copy()
     order.billing_address = address.get_copy()
-    order.user = customer_user
-    order.save(update_fields=["shipping_address", "billing_address", "user"])
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
+    order.save(update_fields=["shipping_address", "billing_address"])
 
     order_id = graphene.Node.to_global_id("Order", order.id)
     variables = {"id": order_id}
@@ -1578,65 +1508,6 @@ def test_draft_order_complete_with_invalid_address(
     assert data["origin"] == OrderOrigin.DRAFT.upper()
     assert order.shipping_address.postal_code == wrong_postal_code
     assert order.billing_address.postal_code == wrong_postal_code
-    assert customer_user.addresses.count() == user_address_count
-
-
-def test_draft_order_complete_with_invalid_address_save_addresses_on(
-    staff_api_client,
-    permission_group_manage_orders,
-    draft_order,
-    address,
-    customer_user,
-):
-    """Check if draft order can be completed with invalid address.
-
-    After introducing `AddressInput.skip_validation`, Saleor may have invalid address
-    stored in database.
-    """
-    # given
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-    order = draft_order
-    wrong_postal_code = "wrong postal code"
-    address.postal_code = wrong_postal_code
-
-    order.shipping_address = address.get_copy()
-    order.billing_address = address.get_copy()
-    order.draft_save_shipping_address = True
-    order.draft_save_billing_address = True
-    order.user = customer_user
-    order.save(
-        update_fields=[
-            "shipping_address",
-            "billing_address",
-            "draft_save_shipping_address",
-            "draft_save_billing_address",
-            "user",
-        ]
-    )
-
-    customer_user.addresses.clear()
-    user_address_count = customer_user.addresses.count()
-
-    order_id = graphene.Node.to_global_id("Order", order.id)
-    variables = {"id": order_id}
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDER_COMPLETE_MUTATION, variables)
-    content = get_graphql_content(response)
-
-    # then
-    data = content["data"]["draftOrderComplete"]["order"]
-    order.refresh_from_db()
-
-    assert data["status"] == order.status.upper()
-    assert data["origin"] == OrderOrigin.DRAFT.upper()
-    assert order.shipping_address.postal_code == wrong_postal_code
-    assert order.billing_address.postal_code == wrong_postal_code
-    assert customer_user.addresses.count() == user_address_count + 1
-    assert order.draft_save_billing_address is None
-    assert order.draft_save_shipping_address is None
-    assert customer_user.addresses.first().id != order.shipping_address.id
-    assert customer_user.addresses.first().id != order.billing_address.id
 
 
 @patch(
@@ -1657,6 +1528,7 @@ def test_draft_order_complete_triggers_webhooks(
     permission_group_manage_orders,
     draft_order,
     settings,
+    django_capture_on_commit_callbacks,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -1684,7 +1556,10 @@ def test_draft_order_complete_triggers_webhooks(
     variables = {"id": order_id}
 
     # when
-    response = staff_api_client.post_graphql(DRAFT_ORDER_COMPLETE_MUTATION, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(
+            DRAFT_ORDER_COMPLETE_MUTATION, variables
+        )
 
     # then
     content = get_graphql_content(response)
@@ -1707,9 +1582,11 @@ def test_draft_order_complete_triggers_webhooks(
     mocked_send_webhook_request_async.assert_has_calls(
         [
             call(
-                kwargs={"event_delivery_id": delivery.id, "telemetry_context": ANY},
+                kwargs={"event_delivery_id": delivery.id},
                 queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-                MessageGroupId="example.com:saleor.app.additional",
+                bind=True,
+                retry_backoff=10,
+                retry_kwargs={"max_retries": 5},
             )
             for delivery in order_deliveries
         ],
@@ -1737,148 +1614,3 @@ def test_draft_order_complete_triggers_webhooks(
     )
 
     assert wrapped_call_order_event.called
-
-
-@patch(
-    "saleor.graphql.order.mutations.draft_order_complete.order_created",
-)
-def test_draft_order_complete_save_user_addresses_in_customer_book(
-    order_created_mock,
-    staff_api_client,
-    permission_group_manage_orders,
-    draft_order,
-    customer_user,
-    address_usa,
-):
-    # given the order with user set
-    # and draft_save_shipping_address and draft_save_billing_address set to True
-    order = draft_order
-    order.user = customer_user
-    order.shipping_address = address_usa
-    order.draft_save_shipping_address = True
-    order.draft_save_billing_address = True
-    order.save(
-        update_fields=[
-            "user",
-            "draft_save_shipping_address",
-            "draft_save_billing_address",
-            "shipping_address",
-        ]
-    )
-
-    customer_user.addresses.clear()
-
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    order_id = graphene.Node.to_global_id("Order", order.id)
-    variables = {"id": order_id}
-
-    # when the draft order is completed
-    response = staff_api_client.post_graphql(DRAFT_ORDER_COMPLETE_MUTATION, variables)
-
-    # then the addresses are saved in the customer book
-    # the flags are cleared
-    content = get_graphql_content(response)
-    data = content["data"]["draftOrderComplete"]["order"]
-    order.refresh_from_db()
-    assert data["status"] == order.status.upper()
-    assert data["origin"] == OrderOrigin.DRAFT.upper()
-
-    order_created_mock.assert_called_once()
-
-    customer_user.refresh_from_db()
-    assert customer_user.addresses.count() == 2
-    # ensure that the addresses are not the same instances are addresses assigned to order
-    customer_address_ids = set(customer_user.addresses.values_list("id", flat=True))
-    order_address_ids = {order.billing_address_id, order.shipping_address_id}
-    assert not (customer_address_ids & order_address_ids)
-
-    assert order.draft_save_shipping_address is None
-    assert order.draft_save_billing_address is None
-
-
-@patch(
-    "saleor.graphql.order.mutations.draft_order_complete.order_created",
-)
-def test_draft_order_complete_do_not_save_user_addresses_in_customer_book(
-    order_created_mock,
-    staff_api_client,
-    permission_group_manage_orders,
-    draft_order,
-    customer_user,
-    address_usa,
-):
-    # given the order with user set
-    # and draft_save_shipping_address and draft_save_billing_address set to False
-    order = draft_order
-    order.user = customer_user
-    order.shipping_address = address_usa
-    order.draft_save_shipping_address = False
-    order.draft_save_billing_address = False
-    order.save(
-        update_fields=[
-            "user",
-            "draft_save_shipping_address",
-            "draft_save_billing_address",
-            "shipping_address",
-        ]
-    )
-
-    customer_user.addresses.clear()
-
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    order_id = graphene.Node.to_global_id("Order", order.id)
-    variables = {"id": order_id}
-
-    # when the draft order is completed
-    response = staff_api_client.post_graphql(DRAFT_ORDER_COMPLETE_MUTATION, variables)
-
-    # then the addresses are not saved in the customer book
-    # the flags are cleared
-    content = get_graphql_content(response)
-    data = content["data"]["draftOrderComplete"]["order"]
-    order.refresh_from_db()
-    assert data["status"] == order.status.upper()
-    assert data["origin"] == OrderOrigin.DRAFT.upper()
-
-    order_created_mock.assert_called_once()
-
-    customer_user.refresh_from_db()
-    assert customer_user.addresses.count() == 0
-    # ensure that the addresses are not the same instances are addresses assigned to order
-    customer_address_ids = set(customer_user.addresses.values_list("id", flat=True))
-    order_address_ids = {order.billing_address_id, order.shipping_address_id}
-    assert not (customer_address_ids & order_address_ids)
-
-    assert order.draft_save_shipping_address is None
-    assert order.draft_save_billing_address is None
-
-
-def test_draft_order_complete_clear_line_draft_base_price_expire_at_field(
-    staff_api_client,
-    permission_group_manage_orders,
-    draft_order,
-):
-    # given
-    order = draft_order
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    expire_time = timezone.now() + datetime.timedelta(hours=24)
-    lines = order.lines.all()
-    for line in lines:
-        line.draft_base_price_expire_at = expire_time
-    OrderLine.objects.bulk_update(lines, ["draft_base_price_expire_at"])
-
-    order_id = graphene.Node.to_global_id("Order", order.id)
-    variables = {"id": order_id}
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDER_COMPLETE_MUTATION, variables)
-
-    # then
-    content = get_graphql_content(response)
-    assert not content["data"]["draftOrderComplete"]["errors"]
-
-    for line in order.lines.all():
-        assert line.draft_base_price_expire_at is None

@@ -1,15 +1,18 @@
 // @ts-strict-ignore
 import { DashboardCard } from "@dashboard/components/Card";
 import { FulfillmentStatus, OrderDetailsFragment } from "@dashboard/graphql";
+import TrashIcon from "@dashboard/icons/Trash";
 import { orderHasTransactions } from "@dashboard/orders/types";
 import { mergeRepeatedOrderLines } from "@dashboard/orders/utils/data";
-import { Box, Button, Divider, TrashBinIcon } from "@saleor/macaw-ui-next";
-import { PropsWithChildren } from "react";
+import { IconButton } from "@saleor/macaw-ui";
+import { Box, Divider } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import OrderCardTitle from "../OrderCardTitle";
 import { OrderDetailsDatagrid } from "../OrderDetailsDatagrid";
 import ActionButtons from "./ActionButtons";
 import ExtraInfoLines from "./ExtraInfoLines";
+import useStyles from "./styles";
 
 interface OrderFulfilledProductsCardProps {
   fulfillment: OrderDetailsFragment["fulfillments"][0];
@@ -38,7 +41,7 @@ const fulfillmentLineToLine = ({
   // 'orderLine.quantity' has the total number of items in the order
   quantity,
 });
-const OrderFulfilledProductsCard = (props: PropsWithChildren<OrderFulfilledProductsCardProps>) => {
+const OrderFulfilledProductsCard: React.FC<OrderFulfilledProductsCardProps> = props => {
   const {
     fulfillment,
     fulfillmentAllowUnpaid,
@@ -49,6 +52,7 @@ const OrderFulfilledProductsCard = (props: PropsWithChildren<OrderFulfilledProdu
     onShowMetadata,
     dataTestId,
   } = props;
+  const classes = useStyles(props);
 
   if (!fulfillment) {
     return null;
@@ -73,12 +77,14 @@ const OrderFulfilledProductsCard = (props: PropsWithChildren<OrderFulfilledProdu
         toolbar={
           <Box display="flex" alignItems="center" gap={6}>
             {cancelableStatuses.includes(fulfillment?.status) && (
-              <Button
+              <IconButton
                 variant="secondary"
+                className={classes.deleteIcon}
                 onClick={onOrderFulfillmentCancel}
                 data-test-id="cancel-fulfillment-button"
-                icon={<TrashBinIcon />}
-              />
+              >
+                <TrashIcon />
+              </IconButton>
             )}
             <ActionButtons
               orderId={order?.id}

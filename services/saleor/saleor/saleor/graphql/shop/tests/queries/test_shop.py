@@ -293,7 +293,7 @@ def test_query_company_address(user_api_client, site_settings, address):
     assert company_address["postalCode"] == address.postal_code
 
 
-def test_query_domain(user_api_client, settings):
+def test_query_domain(user_api_client, site_settings, settings):
     # given
     query = """
     query {
@@ -313,8 +313,8 @@ def test_query_domain(user_api_client, settings):
     # then
     content = get_graphql_content(response)
     data = content["data"]["shop"]
-    assert data["domain"]["host"] == "example.com"
-    assert data["domain"]["sslEnabled"] is True
+    assert data["domain"]["host"] == site_settings.site.domain
+    assert data["domain"]["sslEnabled"] == settings.ENABLE_SSL
     assert data["domain"]["url"]
 
 
@@ -557,7 +557,9 @@ AVAILABLE_PAYMENT_GATEWAYS_QUERY = """
 """
 
 
-def test_query_available_payment_gateways(user_api_client, sample_gateway, channel_USD):
+def test_query_available_payment_gateways(
+    user_api_client, _sample_gateway, channel_USD
+):
     # given
     query = AVAILABLE_PAYMENT_GATEWAYS_QUERY
 
@@ -578,7 +580,7 @@ def test_query_available_payment_gateways(user_api_client, sample_gateway, chann
 
 
 def test_query_available_payment_gateways_specified_currency_USD(
-    user_api_client, sample_gateway, channel_USD
+    user_api_client, _sample_gateway, channel_USD
 ):
     # given
     query = AVAILABLE_PAYMENT_GATEWAYS_QUERY
@@ -600,7 +602,7 @@ def test_query_available_payment_gateways_specified_currency_USD(
 
 
 def test_query_available_payment_gateways_specified_currency_EUR(
-    user_api_client, sample_gateway, channel_USD
+    user_api_client, _sample_gateway, channel_USD
 ):
     # given
     query = AVAILABLE_PAYMENT_GATEWAYS_QUERY

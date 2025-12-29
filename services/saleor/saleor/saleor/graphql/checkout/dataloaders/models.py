@@ -5,6 +5,7 @@ from django.db.models import F
 
 from ....checkout.models import Checkout, CheckoutLine, CheckoutMetadata
 from ....payment.models import TransactionItem
+from ...channel.dataloaders import ChannelByIdLoader
 from ...core.dataloaders import DataLoader
 
 
@@ -70,9 +71,31 @@ class CheckoutLinesByCheckoutTokenLoader(DataLoader[str, list[CheckoutLine]]):
             checkout_id__in=keys
         )
         line_map = defaultdict(list)
-        for line in lines.iterator(chunk_size=1000):
+        for line in lines.iterator():
             line_map[line.checkout_id].append(line)
         return [line_map.get(checkout_id, []) for checkout_id in keys]
+
+
+class ChannelByCheckoutIDLoader(DataLoader):
+    context_key = "channel_by_checkout"
+
+    def batch_load(self, keys):
+        def with_checkouts(checkouts):
+            def with_channels(channels):
+                channel_map = {channel.id: channel for channel in channels}
+                return [
+                    channel_map.get(checkout.channel_id) if checkout else None
+                    for checkout in checkouts
+                ]
+
+            channel_ids = set(checkout.channel_id for checkout in checkouts if checkout)
+            return (
+                ChannelByIdLoader(self.context)
+                .load_many(channel_ids)
+                .then(with_channels)
+            )
+
+        return CheckoutByTokenLoader(self.context).load_many(keys).then(with_checkouts)
 
 
 class CheckoutMetadataByCheckoutIdLoader(DataLoader[str, CheckoutMetadata]):

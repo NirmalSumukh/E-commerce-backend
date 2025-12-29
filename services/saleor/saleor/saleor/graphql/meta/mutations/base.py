@@ -2,8 +2,8 @@ import graphene
 from django.core.exceptions import ValidationError
 from graphql.error.base import GraphQLError
 
-from ....attribute import models as attribute_models
 from ....checkout import models as checkout_models
+from ....checkout.models import Checkout
 from ....core import models
 from ....core.db.connection import allow_writer
 from ....core.error_codes import MetadataErrorCode
@@ -12,14 +12,14 @@ from ....discount import models as discount_models
 from ....discount.models import Promotion
 from ....menu import models as menu_models
 from ....order import models as order_models
-from ....page import models as page_models
 from ....product import models as product_models
 from ....shipping import models as shipping_models
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import BaseContext, ChannelContext, SyncWebhookControlContext
 from ...core.mutations import BaseMutation
 from ...core.utils import from_global_id_or_error
-from ..extra_methods import TYPE_EXTRA_METHODS
+from ...payment.utils import metadata_contains_empty_key
+from ..extra_methods import TYPE_EXTRA_METHODS, TYPE_EXTRA_PREFETCH
 from ..permissions import AccountPermissions
 from ..types import ObjectWithMetadata
 from .utils import get_valid_metadata_instance
@@ -34,15 +34,13 @@ class BaseMetadataMutation(BaseMutation):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls,
         arguments=None,
-        permission_map=None,
+        permission_map=[],
         _meta=None,
         **kwargs,
     ):
-        if permission_map is None:
-            permission_map = []
         if not _meta:
             _meta = MetadataPermissionOptions(cls)
         if not arguments:
@@ -75,7 +73,7 @@ class BaseMetadataMutation(BaseMutation):
                         str(e), code=MetadataErrorCode.GRAPHQL_ERROR.value
                     )
                 }
-            ) from e
+            )
 
     @classmethod
     def get_instance_by_token(cls, object_id, qs):
@@ -89,7 +87,6 @@ class BaseMetadataMutation(BaseMutation):
             return None
         if qs and "token" in [field.name for field in qs.model._meta.get_fields()]:
             return qs.filter(token=object_id).first()
-        return None
 
     @classmethod
     def get_old_sale_instance(cls, global_id, old_sale_id):
@@ -97,25 +94,35 @@ class BaseMetadataMutation(BaseMutation):
             old_sale_id=old_sale_id
         ).first():
             return instance
-        raise ValidationError(
-            {
-                "id": ValidationError(
-                    f"Couldn't resolve to a node: {global_id}", code="not_found"
-                )
-            }
-        )
+        else:
+            raise ValidationError(
+                {
+                    "id": ValidationError(
+                        f"Couldn't resolve to a node: {global_id}", code="not_found"
+                    )
+                }
+            )
 
     @classmethod
     def validate_model_is_model_with_metadata(cls, model, object_id):
-        if (
-            not issubclass(model, models.ModelWithMetadata)
-            and not model == checkout_models.Checkout
-        ):
+        if not issubclass(model, models.ModelWithMetadata) and not model == Checkout:
             raise ValidationError(
                 {
                     "id": ValidationError(
                         f"Couldn't resolve to a item with meta: {object_id}",
                         code=MetadataErrorCode.NOT_FOUND.value,
+                    )
+                }
+            )
+
+    @classmethod
+    def validate_metadata_keys(cls, metadata_list: list[dict]):
+        if metadata_contains_empty_key(metadata_list):
+            raise ValidationError(
+                {
+                    "input": ValidationError(
+                        "Metadata key cannot be empty.",
+                        code=MetadataErrorCode.REQUIRED.value,
                     )
                 }
             )
@@ -153,7 +160,7 @@ class BaseMetadataMutation(BaseMutation):
         return graphene_type._meta.model
 
     @classmethod
-    def check_permissions(cls, context, permissions=None, **data):  # type: ignore[override]
+    def check_permissions(cls, context, permissions=None, **data):
         is_app = bool(getattr(context, "app", None))
         if is_app and permissions and AccountPermissions.MANAGE_STAFF in permissions:
             raise PermissionDenied(
@@ -197,7 +204,7 @@ class BaseMetadataMutation(BaseMutation):
             has_changed = False
 
             instance = result.item
-            if isinstance(instance, BaseContext):
+            if isinstance(instance, ChannelContext):
                 instance = instance.node
 
             if instance:
@@ -223,7 +230,7 @@ class BaseMetadataMutation(BaseMutation):
             return None, None
         try:
             return from_global_id_or_error(object_id)
-        except GraphQLError as e:
+        except GraphQLError:
             if order := order_models.Order.objects.filter(id=object_id).first():
                 return "Order", order.pk
             if checkout := checkout_models.Checkout.objects.filter(
@@ -236,12 +243,15 @@ class BaseMetadataMutation(BaseMutation):
                         "Couldn't resolve to a node.", code="graphql_error"
                     )
                 }
-            ) from e
+            )
 
     @classmethod
     def perform_model_extra_actions(cls, root, info: ResolveInfo, type_name, **data):
         """Run extra metadata method based on mutating model."""
         if TYPE_EXTRA_METHODS.get(type_name):
+            prefetch_method = TYPE_EXTRA_PREFETCH.get(type_name)
+            if prefetch_method:
+                data["qs"] = prefetch_method()
             instance = cls.get_instance(info, **data)
             TYPE_EXTRA_METHODS[type_name](instance, info, **data)
 
@@ -249,40 +259,26 @@ class BaseMetadataMutation(BaseMutation):
     def success_response(cls, instance):
         """Return a success response."""
         # Wrap the instance with ChannelContext for models that use it.
-        use_channel_context = isinstance(
-            instance,
-            discount_models.Voucher
-            | menu_models.Menu
-            | menu_models.MenuItem
-            | product_models.Collection
-            | product_models.Product
-            | product_models.ProductVariant
-            | shipping_models.ShippingMethod
-            | shipping_models.ShippingZone
-            | attribute_models.Attribute
-            | attribute_models.AttributeValue
-            | page_models.Page,
+        use_channel_context = any(
+            [
+                isinstance(instance, Model)
+                for Model in [
+                    discount_models.Voucher,
+                    menu_models.Menu,
+                    menu_models.MenuItem,
+                    product_models.Collection,
+                    product_models.Product,
+                    product_models.ProductVariant,
+                    shipping_models.ShippingMethod,
+                    shipping_models.ShippingZone,
+                ]
+            ]
         )
-
-        use_channel_context = use_channel_context or (
-            # For old sales migrated into promotions
-            isinstance(instance, Promotion) and instance.old_sale_id
-        )
-
         if use_channel_context:
             instance = ChannelContext(node=instance, channel_slug=None)
 
-        use_webhook_sync_control_context = isinstance(
-            instance,
-            checkout_models.Checkout
-            | checkout_models.CheckoutLine
-            | order_models.Order
-            | order_models.OrderLine
-            | order_models.Fulfillment
-            | order_models.FulfillmentLine,
-        )
-
-        if use_webhook_sync_control_context:
-            instance = SyncWebhookControlContext(node=instance)
+        # For old sales migrated into promotions
+        if isinstance(instance, Promotion) and instance.old_sale_id:
+            instance = ChannelContext(node=instance, channel_slug=None)
 
         return cls(item=instance, errors=[])

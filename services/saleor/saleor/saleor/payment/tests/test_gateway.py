@@ -345,7 +345,7 @@ def test_request_charge_action_missing_active_event(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
     )
     action_value = Decimal("5.00")
     requested_event = transaction.events.create(
@@ -391,7 +391,7 @@ def test_request_charge_action_on_order(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=app,
     )
     action_value = Decimal("5.00")
@@ -455,7 +455,7 @@ def test_request_charge_action_by_app(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=webhook_app,
     )
     action_value = Decimal("5.00")
@@ -509,7 +509,7 @@ def test_request_action_by_removed_app(mocked_transaction_request, order, remove
         available_actions=["capture", "void"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app_identifier,
     )
     action_value = Decimal("5.00")
@@ -546,7 +546,7 @@ def test_request_action_by_disabled_app(mocked_transaction_request, order, app):
         available_actions=["capture", "void"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app_identifier,
     )
     action_value = Decimal("5.00")
@@ -600,7 +600,7 @@ def test_request_action_by_removed_app_and_second_active(
         available_actions=["capture", "void"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app_identifier,
         app=removed_app,
     )
@@ -662,7 +662,7 @@ def test_request_action_by_disabled_app_and_second_active(
         available_actions=["capture", "void"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app_identifier=app_identifier,
         app=app,
     )
@@ -720,7 +720,7 @@ def test_request_charge_action_on_checkout(
         available_actions=["capture", "cancel"],
         currency="USD",
         checkout_id=checkout.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=app,
     )
     action_value = Decimal("5.00")
@@ -767,7 +767,7 @@ def test_request_refund_action_missing_active_event(
         available_actions=["refund"],
         currency="USD",
         order_id=order.pk,
-        charged_value=Decimal(10),
+        charged_value=Decimal("10"),
     )
     action_value = Decimal("5.00")
     requested_event = transaction.events.create(
@@ -850,7 +850,7 @@ def test_request_refund_action_on_order(
         available_actions=["refund"],
         currency="USD",
         order_id=order.pk,
-        charged_value=Decimal(10),
+        charged_value=Decimal("10"),
         app=app,
     )
     action_value = Decimal("5.00")
@@ -924,7 +924,7 @@ def test_request_refund_action_with_granted_refund(
         available_actions=["refund"],
         currency="USD",
         order_id=order_with_lines.pk,
-        charged_value=Decimal(10),
+        charged_value=Decimal("10"),
         app=app,
     )
     action_value = order_line.unit_price_gross_amount
@@ -991,7 +991,7 @@ def test_request_refund_action_by_app(
         available_actions=["refund"],
         currency="USD",
         order_id=order.pk,
-        charged_value=Decimal(10),
+        charged_value=Decimal("10"),
         app=webhook_app,
     )
     action_value = Decimal("5.00")
@@ -1057,7 +1057,7 @@ def test_request_refund_action_on_checkout(
         available_actions=["refund"],
         currency="USD",
         checkout_id=checkout.pk,
-        charged_value=Decimal(10),
+        charged_value=Decimal("10"),
         app=app,
     )
     action_value = Decimal("5.00")
@@ -1104,7 +1104,7 @@ def test_request_cancelation_action_missing_active_event(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
     )
     requested_event = transaction.events.create(
         currency=transaction.currency,
@@ -1190,7 +1190,7 @@ def test_request_cancelation_action_on_order(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=app,
     )
     requested_event = transaction.events.create(
@@ -1217,7 +1217,7 @@ def test_request_cancelation_action_on_order(
         TransactionActionData(
             transaction=transaction,
             action_type=TransactionAction.CANCEL,
-            action_value=transaction.authorized_value,
+            action_value=None,
             event=requested_event,
             transaction_app_owner=app,
         ),
@@ -1255,13 +1255,11 @@ def test_request_cancelation_action_by_app(
         available_actions=["capture", "cancel"],
         currency="USD",
         order_id=order.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=webhook_app,
     )
     requested_event = transaction.events.create(
-        currency=transaction.currency,
-        type=TransactionEventType.CANCEL_REQUEST,
-        amount_value=transaction.authorized_value,
+        currency=transaction.currency, type=TransactionEventType.CANCEL_REQUEST
     )
     mocked_is_active.side_effect = [False, True]
 
@@ -1283,7 +1281,7 @@ def test_request_cancelation_action_by_app(
         TransactionActionData(
             transaction=transaction,
             action_type=TransactionAction.CANCEL,
-            action_value=transaction.authorized_value,
+            action_value=None,
             event=requested_event,
             transaction_app_owner=webhook_app,
         ),
@@ -1322,13 +1320,12 @@ def test_request_cancelation_action_on_checkout(
         available_actions=["capture", "cancel"],
         currency="USD",
         checkout_id=checkout.pk,
-        authorized_value=Decimal(10),
+        authorized_value=Decimal("10"),
         app=app,
     )
     requested_event = transaction.events.create(
         currency=transaction.currency,
         type=TransactionEventType.CANCEL_REQUEST,
-        amount_value=transaction.authorized_value,
     )
     mocked_is_active.side_effect = [False, True]
 
@@ -1350,7 +1347,7 @@ def test_request_cancelation_action_on_checkout(
         TransactionActionData(
             transaction=transaction,
             action_type=TransactionAction.CANCEL,
-            action_value=transaction.authorized_value,
+            action_value=None,
             event=requested_event,
             transaction_app_owner=app,
         ),
@@ -1374,7 +1371,7 @@ def test_payment_refund_or_void_no_payment(refund_mock, void_mock):
 def test_payment_refund_or_void_refund_called(refund_mock, payment):
     """Test that refund is called when there is no matching transaction."""
     # given
-    assert payment.transactions.count() == 0
+    payment.transactions.count() == 0
     payment.charge_status = ChargeStatus.FULLY_CHARGED
     payment.save(update_fields=["charge_status"])
 
@@ -1487,7 +1484,7 @@ def test_payment_refund_or_void_void_called(void_mock, payment):
     # given
     payment.can_void = Mock(return_value=True)
     assert payment.can_void() is True
-    assert payment.transactions.count() == 0
+    payment.transactions.count() == 0
 
     # when
     gateway.payment_refund_or_void(

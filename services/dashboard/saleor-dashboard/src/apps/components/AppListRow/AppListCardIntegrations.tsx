@@ -1,12 +1,13 @@
 import { AppstoreApi } from "@dashboard/apps/appstore.types";
 import { useTheme } from "@saleor/macaw-ui";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 
 interface AppListCardIntegrationsProps {
   integrations: AppstoreApi.SaleorApp["integrations"];
 }
 
-export const AppListCardIntegrations = ({ integrations }: AppListCardIntegrationsProps) => {
+const AppListCardIntegrations: React.FC<AppListCardIntegrationsProps> = ({ integrations }) => {
   const { themeType } = useTheme();
 
   if (!integrations) {
@@ -54,3 +55,4 @@ export const AppListCardIntegrations = ({ integrations }: AppListCardIntegration
 };
 
 AppListCardIntegrations.displayName = "AppListCardIntegrations";
+export default AppListCardIntegrations;

@@ -3,16 +3,16 @@ import graphene
 from ....core.tracing import traced_atomic_transaction
 from ....permission.enums import SitePermissions
 from ....product import models as product_models
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
 from ...core.enums import LanguageCodeEnum
 from ...core.types import TranslationError
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...product.types import Product
-from .utils import BaseTranslateMutationWithSlug, TranslationInput
+from .utils import BaseTranslateMutation, TranslationInput
 
 
-class ProductTranslate(BaseTranslateMutationWithSlug):
+class ProductTranslate(BaseTranslateMutation):
     class Arguments:
         id = graphene.ID(
             required=True,
@@ -40,7 +40,6 @@ class ProductTranslate(BaseTranslateMutationWithSlug):
         node_id = cls.clean_node_id(id)[0]
         instance = cls.get_node_or_error(info, node_id, only_type=Product)
         cls.validate_input(input)
-        input = cls.pre_update_or_create(instance, input, language_code)
         manager = get_plugin_manager_promise(info.context).get()
         with traced_atomic_transaction():
             translation, created = instance.translations.update_or_create(

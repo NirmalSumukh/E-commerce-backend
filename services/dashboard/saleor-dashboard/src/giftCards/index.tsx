@@ -4,6 +4,7 @@ import { WindowTitle } from "@dashboard/components/WindowTitle";
 import { sectionNames } from "@dashboard/intl";
 import { asSortParams } from "@dashboard/utils/sort";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -14,14 +15,13 @@ import GiftCardUpdateComponent from "./GiftCardUpdate";
 import { GiftCardUpdatePageUrlQueryParams } from "./GiftCardUpdate/types";
 import { giftCardPath, giftCardSettingsUrl, giftCardsListPath } from "./urls";
 
-const GiftCardUpdatePage = ({ match }: RouteComponentProps<{ id: string }>) => {
+const GiftCardUpdatePage: React.FC<RouteComponentProps<{ id: string }>> = ({ match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: GiftCardUpdatePageUrlQueryParams = qs;
 
   return <GiftCardUpdateComponent id={decodeURIComponent(match.params.id)} params={params} />;
 };
-
-const GiftCardList = () => {
+const GiftCardList: React.FC<RouteComponentProps<any>> = () => {
   const qs = parseQs(location.search.substr(1)) as any;
   const params: GiftCardListUrlQueryParams = asSortParams(
     qs,
@@ -35,8 +35,7 @@ const GiftCardList = () => {
     </ConditionalGiftCardsFilterProver>
   );
 };
-
-const Component = () => {
+const Component: React.FC = () => {
   const intl = useIntl();
 
   return (

@@ -2,20 +2,26 @@ import { ThemeProvider as LegacyThemeProvider } from "@saleor/macaw-ui";
 import { ThemeProvider } from "@saleor/macaw-ui-next";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 import { singleRefundableTransaction } from "./fixtures";
 import { TransactionSubmitCard } from "./TransactionSubmitCard";
 
 const Wrapper = ({ children }: { children: ReactNode }) => {
   return (
-    // @ts-expect-error - legacy types
     <LegacyThemeProvider>
       <ThemeProvider>{children}</ThemeProvider>
     </LegacyThemeProvider>
   );
 };
 
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
 jest.mock("@dashboard/auth/hooks/useUserPermissions", () => ({
   useUserPermissions: jest.fn(() => [
     {
@@ -52,7 +58,6 @@ const transactionSubmitCardProps = {
   submitStatus: "default" as const,
   onAmountChange: () => undefined,
   isAmountDirty: false,
-  transactionId: "VHJhbnNhY3Rpb25JdGVtOmZjNzhhZDkwLWQ3NDgtNDdlNi04YWM4LWE0YjdiNjRlMmE1MQ==",
 };
 
 describe("TransactionSubmitCard", () => {
@@ -76,7 +81,6 @@ describe("TransactionSubmitCard", () => {
     // Act
     await userEvent.click(autoGrantRefundCheckbox);
     await userEvent.click(submitBtn);
-
     // Assert
     expect(onChangeFn).toHaveBeenCalledWith({
       target: {

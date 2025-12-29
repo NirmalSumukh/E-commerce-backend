@@ -1,10 +1,9 @@
 import { AppActionsHandler } from "@dashboard/apps/components/AppFrame/appActionsHandler";
 import { usePostToExtension } from "@dashboard/apps/components/AppFrame/usePostToExtension";
 import { Actions, DispatchResponseEvent } from "@saleor/app-sdk/app-bridge";
-import { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 /**
- * @deprecated Use hook from extensions/
  * TODO Refactor to named attributes
  */
 export const useAppActions = (
@@ -62,7 +61,7 @@ export const useAppActions = (
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handler = (event: MessageEvent<Actions>) => {
       if (event.origin === appOrigin) {
         const response = handleAction(event.data);

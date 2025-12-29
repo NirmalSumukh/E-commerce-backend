@@ -3,7 +3,7 @@ import { FlagList } from "@dashboard/featureFlags";
 import { ThemeType } from "@saleor/app-sdk/app-bridge";
 import { useTheme } from "@saleor/macaw-ui";
 import isEqualWith from "lodash/isEqualWith";
-import { forwardRef, memo, useEffect, useRef } from "react";
+import React, { forwardRef, memo, useEffect, useRef } from "react";
 
 interface AppIFrameProps {
   appId: string;
@@ -15,7 +15,6 @@ interface AppIFrameProps {
   className: string;
 }
 
-/** @deprecated Use component from extensions/ */
 const _AppIFrame = forwardRef<HTMLIFrameElement, AppIFrameProps>(
   ({ appId, src, featureFlags, params, onLoad, onError, className }, ref) => {
     const themeRef = useRef<ThemeType>();

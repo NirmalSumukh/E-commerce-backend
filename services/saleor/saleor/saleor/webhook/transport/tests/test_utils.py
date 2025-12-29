@@ -56,7 +56,7 @@ def test_webhook_retry(webhook, event_delivery):
     # given
     attempt = EventDeliveryAttempt(
         id=1,
-        created_at=datetime.datetime.now(tz=datetime.UTC),
+        created_at=datetime.datetime.utcnow(),
         delivery=event_delivery,
         request_headers="",
         task_id="123",
@@ -76,7 +76,7 @@ def test_webhook_retry_404(webhook, event_delivery):
     # given
     attempt = EventDeliveryAttempt(
         id=1,
-        created_at=datetime.datetime.now(tz=datetime.UTC),
+        created_at=datetime.datetime.utcnow(),
         delivery=event_delivery,
         request_headers="",
         task_id="123",
@@ -96,7 +96,7 @@ def test_webhook_retry_redirect(webhook, event_delivery):
     # given
     attempt = EventDeliveryAttempt(
         id=1,
-        created_at=datetime.datetime.now(tz=datetime.UTC),
+        created_at=datetime.datetime.utcnow(),
         delivery=event_delivery,
         request_headers="",
         task_id="123",
@@ -169,7 +169,7 @@ def test_send_webhook_using_aws_sqs(
             "SaleorDomain": {"DataType": "String", "StringValue": domain},
             "SaleorApiUrl": {
                 "DataType": "String",
-                "StringValue": f"https://{domain}/graphql/",
+                "StringValue": f"http://{domain}/graphql/",
             },
             "EventType": {"DataType": "String", "StringValue": event_type},
             "Signature": {"DataType": "String", "StringValue": signature},
@@ -230,25 +230,7 @@ def test_get_delivery_for_webhook_inactive_webhook(event_delivery, caplog):
     event_delivery.refresh_from_db()
     assert event_delivery.status == EventDeliveryStatus.FAILED
     assert caplog.records[0].message == (
-        f"Event delivery id: {event_delivery.pk} app/webhook is disabled."
-    )
-    assert not_found is False
-
-
-def test_get_delivery_for_webhook_inactive_app(event_delivery, caplog):
-    # given
-    event_delivery.webhook.app.is_active = False
-    event_delivery.webhook.app.save(update_fields=["is_active"])
-
-    # when
-    delivery, not_found = get_delivery_for_webhook(event_delivery.pk)
-
-    # then
-    assert delivery is None
-    event_delivery.refresh_from_db()
-    assert event_delivery.status == EventDeliveryStatus.FAILED
-    assert caplog.records[0].message == (
-        f"Event delivery id: {event_delivery.pk} app/webhook is disabled."
+        f"Event delivery id: {event_delivery.pk} webhook is disabled."
     )
     assert not_found is False
 
@@ -266,7 +248,7 @@ def test_get_multiple_deliveries_for_webhooks(event_deliveries):
     assert set(deliveries.keys()) == set(ids)
 
 
-def test_get_multiple_deliveries_for_webhooks_with_inactive_webhook(
+def test_get_multiple_deliveries_for_webhooks_with_inactive(
     any_webhook, event_deliveries
 ):
     # given
@@ -276,42 +258,6 @@ def test_get_multiple_deliveries_for_webhooks_with_inactive_webhook(
 
     any_webhook.is_active = False
     any_webhook.save(update_fields=["is_active"])
-    inactive_delivery.webhook = any_webhook
-    inactive_delivery.save(update_fields=["webhook"])
-
-    # when
-    deliveries, _ = get_multiple_deliveries_for_webhooks(ids)
-
-    # then
-    assert len(deliveries) == len(all_deliveries) - 1
-    assert set(deliveries.keys()) == set(ids) - {inactive_delivery.pk}
-
-    inactive_delivery.refresh_from_db()
-    assert inactive_delivery.status == EventDeliveryStatus.FAILED
-
-
-def test_get_multiple_deliveries_for_webhooks_with_inactive_app(
-    any_webhook, event_deliveries, external_app
-):
-    # given
-    all_deliveries = EventDelivery.objects.all()
-    assert len(all_deliveries) == 3
-
-    ids = [event_delivery.pk for event_delivery in all_deliveries]
-    inactive_delivery = all_deliveries[0]
-
-    # Assign inactive app to single delivery
-    external_app.is_active = False
-    external_app.save(update_fields=["is_active"])
-    any_webhook.app = external_app
-    any_webhook.save()
-    inactive_delivery.webhook = any_webhook
-    inactive_delivery.save()
-
-    assert any_webhook.is_active
-    assert all_deliveries[1].webhook.app != any_webhook.app
-    assert all_deliveries[2].webhook.app != any_webhook.app
-
     inactive_delivery.webhook = any_webhook
     inactive_delivery.save(update_fields=["webhook"])
 

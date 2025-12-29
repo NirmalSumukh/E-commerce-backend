@@ -1,3 +1,4 @@
+// import { isLimitReached } from "@dashboard/utils/limits";
 import { ChannelData } from "@dashboard/channels/utils";
 import { ColumnPicker } from "@dashboard/components/Datagrid/ColumnPicker/ColumnPicker";
 import { useColumns } from "@dashboard/components/Datagrid/ColumnPicker/useColumns";
@@ -18,7 +19,7 @@ import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { Item } from "@glideapps/glide-data-grid";
 import { Button } from "@saleor/macaw-ui";
 import { Option } from "@saleor/macaw-ui-next";
-import { useCallback, useEffect, useMemo } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { ProductVariantsHeader } from "./components/ProductVariantsHeader";
@@ -45,7 +46,7 @@ interface ProductVariantsProps {
   onRowClick: (id: string) => void;
 }
 
-const ProductVariants = ({
+export const ProductVariants: React.FC<ProductVariantsProps> = ({
   channels,
   errors,
   variants,
@@ -55,7 +56,7 @@ const ProductVariants = ({
   onAttributeValuesSearch,
   onChange,
   onRowClick,
-}: ProductVariantsProps) => {
+}) => {
   const intl = useIntl();
 
   // https://github.com/saleor/saleor-dashboard/issues/4165
@@ -69,7 +70,7 @@ const ProductVariants = ({
   // Normally this should be in LS handled by useListSettings hook
   // https://github.com/saleor/saleor-dashboard/issues/4164
 
-  const initialSettings = useMemo(
+  const initialSettings = React.useMemo(
     () =>
       channels && warehouses && variantAttributes
         ? [
@@ -95,14 +96,14 @@ const ProductVariants = ({
     initialSettings,
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (columnSettings) {
       handlers.onResetDynamicToInitial();
     }
   }, [columnSettings]);
 
-  const handleColumnChange = useCallback(
-    (picked: string[]) => {
+  const handleColumnChange = React.useCallback(
+    picked => {
       setColumnSettings(picked);
     },
     [setColumnSettings],
@@ -130,7 +131,7 @@ const ProductVariants = ({
     intl,
     warehouses,
   });
-  const memoizedStaticColumns = useMemo(() => variantsStaticColumnsAdapter(intl), [intl]);
+  const memoizedStaticColumns = React.useMemo(() => variantsStaticColumnsAdapter(intl), [intl]);
   const {
     handlers,
     columnCategories,
@@ -146,7 +147,7 @@ const ProductVariants = ({
     selectedColumns: columnSettings ?? [],
     onSave: handleColumnChange,
   });
-  const getCellContent = useCallback(
+  const getCellContent = React.useCallback(
     ([column, row]: Item, opts: GetCellContentOpts) =>
       getData({
         availableColumns: visibleColumns,
@@ -159,7 +160,7 @@ const ProductVariants = ({
       }),
     [channels, visibleColumns, onAttributeValuesSearch, variants],
   );
-  const getCellError = useCallback(
+  const getCellError = React.useCallback(
     ([column, row]: Item, opts: GetCellContentOpts) =>
       getError(errors, {
         availableColumns: visibleColumns,
@@ -217,6 +218,5 @@ const ProductVariants = ({
     />
   );
 };
-
 ProductVariants.displayName = "ProductVariants";
 export default ProductVariants;

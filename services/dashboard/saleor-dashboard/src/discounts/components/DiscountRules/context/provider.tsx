@@ -1,5 +1,5 @@
 import { ChannelFragment, PromotionTypeEnum } from "@dashboard/graphql";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 import { discountRulesContext } from "./context";
 

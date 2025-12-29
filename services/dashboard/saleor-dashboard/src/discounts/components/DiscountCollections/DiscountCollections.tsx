@@ -11,6 +11,7 @@ import { CollectionWithTotalProductsFragment } from "@dashboard/graphql";
 import { TableBody, TableCell, TableFooter } from "@material-ui/core";
 import { DeleteIcon, IconButton } from "@saleor/macaw-ui";
 import { Button, Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { renderCollection } from "../../../misc";
@@ -18,14 +19,14 @@ import { ListActions, ListProps } from "../../../types";
 import { messages } from "./messages";
 import { useStyles } from "./styles";
 
-interface DiscountCollectionsProps extends ListProps, ListActions {
+export interface DiscountCollectionsProps extends ListProps, ListActions {
   collections: CollectionWithTotalProductsFragment[];
   onCollectionAssign: () => void;
   onCollectionUnassign: (id: string) => void;
 }
 
 const numberOfColumns = 4;
-const DiscountCollections = (props: DiscountCollectionsProps) => {
+const DiscountCollections: React.FC<DiscountCollectionsProps> = props => {
   const {
     collections,
     disabled,
@@ -123,10 +124,7 @@ const DiscountCollections = (props: DiscountCollectionsProps) => {
                           onCollectionUnassign(collection.id);
                         }}
                       >
-                        <DeleteIcon
-                          onPointerEnterCapture={undefined}
-                          onPointerLeaveCapture={undefined}
-                        />
+                        <DeleteIcon />
                       </IconButton>
                     </TableButtonWrapper>
                   </TableCell>

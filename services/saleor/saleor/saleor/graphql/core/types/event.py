@@ -15,7 +15,7 @@ class SubscriptionObjectType(BaseObjectType):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls,
         root_type=None,
         enable_dry_run=False,

@@ -1,10 +1,18 @@
 import { getChoicesWithAncestors } from "@dashboard/products/utils/utils";
 import { ThemeProvider } from "@saleor/macaw-ui";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { PropsWithChildren } from "react";
+import React, { PropsWithChildren } from "react";
 import { MemoryRouter as Router } from "react-router-dom";
 
 import { ProductOrganization } from "./ProductOrganization";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
 
 const intersectionObserverMock = () => ({
   observe: () => null,
@@ -90,9 +98,8 @@ const categoriesWithAncestors = getChoicesWithAncestors([
   },
 ]);
 
-const Wrapper = ({ children }: PropsWithChildren<{}>) => (
+const Wrapper: React.FC<PropsWithChildren<{}>> = ({ children }) => (
   <Router>
-    {/*@ts-expect-error - legacy types */}
     <ThemeProvider>{children}</ThemeProvider>
   </Router>
 );

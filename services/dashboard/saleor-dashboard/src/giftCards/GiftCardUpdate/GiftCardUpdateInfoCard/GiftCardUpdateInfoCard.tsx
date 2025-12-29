@@ -1,12 +1,13 @@
 import { DashboardCard } from "@dashboard/components/Card";
 import { Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import useGiftCardDetails from "../providers/GiftCardDetailsProvider/hooks/useGiftCardDetails";
 import GiftCardUpdateInfoCardContent from "./GiftCardUpdateInfoCardContent";
 import { giftCardUpdateInfoCardMessages as messages } from "./messages";
 
-const GiftCardUpdateInfoCard = () => {
+const GiftCardUpdateInfoCard: React.FC = () => {
   const intl = useIntl();
   const { loading } = useGiftCardDetails();
 

@@ -2,11 +2,12 @@ import ActionDialog from "@dashboard/components/ActionDialog";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import msgs from "./messages";
 
-interface AppInProgressDeleteDialogProps {
+export interface AppInProgressDeleteDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   name?: string | null;
@@ -14,7 +15,7 @@ interface AppInProgressDeleteDialogProps {
   onConfirm: () => void;
 }
 
-export const AppInProgressDeleteDialog = ({
+const AppInProgressDeleteDialog = ({
   confirmButtonState,
   open,
   name,
@@ -48,3 +49,4 @@ export const AppInProgressDeleteDialog = ({
 };
 
 AppInProgressDeleteDialog.displayName = "AppInProgressDeleteDialog";
+export default AppInProgressDeleteDialog;

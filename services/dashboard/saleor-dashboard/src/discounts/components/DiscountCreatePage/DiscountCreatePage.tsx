@@ -11,6 +11,7 @@ import {
 } from "@dashboard/graphql";
 import { getFormErrors } from "@dashboard/utils/errors";
 import { getCommonFormFieldErrorMessage } from "@dashboard/utils/errors/common";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { DiscountCreateForm } from "../DiscountCreateForm";
@@ -19,7 +20,7 @@ import { DiscountDescription } from "../DiscountDescription";
 import { DiscountGeneralInfo } from "../DiscountGeneralInfo";
 import { DiscountRules, DiscountRulesErrors } from "../DiscountRules";
 
-interface DiscountCreatePageProps {
+export interface DiscountCreatePageProps {
   channels: ChannelFragment[];
   disabled: boolean;
   errors: PromotionCreateErrorFragment[];

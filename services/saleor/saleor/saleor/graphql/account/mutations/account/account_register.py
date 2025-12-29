@@ -1,23 +1,27 @@
+from urllib.parse import urlencode
+
 import graphene
 from django.conf import settings
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 
-from .....account import models
+from .....account import events as account_events
+from .....account import models, notifications, search
 from .....account.error_codes import AccountErrorCode
-from .....account.tasks import finish_creating_user
-from .....account.utils import RequestorAwareContext
-from .....core.utils.url import validate_storefront_url
+from .....core.tokens import token_generator
+from .....core.tracing import traced_atomic_transaction
+from .....core.utils.url import prepare_url, validate_storefront_url
 from .....webhook.event_types import WebhookEventAsyncType
 from ....channel.utils import clean_channel
 from ....core import ResolveInfo
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.enums import LanguageCodeEnum
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.types import AccountError, NonNullList
 from ....core.utils import WebhookEventInfo
-from ....meta.inputs import MetadataInput, MetadataInputDescription
+from ....meta.inputs import MetadataInput
+from ....plugins.dataloaders import get_plugin_manager_promise
 from ....site.dataloaders import get_site_promise
 from ...types import User
 from .base import AccountBaseInput
@@ -40,9 +44,7 @@ class AccountRegisterInput(AccountBaseInput):
     )
     metadata = NonNullList(
         MetadataInput,
-        description=(
-            f"User public metadata. {MetadataInputDescription.PUBLIC_METADATA_INPUT}"
-        ),
+        description="User public metadata.",
         required=False,
     )
     channel = graphene.String(
@@ -57,16 +59,7 @@ class AccountRegisterInput(AccountBaseInput):
         doc_category = DOC_CATEGORY_USERS
 
 
-class AccountRegister(DeprecatedModelMutation):
-    user = graphene.Field(
-        User,
-        deprecation_reason=(
-            "The field always returns a `User` object constructed from the input data. "
-            "The `user.id` is always empty. To determine whether the user exists "
-            "in Saleor, query via an external app with the required permissions."
-        ),
-    )
-
+class AccountRegister(ModelMutation):
     class Arguments:
         input = AccountRegisterInput(
             description="Fields required to create a user.", required=True
@@ -79,10 +72,11 @@ class AccountRegister(DeprecatedModelMutation):
     class Meta:
         description = "Register a new user."
         doc_category = DOC_CATEGORY_USERS
-        error_type_class = AccountError
-        error_type_field = "account_errors"
+        exclude = ["password"]
         model = models.User
         object_type = User
+        error_type_class = AccountError
+        error_type_field = "account_errors"
         support_meta_field = True
         webhook_events_info = [
             WebhookEventInfo(
@@ -109,9 +103,6 @@ class AccountRegister(DeprecatedModelMutation):
         response.requires_confirmation = (
             site.settings.enable_account_confirmation_by_email
         )
-        # we don't want to return id's as it will allow to deduce if user exists
-        if response.user:
-            response.user.NEWLY_CREATED_USER = True
         return response
 
     @classmethod
@@ -119,7 +110,7 @@ class AccountRegister(DeprecatedModelMutation):
         site = get_site_promise(info.context).get()
         if not site.settings.enable_account_confirmation_by_email:
             return super().clean_input(info, instance, data, **kwargs)
-        if not data.get("redirect_url"):
+        elif not data.get("redirect_url"):
             raise ValidationError(
                 {
                     "redirect_url": ValidationError(
@@ -130,14 +121,14 @@ class AccountRegister(DeprecatedModelMutation):
 
         try:
             validate_storefront_url(data["redirect_url"])
-        except ValidationError as e:
+        except ValidationError as error:
             raise ValidationError(
                 {
                     "redirect_url": ValidationError(
-                        e.message, code=AccountErrorCode.INVALID.value
+                        error.message, code=AccountErrorCode.INVALID.value
                     )
                 }
-            ) from e
+            )
 
         data["channel"] = clean_channel(
             data.get("channel"), error_class=AccountErrorCode, allow_replica=False
@@ -148,138 +139,76 @@ class AccountRegister(DeprecatedModelMutation):
         password = data["password"]
         try:
             password_validation.validate_password(password, instance)
-        except ValidationError as e:
-            raise ValidationError({"password": e}) from e
+        except ValidationError as error:
+            raise ValidationError({"password": error})
 
         data["language_code"] = data.get("language_code", settings.LANGUAGE_CODE)
         return super().clean_input(info, instance, data, **kwargs)
 
     @classmethod
-    def clean_instance(cls, info: ResolveInfo, instance, /):
-        user_exists = False
-
-        try:
-            instance.full_clean(exclude=["password"])
-        except ValidationError as error:
-            user_exists, error.error_dict = cls._clean_errors(error)
-
-            if error.error_dict:
-                raise error
-
-        return user_exists
-
-    @classmethod
-    def perform_mutation(cls, _root, info: ResolveInfo, /, **data):
-        instance = models.User()
-        data = data.get("input")
-        cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
+    def save(cls, info: ResolveInfo, user, cleaned_input):
+        password = cleaned_input["password"]
+        user.set_password(password)
+        user.search_document = search.prepare_user_search_document_value(
+            user, attach_addresses_data=False
         )
+        manager = get_plugin_manager_promise(info.context).get()
+        site = get_site_promise(info.context).get()
+        token = None
+        redirect_url = cleaned_input.get("redirect_url")
 
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
-        instance = cls.construct_instance(instance, cleaned_input)
-
-        cls.validate_and_update_metadata(
-            instance, metadata_collection, private_metadata_collection
-        )
-
-        user_exists = cls.clean_instance(info, instance)
-
-        context_data = RequestorAwareContext.create_context_data(info.context)
-        cls.save_and_create_task(user_exists, instance, cleaned_input, context_data)
-
-        # Sets updated_at, to always return the time when mutation was called
-        instance.updated_at = instance.date_joined
-        return cls.success_response(instance)
-
-    @classmethod
-    def _save(cls, instance: models.User) -> bool:
-        """Save a user instance with thread-race error handling.
-
-        This method attempts to save a User instance and handles possible thread race
-        that may occur due to unique constraint violations on the email field.
-
-        To keep the timing of the logic similar, the number of DB queries is the same
-        in both cases.
-        Return true when instance is saved. Return false otherwise.
-        """
-        try:
-            with transaction.atomic():
-                instance.save()
-            models.User.objects.filter(email=instance.email).first()
-            return True
-        except IntegrityError:
+        with traced_atomic_transaction():
+            user.is_confirmed = False
             try:
-                models.User.objects.get(email=instance.email)
-                return False
-            except models.User.DoesNotExist:
-                pass
-            raise
+                user.save()
+            except IntegrityError:
+                try:
+                    # Verify if object already exists in DB.
+                    # If yes, it means we have a race-condition
+                    # This eventually leads to ValidationError because this user
+                    # already exists
+                    models.User.objects.get(email=user.email)
 
-    @classmethod
-    def save_and_create_task(cls, user_exists, instance, cleaned_input, context_data):
-        instance.set_password(cleaned_input["password"])
-        instance.is_confirmed = False
+                    raise ValidationError(
+                        {
+                            # This validation error mimics built-in validation error
+                            # So graphQL response is the same
+                            "email": ValidationError(
+                                "User with this Email already exists.",
+                                code=AccountErrorCode.UNIQUE.value,
+                            )
+                        }
+                    )
+                except user.DoesNotExist:
+                    pass
+                raise
 
-        user_created = False
-        if not user_exists:
-            user_created = cls._save(instance)
+            if site.settings.enable_account_confirmation_by_email:
+                # Notifications will be deprecated in the future
+                token = token_generator.make_token(user)
+                notifications.send_account_confirmation(
+                    user,
+                    redirect_url,
+                    manager,
+                    channel_slug=cleaned_input["channel"],
+                    token=token,
+                )
+                if redirect_url:
+                    params = urlencode(
+                        {
+                            "email": user.email,
+                            "token": token or token_generator.make_token(user),
+                        }
+                    )
+                    redirect_url = prepare_url(params, redirect_url)
 
-        # moving logic to async task to prevent timing attacks
-        finish_creating_user.delay(
-            instance.pk if user_created else None,
-            cleaned_input.get("redirect_url"),
-            cleaned_input.get("channel"),
-            context_data,
-        )
+                cls.call_event(
+                    manager.account_confirmation_requested,
+                    user,
+                    cleaned_input["channel"],
+                    token,
+                    redirect_url,
+                )
 
-    @classmethod
-    def _clean_email_errors(cls, errors):
-        """Clean email errors.
-
-        Iterates over errors for field `email` with purpose to
-        not leak `unique` error in case when user already exists in database which would
-        allow user enumeration.
-        Returns boolean value if user exists and filtered errors
-        that can be displayed to the end user.
-        """
-        existing_user = False
-        filtered_errors = []
-
-        for error in errors:
-            if error.code == "unique":
-                existing_user = True
-                continue
-            filtered_errors.append(error)
-
-        return existing_user, filtered_errors
-
-    @classmethod
-    def _clean_errors(cls, error):
-        """Clean errors.
-
-        Iterate over errors for field `email` with purpose to
-        not leak error indicating user existence in the system.
-        Returns boolean value if user exists and filtered errors
-        that can be displayed to the end user.
-        """
-        existing_user = False
-        error_dict = {}
-
-        for field, errors in error.error_dict.items():
-            if field == "email":
-                existing_user, errors = cls._clean_email_errors(errors)
-                if not errors:
-                    continue
-
-            error_dict[field] = errors
-
-        return existing_user, error_dict
+            cls.call_event(manager.customer_created, user)
+        account_events.customer_account_created_event(user=user)

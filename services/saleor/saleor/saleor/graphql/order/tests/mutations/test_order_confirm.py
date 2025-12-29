@@ -625,6 +625,7 @@ def test_order_confirm_triggers_webhooks(
     permission_group_manage_orders,
     payment_txn_preauth,
     settings,
+    django_capture_on_commit_callbacks,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -654,10 +655,11 @@ def test_order_confirm_triggers_webhooks(
     assert not OrderEvent.objects.exists()
 
     # when
-    response = staff_api_client.post_graphql(
-        ORDER_CONFIRM_MUTATION,
-        {"id": graphene.Node.to_global_id("Order", order_unconfirmed.id)},
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(
+            ORDER_CONFIRM_MUTATION,
+            {"id": graphene.Node.to_global_id("Order", order_unconfirmed.id)},
+        )
 
     # then
     assert not get_graphql_content(response)["data"]["orderConfirm"]["errors"]
@@ -689,9 +691,11 @@ def test_order_confirm_triggers_webhooks(
     mocked_send_webhook_request_async.assert_has_calls(
         [
             call(
-                kwargs={"event_delivery_id": delivery.id, "telemetry_context": ANY},
+                kwargs={"event_delivery_id": delivery.id},
                 queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-                MessageGroupId="example.com:saleor.app.additional",
+                bind=True,
+                retry_backoff=10,
+                retry_kwargs={"max_retries": 5},
             )
             for delivery in order_deliveries
         ],

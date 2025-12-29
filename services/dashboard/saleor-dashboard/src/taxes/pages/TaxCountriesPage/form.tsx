@@ -1,14 +1,25 @@
 // @ts-strict-ignore
 import { useExitFormDialog } from "@dashboard/components/Form/useExitFormDialog";
-import { TaxClassRateInput, TaxCountryConfigurationFragment } from "@dashboard/graphql";
+import {
+  TaxClassFragment,
+  TaxClassRateInput,
+  TaxCountryConfigurationFragment,
+} from "@dashboard/graphql";
 import useForm, { SubmitPromise } from "@dashboard/hooks/useForm";
 import useFormset, { FormsetData } from "@dashboard/hooks/useFormset";
 import useHandleFormSubmit from "@dashboard/hooks/useHandleFormSubmit";
 import { taxesMessages } from "@dashboard/taxes/messages";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface UseTaxCountriesFormResult {
+export interface TaxCountriesPageFormData {
+  rates: Array<{
+    rate: string;
+    taxClass: Omit<TaxClassFragment, "countries">;
+  }>;
+  country: string;
+}
+export interface UseTaxCountriesFormResult {
   data: FormsetData<TaxClassRateInput>;
   submit: () => SubmitPromise;
   handlers: { handleRateChange: (id: string, value: string) => void };
@@ -76,7 +87,12 @@ function useTaxCountriesForm(
   return { data: formset.data, handlers: { handleRateChange }, submit };
 }
 
-const TaxCountriesForm = ({ children, country, onSubmit, disabled }: TaxCountriesFormProps) => {
+const TaxCountriesForm: React.FC<TaxCountriesFormProps> = ({
+  children,
+  country,
+  onSubmit,
+  disabled,
+}) => {
   const props = useTaxCountriesForm(country, onSubmit, disabled);
 
   return <form onSubmit={props.submit}>{children(props)}</form>;

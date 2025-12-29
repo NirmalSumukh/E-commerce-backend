@@ -4,8 +4,9 @@ import { sectionNames } from "@dashboard/intl";
 import { asSortParams } from "@dashboard/utils/sort";
 import { getArrayQueryParam } from "@dashboard/utils/urls";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
-import { Redirect, RouteComponentProps, Switch } from "react-router-dom";
+import { RouteComponentProps, Switch } from "react-router-dom";
 
 import { WindowTitle } from "../components/WindowTitle";
 import {
@@ -22,7 +23,6 @@ import {
   ProductVariantAddUrlQueryParams,
   productVariantEditPath,
   ProductVariantEditUrlQueryParams,
-  productVariantLegacyEditPath,
 } from "./urls";
 import ProductCreateComponent from "./views/ProductCreate";
 import ProductImageComponent from "./views/ProductImage";
@@ -40,7 +40,7 @@ interface matchParamsProductVariant {
   productId?: string;
 }
 
-const ProductList = ({ location }: RouteComponentProps<any>) => {
+const ProductList: React.FC<RouteComponentProps<any>> = ({ location }) => {
   const qs = parseQs(location.search.substr(1)) as any;
   const params: ProductListUrlQueryParams = asSortParams(
     {
@@ -62,13 +62,13 @@ const ProductList = ({ location }: RouteComponentProps<any>) => {
     </ConditionalProductFilterProvider>
   );
 };
-const ProductUpdate = ({ match }: RouteComponentProps<MatchParams>) => {
+const ProductUpdate: React.FC<RouteComponentProps<any>> = ({ match }) => {
   const qs = parseQs(location.search.substr(1)) as any;
   const params: ProductUrlQueryParams = qs;
 
   return (
     <ProductUpdateComponent
-      id={decodeURIComponent(match.params.id!)}
+      id={decodeURIComponent(match.params.id)}
       params={{
         ...params,
         ids: getArrayQueryParam(qs.ids),
@@ -76,28 +76,25 @@ const ProductUpdate = ({ match }: RouteComponentProps<MatchParams>) => {
     />
   );
 };
-const ProductCreate = () => {
+const ProductCreate: React.FC<RouteComponentProps<any>> = () => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductCreateUrlQueryParams = qs;
 
   return <ProductCreateComponent params={params} />;
 };
-const ProductVariant = ({ match }: RouteComponentProps<matchParamsProductVariant>) => {
+const ProductVariant: React.FC<RouteComponentProps<matchParamsProductVariant>> = ({ match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductVariantEditUrlQueryParams = qs;
 
   return (
     <ProductVariantComponent
       variantId={decodeURIComponent(match.params.variantId ?? "")}
+      productId={decodeURIComponent(match.params.productId ?? "")}
       params={params}
     />
   );
 };
-
-const ProductImage = ({
-  location,
-  match,
-}: RouteComponentProps<{ imageId: string; productId: string }>) => {
+const ProductImage: React.FC<RouteComponentProps<any>> = ({ location, match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductImageUrlQueryParams = qs;
 
@@ -109,7 +106,7 @@ const ProductImage = ({
     />
   );
 };
-const ProductVariantCreate = ({ match }: RouteComponentProps<MatchParams>) => {
+const ProductVariantCreate: React.FC<RouteComponentProps<MatchParams>> = ({ match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ProductVariantAddUrlQueryParams = qs;
 
@@ -130,27 +127,10 @@ const Component = () => {
         <Route exact path={productListPath} component={ProductList} />
         <Route exact path={productAddPath} component={ProductCreate} />
         <Route exact path={productVariantAddPath(":id")} component={ProductVariantCreate} />
-        {/* Redirect old product variant path to new format
-         * TODO: Remove in Saleor Dashboard 3.23 */}
         <Route
-          path={productVariantLegacyEditPath(":productId", ":variantId")}
-          exact
-          render={({ match, location }) => {
-            if (!match.params.variantId) {
-              return <Redirect to={productListPath} />;
-            }
-
-            return (
-              <Redirect
-                to={{
-                  pathname: productVariantEditPath(match.params.variantId),
-                  search: location.search,
-                }}
-              />
-            );
-          }}
+          path={productVariantEditPath(":productId", ":variantId")}
+          component={ProductVariant}
         />
-        <Route path={productVariantEditPath(":variantId")} component={ProductVariant} />
         <Route path={productImagePath(":productId", ":imageId")} component={ProductImage} />
         <Route path={productPath(":id")} component={ProductUpdate} />
       </Switch>

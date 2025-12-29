@@ -1,9 +1,10 @@
 import logging
-from typing import cast
+from typing import Optional
 
 from authlib.common.errors import AuthlibBaseError
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.core.handlers.wsgi import WSGIRequest
 from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError
 from requests import HTTPError, PreparedRequest
 
@@ -17,7 +18,6 @@ from ...core.jwt import (
     get_user_from_payload,
     jwt_decode,
 )
-from ...graphql.core import SaleorContext
 from ...permission.enums import get_permissions_codename, get_permissions_from_names
 from ..base_plugin import BasePlugin, ConfigurationTypeField, ExternalAccessTokens
 from ..error_codes import PluginErrorCode
@@ -242,7 +242,7 @@ class OpenIDConnectPlugin(BasePlugin):
         return user_permissions
 
     def external_obtain_access_tokens(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> ExternalAccessTokens:
         if not self.active:
             return previous_value
@@ -266,11 +266,11 @@ class OpenIDConnectPlugin(BasePlugin):
 
         try:
             state_data = signing.loads(state)
-        except signing.BadSignature as e:
+        except signing.BadSignature:
             msg = "Bad signature"
             raise ValidationError(
                 {"state": ValidationError(msg, code=PluginErrorCode.INVALID.value)}
-            ) from e
+            )
 
         redirect_uri = state_data.get("redirectUri")
         if not redirect_uri:
@@ -283,14 +283,14 @@ class OpenIDConnectPlugin(BasePlugin):
             token_data = self.oauth.fetch_token(
                 self.config.token_url, code=code, redirect_uri=redirect_uri
             )
-        except AuthlibBaseError as e:
+        except AuthlibBaseError as error:
             raise ValidationError(
                 {
                     "code": ValidationError(
-                        e.description, code=PluginErrorCode.INVALID.value
+                        error.description, code=PluginErrorCode.INVALID.value
                     )
                 }
-            ) from e
+            )
 
         try:
             parsed_id_token = get_parsed_id_token(
@@ -303,7 +303,7 @@ class OpenIDConnectPlugin(BasePlugin):
         except AuthenticationError as e:
             raise ValidationError(
                 {"code": ValidationError(str(e), code=PluginErrorCode.INVALID.value)}
-            ) from e
+            )
 
         user_permissions = []
         is_staff_user_email = self.is_staff_user_email(user)
@@ -341,7 +341,7 @@ class OpenIDConnectPlugin(BasePlugin):
         return email_domain in staff_user_domains
 
     def external_authentication_url(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> dict:
         if not self.active:
             return previous_value
@@ -371,7 +371,7 @@ class OpenIDConnectPlugin(BasePlugin):
         return {"authorizationUrl": uri}
 
     def external_refresh(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> ExternalAccessTokens:
         if not self.active:
             return previous_value
@@ -391,15 +391,14 @@ class OpenIDConnectPlugin(BasePlugin):
         refresh_token = data.get("refreshToken") or refresh_token
 
         validate_refresh_token(refresh_token, data)
-        refresh_token = cast(str, refresh_token)
-        saleor_refresh_token = jwt_decode(refresh_token)
+        saleor_refresh_token = jwt_decode(refresh_token)  # type: ignore
         token_endpoint = self.config.token_url
         try:
             token_data = self.oauth.refresh_token(
                 token_endpoint,
                 refresh_token=saleor_refresh_token[OAUTH_TOKEN_REFRESH_FIELD],
             )
-        except (AuthlibBaseError, HTTPError) as e:
+        except (AuthlibBaseError, HTTPError):
             logger.warning("Unable to refresh the token.", exc_info=True)
             raise ValidationError(
                 {
@@ -408,7 +407,7 @@ class OpenIDConnectPlugin(BasePlugin):
                         code=error_code,
                     )
                 }
-            ) from e
+            )
         try:
             parsed_id_token = get_parsed_id_token(
                 token_data, self.config.json_web_key_set_url
@@ -430,7 +429,7 @@ class OpenIDConnectPlugin(BasePlugin):
         except AuthenticationError as e:
             raise ValidationError(
                 {"refreshToken": ValidationError(str(e), code=error_code)}
-            ) from e
+            )
 
     def get_and_update_user_permissions(
         self, user: User, use_scope_permissions: bool, scope: str
@@ -445,7 +444,7 @@ class OpenIDConnectPlugin(BasePlugin):
         )
         return user_permissions
 
-    def external_logout(self, data: dict, request: SaleorContext, previous_value):
+    def external_logout(self, data: dict, request: WSGIRequest, previous_value):
         if not self.active:
             return previous_value
 
@@ -461,8 +460,8 @@ class OpenIDConnectPlugin(BasePlugin):
         return {"logoutUrl": req.url}
 
     def external_verify(
-        self, data: dict, request: SaleorContext, previous_value
-    ) -> tuple[User | None, dict]:
+        self, data: dict, request: WSGIRequest, previous_value
+    ) -> tuple[Optional[User], dict]:
         if not self.active:
             return previous_value
 
@@ -482,7 +481,7 @@ class OpenIDConnectPlugin(BasePlugin):
                 return previous_value
             user.is_staff = False
         except (ExpiredSignatureError, InvalidTokenError) as e:
-            raise ValidationError({"token": e}) from e
+            raise ValidationError({"token": e})
         permissions = payload.get(PERMISSIONS_FIELD)
         if permissions:
             user.is_staff = True
@@ -492,7 +491,7 @@ class OpenIDConnectPlugin(BasePlugin):
             )
         return user, payload
 
-    def authenticate_user(self, request: SaleorContext, previous_value) -> User | None:
+    def authenticate_user(self, request: WSGIRequest, previous_value) -> Optional[User]:
         if not self.active:
             return previous_value
         token = get_token_from_request(request)
@@ -508,7 +507,7 @@ class OpenIDConnectPlugin(BasePlugin):
                 user = get_user_from_access_payload(payload, request)
             except (InvalidTokenError, DecodeError):
                 return previous_value
-            if user and user.is_staff:
+            if user.is_staff:
                 assign_staff_to_default_group_and_update_permissions(
                     user, self.config.default_group_name
                 )

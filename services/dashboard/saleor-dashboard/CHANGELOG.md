@@ -1,398 +1,693 @@
 # Changelog
 
-## 3.22.1
+## 3.20.40
 
 ### Patch Changes
 
-- [#5951](https://github.com/saleor/saleor-dashboard/pull/5951) [`7e2ac0a`](https://github.com/saleor/saleor-dashboard/commit/7e2ac0a54cab9dd0f29ac8cc94e2501cbc75c2ba) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed layout of Granted refund page. Transactions details box will no longer have overlayed text on top of each other and will instead add proper scrollbar on small viewport sizes. This page will now also switch to smaller sidebar sooner than other pages in order to show more details on smaller viewport sizes.
+- 5832525: Update Saleor GraphQL schema to support XK (Kosovo).
 
-- [#5956](https://github.com/saleor/saleor-dashboard/pull/5956) [`99a4948`](https://github.com/saleor/saleor-dashboard/commit/99a4948c8d4d504ca44ed7890eb613b866d790d4) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Migrated sidebar icons to Lucide React for better consistency. Replaced custom SVG icons (Cloud, Graphql, Gift) with Lucide equivalents and refactored TerminalIcon to match Lucide conventions.
-
-## 3.22.0
-
-### Minor Changes
-
-- [#5862](https://github.com/saleor/saleor-dashboard/pull/5862) [`241b9eb`](https://github.com/saleor/saleor-dashboard/commit/241b9eb75dcd0c9712ab5ac49db06d16ef30193b) Thanks [@IKarbowiak](https://github.com/IKarbowiak)! - Narrow down reference attribute choices.
-
-  Now you can narrow down reference attribute options by providing:
-  - Product types for product and product variant references
-  - Model types for model references
-
-  If reference types are defined, then when specifying a value for a reference (product, product variant, or page view), only objects that match the allowed reference types will be available as selectable options.
-
-- [#5172](https://github.com/saleor/saleor-dashboard/pull/5172) [`c665bb8`](https://github.com/saleor/saleor-dashboard/commit/c665bb827b22b31aa8e312075ea50dc3658f6d87) Thanks [@karola312](https://github.com/karola312)! - Comment from tests results will now be displayed for cloud-deployments CORE release PRs
-
-- [#5653](https://github.com/saleor/saleor-dashboard/pull/5653) [`cf2c07a`](https://github.com/saleor/saleor-dashboard/commit/cf2c07ad7c28db296d22f86f1719d7c970f50f1b) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Added now mounting points for app extensions. See [docs](https://docs.saleor.io/developer/extending/apps/extending-dashboard-with-apps).
-
-  Mount point for product-details page now attached "productSlug" to the context
-
-- [#5195](https://github.com/saleor/saleor-dashboard/pull/5195) [`c8661c5`](https://github.com/saleor/saleor-dashboard/commit/c8661c5d4f52ab25fdfd946d457044e9924d281c) Thanks [@karola312](https://github.com/karola312)! - Always add comment after tests to CORE release PR, even if previous job fails.
-
-- [#5698](https://github.com/saleor/saleor-dashboard/pull/5698) [`ffc6c3c`](https://github.com/saleor/saleor-dashboard/commit/ffc6c3c2ad6864887115d53353f13279427bff6c) Thanks [@IKarbowiak](https://github.com/IKarbowiak)! - Allow defining category and collection as a reference attribute
-
-- [#5096](https://github.com/saleor/saleor-dashboard/pull/5096) [`8e91df3`](https://github.com/saleor/saleor-dashboard/commit/8e91df337bcb1b8c26e3aebacefb29c699831267) Thanks [@karola312](https://github.com/karola312)! - Do not open cloud deployment release PR after automation tests for CORE
-
-- [#5170](https://github.com/saleor/saleor-dashboard/pull/5170) [`5da872a`](https://github.com/saleor/saleor-dashboard/commit/5da872afc1b9b972fd2551bd67fe665d8dab52d0) Thanks [@karola312](https://github.com/karola312)! - Tests results slack message now show detailed version of saleor
-
-- [#5040](https://github.com/saleor/saleor-dashboard/pull/5040) [`08b447c`](https://github.com/saleor/saleor-dashboard/commit/08b447c4950ffdb135cd56c3b6a6987246a4ded3) Thanks [@karola312](https://github.com/karola312)! - Add checkout to workflow creating release PR in cloud deployments
-
-- [#5854](https://github.com/saleor/saleor-dashboard/pull/5854) [`d90e986`](https://github.com/saleor/saleor-dashboard/commit/d90e986e277b16865978210ee9f1d84b64a71a9a) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added support for `SINGLE_REFERENCE` attribute types.
-
-  When creating new attributes "Single reference" option can be now selected along with entity types (i.e. Product, Product variant, Model, etc.).
-
-  Assigning values to `SINGLE_REFERENCE` works similar to `REFERENCE` attributes, except the UI allows to select only a single item.
-
-- [#5061](https://github.com/saleor/saleor-dashboard/pull/5061) [`4a50cf9`](https://github.com/saleor/saleor-dashboard/commit/4a50cf9c6b169584c4ee6843250981372a4edd06) Thanks [@karola312](https://github.com/karola312)! - Create CORE release PR even if automation tests fail
-
-- [#5048](https://github.com/saleor/saleor-dashboard/pull/5048) [`39671b7`](https://github.com/saleor/saleor-dashboard/commit/39671b7b928882222ec8fa7f48cf81d2d97adf3a) Thanks [@karola312](https://github.com/karola312)! - Release PRs in cloud deployments for CORE releases will be created even if tests fail
-
-- [#5792](https://github.com/saleor/saleor-dashboard/pull/5792) [`fbbb49d`](https://github.com/saleor/saleor-dashboard/commit/fbbb49d003e47666f6ba74fe69679e58136c7b5c) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Added Refund Reasons. Now, this feature can be configured in settings, after that refund (manual and grant) will require a static list of refund reasons that are also configurable. [See announcement post](todo)
+## 3.20.39
 
 ### Patch Changes
 
-- [#5523](https://github.com/saleor/saleor-dashboard/pull/5523) [`9ac320a`](https://github.com/saleor/saleor-dashboard/commit/9ac320a14a98fbff753b71c6d1e0d7495e5c472a) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now apply specific variants to Vouchers, alongside products, collections and categories. This means variants are now assignable in Voucher edit and create forms.
+- 6ef7487: Now create webhook button works properly, leading you to the form"
+- 37db3ff: Now orders becomes fulfilment as category name within the sidebar.
 
-- [#5601](https://github.com/saleor/saleor-dashboard/pull/5601) [`0664dbc`](https://github.com/saleor/saleor-dashboard/commit/0664dbce8097156796b20295e1a63d9a332c33e1) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now return&replace flow has a transaction selector. This means whenever using grant refund, you need to select desired transaction.
+## 3.20.38
 
-- [#5739](https://github.com/saleor/saleor-dashboard/pull/5739) [`6637b0b`](https://github.com/saleor/saleor-dashboard/commit/6637b0bc018488c9677ddfe7259ebb89962b437e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed a bug when user tried to use redirect from legacy routes (e.g. /pages -> /models) subpaths were not preserved. Now when user navigates to a deeply nested path, e.g. `/pages/<id>` they'll be redirected to `/models/<id>`.
+### Patch Changes
 
-- [#5823](https://github.com/saleor/saleor-dashboard/pull/5823) [`c203014`](https://github.com/saleor/saleor-dashboard/commit/c203014da49aec0deb8bcfccf6eb0eb8701b3171) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Improve order refund UI for orders that uses Payments API. After this change `Automatic Refund` will be avaiable when `Refund products` option is selected. Miscellaneous refund will require providing `Manual Amount` as this is what Saleor API requires.
+- c9feaf1: You can now apply specific variants to Vouchers, alongside products, collections and categories. This means variants are now assignable in Voucher edit and create forms.
+- b0b1873: Setting unsed and false values for the boolean attributes are displaying properly.
+- 4d14bfd: Added new Extension install page at `/extensions/install`, it's meant to replace current App install page in upcoming releases.
+- e1cb757: You can now see a loading animation when you click "Finalize" when finalizing a draft order. It prevents from submitting the form more than once.
+- 1134ec2: You can now see updated radio buttons in warehouse edit view.
+- 120e04c: Added views for managing custom extensions (aka custom apps) to `/extensions` route:
 
-- [#5606](https://github.com/saleor/saleor-dashboard/pull/5606) [`f78e6d9`](https://github.com/saleor/saleor-dashboard/commit/f78e6d92fab5b175fa87546a234948c935be338a) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Updated custom app views to use refreshed look (new UI components)
-
-- [#5572](https://github.com/saleor/saleor-dashboard/pull/5572) [`fc75f66`](https://github.com/saleor/saleor-dashboard/commit/fc75f66ddbbe4c733cfa13d68d1d2ad3078b681c) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Setting unsed and false values for the boolean attributes are displaying properly.
-
-- [#5881](https://github.com/saleor/saleor-dashboard/pull/5881) [`cee2ff1`](https://github.com/saleor/saleor-dashboard/commit/cee2ff1abd18c7e1ff7048fcf4c409d7766ac514) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Removed demo mode code.
-
-- [#5833](https://github.com/saleor/saleor-dashboard/pull/5833) [`d7351ac`](https://github.com/saleor/saleor-dashboard/commit/d7351ac5f9d2fb108ca0971c9d3f0af247cfdd34) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Voucher detail page: fixed how we calculate minimal requirements state. After this change we won't take selected channel into consideration for checking if requirement is `minimal order value` - instead we will use channel listing `minSpent` amount. Thanks to that UI should now properly display requirement.
-
-- [#5522](https://github.com/saleor/saleor-dashboard/pull/5522) [`92ef408`](https://github.com/saleor/saleor-dashboard/commit/92ef408b68db9f23d26a1e23f129c3c5f74d6a31) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added new Extension install page at `/extensions/install`, it's meant to replace current App install page in upcoming releases.
-
-- [#5558](https://github.com/saleor/saleor-dashboard/pull/5558) [`e2355cf`](https://github.com/saleor/saleor-dashboard/commit/e2355cfabd78680f9bbd3fb47fe4b1e9938ab577) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see a loading animation when you click "Finalize" when finalizing a draft order. It prevents from submitting the form more than once.
-
-- [#5737](https://github.com/saleor/saleor-dashboard/pull/5737) [`a92fdd4`](https://github.com/saleor/saleor-dashboard/commit/a92fdd459f114795a5589841d2eb2129f6f23c6c) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Improved UI for translations. Now pickers are refreshed and languages are cached locally, so recent languages are on top of the picker. Additionally translatable entities like products or categories have contextual link/button that redirects to translations
-
-- [#5937](https://github.com/saleor/saleor-dashboard/pull/5937) [`bd3d8e3`](https://github.com/saleor/saleor-dashboard/commit/bd3d8e3c51659ae50f7546dfe771560778de78c7) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Removed "Plugins and Webhook Events have been moved to the "Extensions" page" message on configuration page
-
-- [#5491](https://github.com/saleor/saleor-dashboard/pull/5491) [`641af14`](https://github.com/saleor/saleor-dashboard/commit/641af143aa25e28165feed13624ccc460aef12ab) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Webhooks in app details section now are sorted based on which attempt is latest
-
-- [#5381](https://github.com/saleor/saleor-dashboard/pull/5381) [`1743872`](https://github.com/saleor/saleor-dashboard/commit/174387200d0b9fef072d7239c7e65790edeb6173) Thanks [@poulch](https://github.com/poulch)! - Opening item in new tab using cmd key on datagrid now takes into account mounting point
-
-- [#5847](https://github.com/saleor/saleor-dashboard/pull/5847) [`0b28def`](https://github.com/saleor/saleor-dashboard/commit/0b28defd926e41da4cb7d8949267780412d4d55e) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Fixed null safety issues in OrderPayment component when handling gift card amounts and improved variable naming consistency. This prevents potential runtime errors when order data is not fully loaded.
-
-- [#5534](https://github.com/saleor/saleor-dashboard/pull/5534) [`14e7ee1`](https://github.com/saleor/saleor-dashboard/commit/14e7ee13d02df9ae4b153d507016979b2e6dcd78) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Adding new tile to the home about upcoming live update
-
-- [#5648](https://github.com/saleor/saleor-dashboard/pull/5648) [`8f7a493`](https://github.com/saleor/saleor-dashboard/commit/8f7a4935d84e578c4a960575f25f4ba9ef0fd2f1) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - New app mounting points are available:
-  - Category list under `Create category` button
-  - Category list under additional actions (cog icon)
-  - Category details under additional actions (cog icon)
-  - Collection list under `Create collection` button
-  - Collection list under additional actions (cog icon)
-  - Collection details under additional actions (cog icon)
-  - Gift card list under `Issue card` button
-  - Gift card list under additional actions (cog icon)
-  - Gift card details under additional actions (cog icon)
-  - Draft order list under `Create order` button
-  - Draft order list under additional actions (cog icon)
-  - Draft order details under additional actions (cog icon)
-  - Promotions list under `Create discount` button
-  - Promotions list under additional actions (cog icon)
-  - Promotions details under additional actions (cog icon)
-  - Voucher list under `Create voucher` button
-  - Voucher list under additional actions (cog icon)
-  - Voucher details under additional actions (cog icon)
-  - Model list under `Create model` button
-  - Model list under additional actions (cog icon)
-  - Model details under additional actions (cog icon)
-  - Model type list under `Create model type` button
-  - Model type list under additional actions (cog icon)
-  - Model type details under additional actions (cog icon)
-  - Structure list under `Create structure` button
-  - Structure list under additional actions (cog icon)
-  - Structure details under additional actions (cog icon)
-
-- [#5942](https://github.com/saleor/saleor-dashboard/pull/5942) [`9acc950`](https://github.com/saleor/saleor-dashboard/commit/9acc9508000b6f67c14558e6a63fb4c89a6a4ad7) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Ripples copy are improved (grammar)
-
-- [#5327](https://github.com/saleor/saleor-dashboard/pull/5327) [`d01a207`](https://github.com/saleor/saleor-dashboard/commit/d01a2077fcbb1c3969b1558c1dc7a32d430e9b89) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now you can re-order products within the collection.
-
-- [#5908](https://github.com/saleor/saleor-dashboard/pull/5908) [`d0f5095`](https://github.com/saleor/saleor-dashboard/commit/d0f509524fcb5f6dfa06164522a5aeb97773a68d) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Removed "extensions" flag that was showing new unified UI for all extension types (apps, plugins, webhooks). The flag was always enable for a while, but after this change, it will not be possible to revert to the old view
-
-- [#5518](https://github.com/saleor/saleor-dashboard/pull/5518) [`e7f1c4c`](https://github.com/saleor/saleor-dashboard/commit/e7f1c4caef08c43d55421e7c8c71922af4bc90de) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Some false-positive errors are no longer reported to Sentry.
-
-- [#5366](https://github.com/saleor/saleor-dashboard/pull/5366) [`8694fb7`](https://github.com/saleor/saleor-dashboard/commit/8694fb70418f2f7a4f481555809ee70ef8886506) Thanks [@poulch](https://github.com/poulch)! - Order transaction list now displays the name of a transaction
-
-- [#5590](https://github.com/saleor/saleor-dashboard/pull/5590) [`a2e4a6b`](https://github.com/saleor/saleor-dashboard/commit/a2e4a6bebbea635fdc6a03d65eb78da740bee3e2) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see radio group with updated UI in channel allocation
-
-- [#5654](https://github.com/saleor/saleor-dashboard/pull/5654) [`56bb3c8`](https://github.com/saleor/saleor-dashboard/commit/56bb3c8b247bd7bf8b9fa01563ff5faf5667c58e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed navigation in Saleor Apps causing polluted browser's window history, now navigating to another page adds a single entry in history stack.
-
-- [#5807](https://github.com/saleor/saleor-dashboard/pull/5807) [`b7e10f7`](https://github.com/saleor/saleor-dashboard/commit/b7e10f77e85fe941a8b59f17b5bb2e0aff079799) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Fix links to old Saleor docs
-
-- [#5573](https://github.com/saleor/saleor-dashboard/pull/5573) [`92f8383`](https://github.com/saleor/saleor-dashboard/commit/92f83830f5de1dd610d6310bce77385fa9b289f6) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see updated radio buttons in warehouse edit view.
-
-- [#5600](https://github.com/saleor/saleor-dashboard/pull/5600) [`2d841f0`](https://github.com/saleor/saleor-dashboard/commit/2d841f04514ba8352742312861f7afcc802a3901) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Improved error messages when installing extension from URL.
-  Error messages will now point to Saleor Docs and display error code from GraphQL response
-
-- [#5526](https://github.com/saleor/saleor-dashboard/pull/5526) [`b2acd12`](https://github.com/saleor/saleor-dashboard/commit/b2acd121325cd9c9a1c3d937260c3f64dc93de9a) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Now you can see an updated label for gift card list in customer details - it now clearly states that the list shows gift cards that have been used by the customer, avoiding the confusion.
-
-- [#5516](https://github.com/saleor/saleor-dashboard/pull/5516) [`5a11423`](https://github.com/saleor/saleor-dashboard/commit/5a114237d8f6e3af109de49b0f452836baed8c2a) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Warehouse and tracking number in fulfilled order section are now displayed in two separate lines improving readability.
-
-- [#5822](https://github.com/saleor/saleor-dashboard/pull/5822) [`9520c2f`](https://github.com/saleor/saleor-dashboard/commit/9520c2fd7748c55068d98aa41871aaf0557e3b28) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Hide voucher usage limit and usage count on voucher details page when voucher doesn't have limit set.
-
-- [#5562](https://github.com/saleor/saleor-dashboard/pull/5562) [`dce09da`](https://github.com/saleor/saleor-dashboard/commit/dce09dae4b2876bbd483373f22e4e266e87a620e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added views for managing custom extensions (aka custom apps) to `/extensions` route:
   - `/extensions/custom/<id>` - details view
   - `/extensions/custom/<id>/webhook` - webhook create view
   - `/extensions/custom/<id>/webhook/<webhook_id>` - webhook edit view
 
-- [#5370](https://github.com/saleor/saleor-dashboard/pull/5370) [`c0a78f7`](https://github.com/saleor/saleor-dashboard/commit/c0a78f790f92a0f6425ec065dd0b30734a6b6953) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now you can see pageviews in the posthog.
+- 8f9fe98: Added new "Add Custom Extension" view (`/extensions/custom/add`) for creating custom apps (type: `LOCAL`) that's meant to replace configuration page in Webhook & Events
+- b47c49e: You can now see the unified look and behavior of pagination action buttons across all list views, including products, customers, orders, and other sections.
+- ca8961a: You can now successfully save transaction refunds as drafts when using the latest version of Saleor Core.
+- fb38f45: Now order-relaed buttons for refund, capture, mark as paid, adding products and fulfill are aligned with the others.
+- 9893e47: Remove testMo from workflows and add CTRF report
+- 545c131: You can now filter customers in customers list by metadata.
+- 451c65f: Now the action that runs on release no longer fails due to fetching recent version.
+- c83ad3c: Moved Extensions installed page URL from `/extensions` to `/extensions/installed`
+- 61d2b77: Now you can use download links within the applications.
+- bfaaf72: You can now see updated buttons and icons in tables across Dashboard.
+- 13573f9: Now sidebar has new section "modeling" that reffers to "content" and "navigation".
+- 9160f48: View for managing plugins was added to `/extensions` route, it can be accessed by `/extensions/plugin/<id>` which is used in the list of installed extensions.
+- 40c2405: Fixed Jest tests being flakey (randomly faling) due to not clearing fake timers
 
-- [#5888](https://github.com/saleor/saleor-dashboard/pull/5888) [`414a2ec`](https://github.com/saleor/saleor-dashboard/commit/414a2ec5e7beec40846b3a635e70a23c54adb5b7) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Added "ripples" indicating new features added to the dashboard, directly for staff users
+## 3.20.37
 
-- [#5643](https://github.com/saleor/saleor-dashboard/pull/5643) [`9aa0a69`](https://github.com/saleor/saleor-dashboard/commit/9aa0a696ee48b348e1832e7fbe30fb3a4d5ae42b) Thanks [@witoszekdev](https://github.com/witoszekdev)! - When creating new channels, Transaction flow will be selected as default for "mark as paid" strategy.
+### Patch Changes
 
-- [#5719](https://github.com/saleor/saleor-dashboard/pull/5719) [`e87f5e0`](https://github.com/saleor/saleor-dashboard/commit/e87f5e0857ee97a8771c3c727256194ae9d7329f) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Updated draggable attribute value list design:
-  - it now uses `@dnd-kit` library instead of `react-sortable-hoc`
-  - it uses horizontal layout instead of vertical to minimize space usage
-  - reference attribute values on the list now are clickable and point to a page with referenced object details.
+- 575d337: Plugin details now display pill next to each channel to show whenever plugin is active or not in a given channel
 
-- [#5553](https://github.com/saleor/saleor-dashboard/pull/5553) [`7af826e`](https://github.com/saleor/saleor-dashboard/commit/7af826e3cb58390b8bb1ab62d1579c141b3c1520) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added new "Add Custom Extension" view (`/extensions/custom/add`) for creating custom apps (type: `LOCAL`) that's meant to replace configuration page in Webhook & Events
+## 3.20.36
 
-- [#5907](https://github.com/saleor/saleor-dashboard/pull/5907) [`f940531`](https://github.com/saleor/saleor-dashboard/commit/f94053188aa834f9b7fa1daaeb3bf6c022fe9393) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Removed "discount rules" feature flag, that was enabled for quite a long time. Now reverting this feature is not possible
+### Patch Changes
 
-- [#5914](https://github.com/saleor/saleor-dashboard/pull/5914) [`ac446a7`](https://github.com/saleor/saleor-dashboard/commit/ac446a77796c757f52e0dde48b38f5a0fb3f33c8) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added link to Model type (previously Page type) on the Model details page.
+- 1862202: Now you can see an updated label for gift card list in customer details - it now clearly states that the list shows gift cards that have been used by the customer, avoiding the confusion.
+- ed41cc6: Now navigating to the installed extension, shows the list instantly, this means list is being cached while fetching happens in the background.
+- f1d40cd: Added "Not found" page when navigating to non-existing route in `/extensions/*`. Previously a blank page was displayed.
+- 66f007f: making the DevModePanel use the generic getApiUrl as well to allow the dynamic update in docker containers
+- 360c562: You can now see new installed extensions page with list of all installd apps and search above
 
-- [#5542](https://github.com/saleor/saleor-dashboard/pull/5542) [`e9c7c58`](https://github.com/saleor/saleor-dashboard/commit/e9c7c58b2e48d76f8ea6cf57bd7dc67681efeed4) Thanks [@poulch](https://github.com/poulch)! - Plugin details now display pill next to each channel to show whenever plugin is active or not in a given channel
+## 3.20.35
 
-- [#5561](https://github.com/saleor/saleor-dashboard/pull/5561) [`4f00787`](https://github.com/saleor/saleor-dashboard/commit/4f007878f248748b52b862e4feb1aea07e2e1155) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see the unified look and behavior of pagination action buttons across all list views, including products, customers, orders, and other sections.
+### Patch Changes
 
-- [#5846](https://github.com/saleor/saleor-dashboard/pull/5846) [`3df3c9f`](https://github.com/saleor/saleor-dashboard/commit/3df3c9f5719a9f7ada12ea89c52c32800450beab) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Migrate Saleor docs links to one file
-
-- [#5559](https://github.com/saleor/saleor-dashboard/pull/5559) [`97ae393`](https://github.com/saleor/saleor-dashboard/commit/97ae393f030131ca9d0a4efed7e40a815d714ccd) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now successfully save transaction refunds as drafts when using the latest version of Saleor Core.
-
-- [#5582](https://github.com/saleor/saleor-dashboard/pull/5582) [`f2a4105`](https://github.com/saleor/saleor-dashboard/commit/f2a410518d0e4301bb48e55f16ca5493751c5caf) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now create webhook button works properly, leading you to the form"
-
-- [#5799](https://github.com/saleor/saleor-dashboard/pull/5799) [`7011033`](https://github.com/saleor/saleor-dashboard/commit/701103328e69cd720f0a30e6ef0ce8d0a0178693) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed `AppWidgets` breaking back-navigation . Now users can normally use browser navigation without page crashing.
-
-- [#5543](https://github.com/saleor/saleor-dashboard/pull/5543) [`21fc883`](https://github.com/saleor/saleor-dashboard/commit/21fc8839f12a4f3934ffa735dac5bd027f53f983) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now navigating to the installed extension, shows the list instantly, this means list is being cached while fetching happens in the background.
-
-- [#5646](https://github.com/saleor/saleor-dashboard/pull/5646) [`cdc2bda`](https://github.com/saleor/saleor-dashboard/commit/cdc2bdad018fdd2fd90530d80b3c52a392c01a03) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Change how dashboard fetches GraphQL schema. After this change GraphQL schema is fetched from Saleor repository instead of Saleor API. If you wants the old behavior use `npm run fetch-local-schema`.
-
-- [#5689](https://github.com/saleor/saleor-dashboard/pull/5689) [`1c20dd8`](https://github.com/saleor/saleor-dashboard/commit/1c20dd8a1f95101bd5b59d4b563a74b700c49edf) Thanks [@NyanKiyoshi](https://github.com/NyanKiyoshi)! - fix: typo in image upload error message
-
-- [#5584](https://github.com/saleor/saleor-dashboard/pull/5584) [`6f4d330`](https://github.com/saleor/saleor-dashboard/commit/6f4d330e0353b386fb794b0a80ba17f3e4c257d5) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see updated checkboxes and toggle component in attribute edit form.
-
-- [#5371](https://github.com/saleor/saleor-dashboard/pull/5371) [`0e3109c`](https://github.com/saleor/saleor-dashboard/commit/0e3109cb1c0fc0a0617727213745aa2b11aef2a0) Thanks [@poulch](https://github.com/poulch)! - You can now edit note in order details. Notes in order details now show id of note, id of related note and type of note "added" or "updated"
-
-- [#5574](https://github.com/saleor/saleor-dashboard/pull/5574) [`38ead73`](https://github.com/saleor/saleor-dashboard/commit/38ead736fd5379772e1f52b8afedd3b37f7c702d) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now order-relaed buttons for refund, capture, mark as paid, adding products and fulfill are aligned with the others.
-
-- [#5533](https://github.com/saleor/saleor-dashboard/pull/5533) [`d84d9e6`](https://github.com/saleor/saleor-dashboard/commit/d84d9e6b4b9609088077846ecf01ed8c49bd2fe5) Thanks [@michalina-graczyk](https://github.com/michalina-graczyk)! - Remove testMo from workflows and add CTRF report
-
-- [#5702](https://github.com/saleor/saleor-dashboard/pull/5702) [`e436f79`](https://github.com/saleor/saleor-dashboard/commit/e436f79e15ad875a6994b887d4a4fce35b314190) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Products list can now be filtered based on Product's attribute value, when the attribute's `inputType` is `REFERENCE`.
-  Users will be able to search through all possible values (e.g. Products, Product variants, Pages) using input with search.
-  Previously REFERENCE attributes couldn't be selected for filtering products.
-
-- [#5778](https://github.com/saleor/saleor-dashboard/pull/5778) [`94ab61d`](https://github.com/saleor/saleor-dashboard/commit/94ab61df39df68475961636fd5bf53aae36f1557) Thanks [@lkostrowski](https://github.com/lkostrowski)! - React was upgraded from 17 to 18
-
-- [#5378](https://github.com/saleor/saleor-dashboard/pull/5378) [`8032935`](https://github.com/saleor/saleor-dashboard/commit/8032935af4bb022cffad420baf4f43c683786d9a) Thanks [@poulch](https://github.com/poulch)! - You can now open datagrid list item in new tab using cmd/ctrl button
-
-- [#5527](https://github.com/saleor/saleor-dashboard/pull/5527) [`cc48fe4`](https://github.com/saleor/saleor-dashboard/commit/cc48fe48b1152e1a55e0d8c21dc4b023a0b72800) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now filter customers in customers list by metadata.
-
-- [#5593](https://github.com/saleor/saleor-dashboard/pull/5593) [`b6970f7`](https://github.com/saleor/saleor-dashboard/commit/b6970f7f0246fd1acfe3c61b76afc5e50bcce3f5) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see udpated UI components in product type details view.
-
-- [#5884](https://github.com/saleor/saleor-dashboard/pull/5884) [`03e02aa`](https://github.com/saleor/saleor-dashboard/commit/03e02aae341386f63d08c290a6462901189fb2ab) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Order details page now uses different link for "View orders" link for signed-in customers. Previously we displayed all orders made using that customer's email address. Now we will show only orders made when the user was signed-in.
-
-- [#5610](https://github.com/saleor/saleor-dashboard/pull/5610) [`c09991c`](https://github.com/saleor/saleor-dashboard/commit/c09991c1d40933c0fbeba141448a14266d26f5dd) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Updated plugin extension details page to use fresh look (new macaw-ui components). Added text when plugin has no configuration.
-
-- [#5634](https://github.com/saleor/saleor-dashboard/pull/5634) [`2411628`](https://github.com/saleor/saleor-dashboard/commit/24116282e4796bd080904e8be1c4d35db06beb70) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Fixed create button extensions on Customers, Products, and Orders lists. Apps can now add custom actions alongside the main action (e.g., creating an order) when mounted as extensions.
-
-- [#5603](https://github.com/saleor/saleor-dashboard/pull/5603) [`2dd687d`](https://github.com/saleor/saleor-dashboard/commit/2dd687d2e9dc84142a1bc25cc30dd1e77b377b46) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now the warning when edditing permissions for the app is more readable in the dark mode"
-
-- [#5650](https://github.com/saleor/saleor-dashboard/pull/5650) [`e45abf9`](https://github.com/saleor/saleor-dashboard/commit/e45abf98b3a8c106b623ade8f30e95644f87d5db) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Changed how dashboard fetches app extensions. After this change user without `MANAGE_APPS` permission will see app extensions.
-
-- [#5589](https://github.com/saleor/saleor-dashboard/pull/5589) [`35a8c3b`](https://github.com/saleor/saleor-dashboard/commit/35a8c3b46270d90e0737aa03d425551fa1c37b8e) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now references to "content" translation referencing to model.
-
-- [#5385](https://github.com/saleor/saleor-dashboard/pull/5385) [`ad7c179`](https://github.com/saleor/saleor-dashboard/commit/ad7c17975bd94cc65df59317a909390b11213552) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now product links on the collection points to the correct url.
-
-- [#5579](https://github.com/saleor/saleor-dashboard/pull/5579) [`d24deb8`](https://github.com/saleor/saleor-dashboard/commit/d24deb86b58c92d214b918539fcd629260aae29b) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see updated buttons, inputs and checkboxes in fulfillment refund view
-
-- [#5546](https://github.com/saleor/saleor-dashboard/pull/5546) [`ac41590`](https://github.com/saleor/saleor-dashboard/commit/ac41590048f9d8b37e402c61e81b46efbbd7bb1c) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added "Not found" page when navigating to non-existing route in `/extensions/*`. Previously a blank page was displayed.
-
-- [#5909](https://github.com/saleor/saleor-dashboard/pull/5909) [`89d4881`](https://github.com/saleor/saleor-dashboard/commit/89d488136a5ca4b74690f1448f9977d232093d08) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Removed "app alerts" feature flag. It was enabled for a while, but now it will not be possible to revert this feature.
-
-- [#5608](https://github.com/saleor/saleor-dashboard/pull/5608) [`eee64c7`](https://github.com/saleor/saleor-dashboard/commit/eee64c7e90c2c44c1add701ae50b30176b4b2e33) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now model types view was migrated to the the same layout as on the other pages.
-
-- [#5576](https://github.com/saleor/saleor-dashboard/pull/5576) [`dacfa49`](https://github.com/saleor/saleor-dashboard/commit/dacfa49fec9d8ffa2dda116b3589b6732f8ffad6) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now the action that runs on release no longer fails due to fetching recent version.
-
-- [#5617](https://github.com/saleor/saleor-dashboard/pull/5617) [`8d71b60`](https://github.com/saleor/saleor-dashboard/commit/8d71b609b82c01493602927aa865b22482530d67) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added success indicator when token / headers in "Create token" modal in custom app details page are successfully copied to clipboard
-
-- [#5821](https://github.com/saleor/saleor-dashboard/pull/5821) [`f21defe`](https://github.com/saleor/saleor-dashboard/commit/f21defe5fdcb068a93bcc372f05cf0d9983ff203) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Improved stock section when editing product variant. After this change `Assign Warehouse` button will open modal with warehouse select instead of opening dropdown with the list.
-
-- [#5376](https://github.com/saleor/saleor-dashboard/pull/5376) [`6e46436`](https://github.com/saleor/saleor-dashboard/commit/6e464360f0e30af90ea9a2d60f699f64fc319df7) Thanks [@poulch](https://github.com/poulch)! - After creating a new collection, you should see a list of assigned channels
-
-- [#5834](https://github.com/saleor/saleor-dashboard/pull/5834) [`1e0a3f6`](https://github.com/saleor/saleor-dashboard/commit/1e0a3f6a953c5ec89c9695b187d26c7037b6d68e) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Unify Category organization options for product create and update. After this change all comboboxes will use the same `parent / children` pattern of displaying options
-
-- [#5373](https://github.com/saleor/saleor-dashboard/pull/5373) [`1b8d964`](https://github.com/saleor/saleor-dashboard/commit/1b8d9641af219a1d863817236a6ac7ef3e4d2283) Thanks [@poulch](https://github.com/poulch)! - Modals in the Dashboard are now aligned, all have the same max height. Loading items on scroll works when the dialog is displayed in large screen.
-
-- [#5819](https://github.com/saleor/saleor-dashboard/pull/5819) [`25a3fb1`](https://github.com/saleor/saleor-dashboard/commit/25a3fb1a2e08b7b69af0e22311b5893465b442af) Thanks [@IKarbowiak](https://github.com/IKarbowiak)! - Improved order fulfillment cancel dialog: in case the fulfillment is in waiting for approval state, providing a warehouse will be no longer required.
-
-- [#5759](https://github.com/saleor/saleor-dashboard/pull/5759) [`d7b994b`](https://github.com/saleor/saleor-dashboard/commit/d7b994b5c4941228526da2c21e8cf5c24dc8e9f7) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Remove `Preview` chips from channel configuration form for settings:
-  - `Use Transaction flow when marking order as paid`
-  - `Allow unpaid orders`
-  - `Authorize transactions instead of charging`
-
-- [#5636](https://github.com/saleor/saleor-dashboard/pull/5636) [`4b3934c`](https://github.com/saleor/saleor-dashboard/commit/4b3934cc4d1765c851ee775b80a5597423337103) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed exception that happened when voucher details page was opened / refreshed with modal open for selecting collections and variants. Now page loads correctly.
-
-- [#5654](https://github.com/saleor/saleor-dashboard/pull/5654) [`56bb3c8`](https://github.com/saleor/saleor-dashboard/commit/56bb3c8b247bd7bf8b9fa01563ff5faf5667c58e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added Back button when viewing Extension (App) details page.
-
-- [#5719](https://github.com/saleor/saleor-dashboard/pull/5719) [`e87f5e0`](https://github.com/saleor/saleor-dashboard/commit/e87f5e0857ee97a8771c3c727256194ae9d7329f) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Changed Product Variant details URL from `/products/<productId>/variant/<variantId>` to `/products/variant/<variantId`.
-
-  Old URL will still work and redirect to new one for backwards compatibility, it will be removed in next minor release.
-
-- [#5569](https://github.com/saleor/saleor-dashboard/pull/5569) [`6df03a0`](https://github.com/saleor/saleor-dashboard/commit/6df03a0adab679bcf36a0dcc81a56d63735d991f) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Moved Extensions installed page URL from `/extensions` to `/extensions/installed`
-
-- [#5471](https://github.com/saleor/saleor-dashboard/pull/5471) [`0727bd0`](https://github.com/saleor/saleor-dashboard/commit/0727bd0e473a7fc1dec1718c5620043ab7b4227e) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Login page now doesn't reload after submitting the login form. This means that email and password input remain filled after unsuccessful login attempt.
-
-- [#5598](https://github.com/saleor/saleor-dashboard/pull/5598) [`4439a36`](https://github.com/saleor/saleor-dashboard/commit/4439a3665143b57cef18b1469f311743bbf39c6a) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see channel name in fulfillments lists
-
-- [#5877](https://github.com/saleor/saleor-dashboard/pull/5877) [`1c8db15`](https://github.com/saleor/saleor-dashboard/commit/1c8db1560c5a78def49f345e17e0824048c18783) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Feature flag "improved_refunds" is deleted, only new UI is available now
-
-- [#5551](https://github.com/saleor/saleor-dashboard/pull/5551) [`f9921ff`](https://github.com/saleor/saleor-dashboard/commit/f9921fffcca87bfd8ba055fc1e2cc18ae7472ab1) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now you can use download links within the applications.
-
-- [#5566](https://github.com/saleor/saleor-dashboard/pull/5566) [`6616ab4`](https://github.com/saleor/saleor-dashboard/commit/6616ab4fa9ed8812897aea72864db91192857e0f) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Moved app related views from `/apps/` to `/extensions/app/...`
-
-- [#5872](https://github.com/saleor/saleor-dashboard/pull/5872) [`f8b0942`](https://github.com/saleor/saleor-dashboard/commit/f8b0942e8e27893370e9f1dfdf223688d81a1a5e) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Remove `Preview` status from:
-  - Channel settings - channel allocation strategy section
-  - Customer details - gift cards section
-  - Product variant details - checkout limits section
-  - Product type details - gift card type
-  - Tax settings
-  - Warehouse settings - pickup section
-
-- [#5567](https://github.com/saleor/saleor-dashboard/pull/5567) [`db3bc09`](https://github.com/saleor/saleor-dashboard/commit/db3bc092d69d1c4d76c299210ef9ff9db2a59641) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added new onboarding step when "Extensions" feature flag is enabled: "Discover extension capabilities" that shows users the new installed extensions page.
-  It will be marked as uncompleted even if user previously completed "View webhooks" step.
-
-- [#5632](https://github.com/saleor/saleor-dashboard/pull/5632) [`5d95764`](https://github.com/saleor/saleor-dashboard/commit/5d95764878d9568c275555ba5243246ba3d7c264) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed Pills color not updating after rerender (previously for example when changing plugin from active to inactive color didn't change from red to green).
-
-- [#5587](https://github.com/saleor/saleor-dashboard/pull/5587) [`5ae3088`](https://github.com/saleor/saleor-dashboard/commit/5ae30882ef821d8b24b0eaaf33527697c9243462) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Released changes to Extensions previously behind dev feature flag:
-  - **Unified "Installed Extensions" view**: Apps, plugins and custom apps (aka "local" apps) are now listed together on a single "Installed Extensions" page.
-  - **Plugins in "Explore Extensions"**: Legacy plugins are now discoverable in the "Explore Extensions" section.
-  - **Redesigned "Add Custom App" Workflow**: Creating custom apps is now a multi-step process, starting with name and permissions, followed by webhook and token configuration.
-  - **Streamlined "Install from Manifest"**: Providing a manifest URL and accepting app permissions are now combined into a single page.
-  - **Improved error handling**: Error messages now include direct links to Saleor Documentation for easier troubleshooting.
-  - **Removed old views**: Separate list views for plugins and custom apps have been removed.
-
-- [#5511](https://github.com/saleor/saleor-dashboard/pull/5511) [`3cd92e1`](https://github.com/saleor/saleor-dashboard/commit/3cd92e13050e320edcb65bbc9df94791e3f4320d) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - The library used in variant edit page to change variant order has been changed.
+- ede88bf: Adding new tile to the home about upcoming live update
+- 171b07e: Some false-positive errors are no longer reported to Sentry.
+- 40606f6: Warehouse and tracking number in fulfilled order section are now displayed in two separate lines improving readability.
+- 1dbf4ab: The library used in variant edit page to change variant order has been changed.
   This means that grabbed variant no longer sticks to the cursor after mouse button has been lifted.
+- 76a3285: Now community banner displays porperly in dark mode
+- 48f020b: You can now select specific products, collections aand categories during voucher creation
 
-- [#5538](https://github.com/saleor/saleor-dashboard/pull/5538) [`d643828`](https://github.com/saleor/saleor-dashboard/commit/d643828bf08c37e5e901753384580581984df4e1) Thanks [@JannikZed](https://github.com/JannikZed)! - making the DevModePanel use the generic getApiUrl as well to allow the dynamic update in docker containers
+## 3.20.34
 
-- [#5684](https://github.com/saleor/saleor-dashboard/pull/5684) [`f7ef6b8`](https://github.com/saleor/saleor-dashboard/commit/f7ef6b8d02c2331657141f55e0ae5b34abb5b207) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Remove plugin replacements for deprecated plugins. Deprecated plugins are not visible in appstore anymore.
+### Patch Changes
 
-- [#5578](https://github.com/saleor/saleor-dashboard/pull/5578) [`957d7ea`](https://github.com/saleor/saleor-dashboard/commit/957d7ea33d63b9c0f780d309e83f7e0915c101d4) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now orders becomes fulfilment as category name within the sidebar.
+- 4fbd1ad: Replace an Apps section with a new Extensions section visible under a feature flag
+  New Extensions section is split into two pages:
 
-- [#5591](https://github.com/saleor/saleor-dashboard/pull/5591) [`7d2d773`](https://github.com/saleor/saleor-dashboard/commit/7d2d773ad873c41c9416dbc0f69ea04d82c73030) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now it is possible to send the nullish value when editing dropdown attributes
+  1. Main Extensions page which presents a list of all installed apps
+  2. Explore page which presents a list of available apps to install
 
-- [#5568](https://github.com/saleor/saleor-dashboard/pull/5568) [`74e620d`](https://github.com/saleor/saleor-dashboard/commit/74e620de72a50ecc2cefecc3877d2c4ee2990573) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - You can now see updated buttons and icons in tables across Dashboard.
+  Currently, Extensions show only apps but in the future Extensions section will gather also plugins and webhooks (custom apps).
 
-- [#5544](https://github.com/saleor/saleor-dashboard/pull/5544) [`9b342f1`](https://github.com/saleor/saleor-dashboard/commit/9b342f12cf14c38eef8e730e3613aa021846cca9) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now sidebar has new section "modeling" that reffers to "content" and "navigation".
+- 6875a88: Variant's empty attributes are no longer displayed in fulfillment creation form.
+- 36a9943: Updated @saleor/app-sdk to 1.0.0
+- 45c3f6c: The order list and details view now support the overcharged status. This means that you can now see pill with overcharged label when order has charge status overcharged
+- 4d53e56: Menu item group now support on click handlers
+- 9122a03: Knip no longer raises an error regarding "import.meta" in vite.config.js
+- 62383cc: In quick search you can now search for product variants with SKU. This means product variants are a new item added to the search catalogue. Catalogue items now show their media, if available. Category item display message if they don't have parents.
+- d7adfec: You can now see the correct quantity for unfulfilled lines in Order details page.
+- 4df5005: Test results from the release workflow are now generated in the CTRF scheme and pushed to the qa-helpers repository.
 
-- [#5537](https://github.com/saleor/saleor-dashboard/pull/5537) [`4e970c2`](https://github.com/saleor/saleor-dashboard/commit/4e970c266cb39a059655d41f0ac3d46f84bebf3f) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - Now community banner displays porperly in dark mode
+## 3.20.33
 
-- [#5457](https://github.com/saleor/saleor-dashboard/pull/5457) [`c63e150`](https://github.com/saleor/saleor-dashboard/commit/c63e1507790781271d471009bb84a038600f870f) Thanks [@poulch](https://github.com/poulch)! - You can now select specific products, collections aand categories during voucher creation
+### Patch Changes
 
-- [#5910](https://github.com/saleor/saleor-dashboard/pull/5910) [`4d2ce49`](https://github.com/saleor/saleor-dashboard/commit/4d2ce494158a579f61c64468ae8975fa3a36fbc2) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Removed new_filters flag. The new filters behavior was enabled for a while, so this flag only prevents reverting to the legacy behavior
+- 779d410: Webhooks in app details section now are sorted based on which attempt is latest
+- b007a2a: Login page now doesn't reload after submitting the login form. This means that email and password input remain filled after unsuccessful login attempt.
 
-- [#5739](https://github.com/saleor/saleor-dashboard/pull/5739) [`6637b0b`](https://github.com/saleor/saleor-dashboard/commit/6637b0bc018488c9677ddfe7259ebb89962b437e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Maintanance: Saleor Dashboard now uses ESLint v9 with flatconfig.
+## 3.20.32
 
-- [#5560](https://github.com/saleor/saleor-dashboard/pull/5560) [`80ec78d`](https://github.com/saleor/saleor-dashboard/commit/80ec78d98aea3c5bf04db4c603c03c798afef414) Thanks [@karola312](https://github.com/karola312)! - Test reports are send on slack in message
+### Patch Changes
 
-- [#5600](https://github.com/saleor/saleor-dashboard/pull/5600) [`2d841f0`](https://github.com/saleor/saleor-dashboard/commit/2d841f04514ba8352742312861f7afcc802a3901) Thanks [@witoszekdev](https://github.com/witoszekdev)! - When installing extension from URL (e.g. by clicking "Install" on Explore Extensions), `manifestUrl` input will no longer be displayed
+- 91b41a1: Now, the header near the input for note, when creating customer has correct text.
+- edf04af: You can now close the channel availability modal in product variant edit form using "x" button
+- 29a50ef: Last delivery attempt date is now the date of the newest attempt in given event delivery.
+- 3dd70bb: Now the project uses the latest version of the Vitejs
+- 594244a: You can now see extensions section in sidebar when feature flag is on
+- f925a68: Order details now show correct quantity of items after some items have been returned.
 
-- [#5529](https://github.com/saleor/saleor-dashboard/pull/5529) [`ba82908`](https://github.com/saleor/saleor-dashboard/commit/ba829086e04c726d8968edac00d55b54186acdbc) Thanks [@poulch](https://github.com/poulch)! - You can now see new installed extensions page with list of all installd apps and search above
+## 3.20.31
 
-- [#5613](https://github.com/saleor/saleor-dashboard/pull/5613) [`7d04c19`](https://github.com/saleor/saleor-dashboard/commit/7d04c19e3e4f213830fd48d0eb59034c4118cd04) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Improved search element across dashboard: now clicking on search icon or near the search border will focus the input.
+### Patch Changes
 
-- [#5797](https://github.com/saleor/saleor-dashboard/pull/5797) [`33fea4e`](https://github.com/saleor/saleor-dashboard/commit/33fea4e443e55d80be0273f2d310c7e4fd0ca0ff) Thanks [@mirekm](https://github.com/mirekm)! - Enhancement: Added new Command Menu actions:
-  - Vouchers: Go to / Create
-  - Promotions: Go to / Create
-  - Customers: Go to / Create
-  - Users & Staff: Go to / Invite
-  - Extensions: Install from manifest, Go to installed, Explore marketplace
-  - Webhooks: Create manually
+- 5277d8f: You can now middle click on the links in order history event messages.
+- d3bfbc2: Dashboard now properly handles failed or pending deliveries without any attempts in App alerts.
+- 1405ff0: Chosen warehouses no longer persist between select dialogs.
+- 03551ee: Node 20 can be now used along with Node 18, which will be removed in next release.
+- e935b96: Fixed scaling issues for small images in OrderLine metadata dialog - now small images will scale to fit entire reserved space, just like other places in Salero Dashboard. Previously such images remained at their default size in px.
+- 9070a79: Flaky orders tests using auto-retrying assertions on checking fulfillment status
 
-- [#5670](https://github.com/saleor/saleor-dashboard/pull/5670) [`9ef0833`](https://github.com/saleor/saleor-dashboard/commit/9ef0833cd908c496f12a238179987655deb386ee) Thanks [@andrzejewsky](https://github.com/andrzejewsky)! - The overlap is no longer visible when using text editor.
+## 3.20.30
 
-- [#5565](https://github.com/saleor/saleor-dashboard/pull/5565) [`b19c6e1`](https://github.com/saleor/saleor-dashboard/commit/b19c6e10dae831f8bee76b96e5ce280fdfab327e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - View for managing plugins was added to `/extensions` route, it can be accessed by `/extensions/plugin/<id>` which is used in the list of installed extensions.
+### Patch Changes
 
-- [#5664](https://github.com/saleor/saleor-dashboard/pull/5664) [`8c27403`](https://github.com/saleor/saleor-dashboard/commit/8c27403f65a681a4189ef111231376c40bd20d24) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Product filters now include explicit "Attribute" search option to search for product attributes. Previously this feature was hidden by entering attribute name in the first input element, which made it hard to discover.
+- 4a56859: Collection table no longer shrinks its rows
+- 75c203f: Checkbox and datapiker are now clickable in channel availlablity
 
-- [#5864](https://github.com/saleor/saleor-dashboard/pull/5864) [`13c3fa6`](https://github.com/saleor/saleor-dashboard/commit/13c3fa6bf3214eb74a292185a26d423b6bafc41d) Thanks [@krzysztofzuraw](https://github.com/krzysztofzuraw)! - Fix ProductCreatePage form showing "Leave without saving changes" dialog on successful submission.
+## 3.20.29
 
-  The form was incorrectly marking itself as dirty after successful submission, causing the exit dialog to appear even when the form was successfully saved. This change clears the dirty state when submission succeeds and removes the automatic dirty state setting in the useEffect hook.
+### Patch Changes
 
-- [#5305](https://github.com/saleor/saleor-dashboard/pull/5305) [`10fc24c`](https://github.com/saleor/saleor-dashboard/commit/10fc24cd820359ab07053ba119674d57d2515a72) Thanks [@poulch](https://github.com/poulch)! - Dashboard now sends source header to API, when ENABLED_SERVICE_NAME_HEADER=true. Requires core >=3.20.68.
+- 4bcebbf: Reorder warehouses on channel edit is now called only when warehouses have been changed
+- 37fdf66: The alert in the Apps link in the Dashboard's sidebar now hide after user is informed about apps' issues. This means the dot will hide after you enter the App list and will show only when there is a new failed webhook after your last visit.
+- fe0b3e6: Now clicking in radio and checkbox in a channel availability section no more case error
+- eb9d8ce: Clicking on "Apps" when there is an alert is now persisted after webhooks pending query is executed. This means that after viewing apps list the alert now correctly disappears after long time of inactivity when there has been no new alerts.
+- 41834a8: Notifications will be now clearly visible and not be overlayed anymore by modals. Previously they were partially hidden by the modal's dropover.
+- a2af73f: App list now shows an alert if app's webhooks have failed or the app is disabled. This means you can see if there are issues with your apps without having to enter app details.
+- 1b0d02d: Now tests results in ctrf scheme are attached to job from manual trigger tests.
+- eafaf9e: You can now save, update, and delete filter presets on a page types list
+- 988f25a: Shipping details show fresh data after update
+- a517466: Gift card details page now show correct balance amount after update
+- 3ee3970: Menu item create dialog no more show static amount of item, now data is loading dynamically when user scrolls the list
+- e6401c6: You can now see event delivery ID in webhook details section of an app.
+- ebfc19a: Added `OrderLine` metadata editor when opening metadata modal for products on Order details page.
+  It now allows editing `OrderLine`'s `metadata` and `privateMetadata` and viewing (read-only) `metadata` and `privateMetadata` for `OrderLine.variant`
+- bc83281: "Apps" link in sidebar now shows an alert if one or more apps have failed or pending webhook deliveries. This means you can see if there are issues with your apps without having to enter app details.
+- 2938372: Adding changesets can be now skipped on Pull Requests by adding `skip changeset` label
+- 1b5c8d1: You can now see an alert with a correct date when a webhook has failed event delivery with attempts.
+- a53950a: App alerts now save correct dates of failed attempts and clicks to user's metadata.
+- 435a7b1: `@radix-ui/react-portal` and `@radix-ui/react-radio-group` were added as explicit dependencies, previously these packages were assumed to be installed from `@saleor/macaw-ui`
+- 8a2842a: Legacy alert on gift cards list have been replaced by link to documentaion in page header
+- f33c9a7: Webhooks with failed or pending event deliveries now appear on top in App's settings. App alert tooltip now takes less space on the screen.
+- fdcd7c5: Now results from test report are pushed to qa repo
+- 4162987: App delivery events are now fetched at a 5 minute interval. This means this heavy query is now used sparingly.
+- f7a936b: Voucher details form now properly validate data when discount type is shipping
+- 32b03f4: You can now see apps alerts when multiple apps have failed event deliveries.
+- 5526cd5: Nginx config now server index.html to paths that doesnot contains dashboard
+- e6ef0fb: Fixed issue in OrderLine metadata form dialog: when closing dialog, form state was preserved even when opened for different OrderLine.
+  Now form state will be cleared properly on dialog closure.
+- 2275ad9: "App alers" feature is now available in feature flags and is enabled by default.
 
-- [#5730](https://github.com/saleor/saleor-dashboard/pull/5730) [`a8709e2`](https://github.com/saleor/saleor-dashboard/commit/a8709e248316a8d4e7d04d9f15404c23356c5671) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Added "Translate" button in Product page, it links to translations page for selected product. Language is taken from current Dashboard locale
+## 3.20.28
 
-- [#5160](https://github.com/saleor/saleor-dashboard/pull/5160) [`fe252cb`](https://github.com/saleor/saleor-dashboard/commit/fe252cbe63cf482b6d127987476c3b89747a5b22) Thanks [@Cloud11PL](https://github.com/Cloud11PL)! - Fix dockerfile build error caused by deleted file and bash script
+### Patch Changes
 
-- [#5940](https://github.com/saleor/saleor-dashboard/pull/5940) [`4915a19`](https://github.com/saleor/saleor-dashboard/commit/4915a194f9a5a7f79c67e589dd7f18b483b2a275) Thanks [@lkostrowski](https://github.com/lkostrowski)! - Fixed resolving Saleor absolute API URL. It was broken for some setups when extensions received a partial (incomplete) URL.
+- 2ab3653: Product types list page uses now new filters. New filters are under feature flag and are enabled by default.
+- 6ece8a5: Test reports no longer mention users due to test tags matching GitHub usernames. Replace overlooked tag
+- 3fdd2b2: Staff members list page use now new filters. New filters are under feature flag and are enabled by default.
+- a04abc7: You can now save, update, and delete filter presets on a product types list
+- eb76fa3: Publish only the table with the summary on PRs, now includes a quick link to the job summary. Added ISO formatted date to the report for future flakiness measurement.
+- 402c88d: Modify menu tests to ensure the first item in the list is visible before proceeding.
+- 9078b4b: Gather all single feature flags for filters into one
+- 3b92997: Collection list filters have been ported to expression filtering. This means you can now use new filters in the Collection list.
+- 5640a9d: Test reports no longer mention users due to test tags matching GitHub usernames.
+- 5434419: You can now save, update and delete filter presets on the warehouse list page
+- b7bc6a9: Now, non-code related files are not included in codecov report.
+- 2d7fde8: Now tests results in ctrf scheme are attached to job and results are published in job summary and PR.
+- 50d6564: Now, the files for collecting coverage was explicitly set, this means we will include also files that are not covered.
+- 428bad7: Now the test coverage is being raported and tracked
+- f3e75bc: List of customers now uses conditional filters
+- 3862c59: Gift cards list page use now new filters. New filters are under feature flag and are enabled by default.
+- 24c613d: List of draft orders now use new filters
+- ceb1919: List of vouchers now use new filters
+- 3232550: Apply improvments for new filters so they looks align
+- 053be92: List of pages now uses conditional filters
+- 659a7c2: Attributes list page use now new filters. New filters are under feature flag and are enabled by default.
+- edf962c: Tests reports from artifacts will be protected by password
 
-- [#5377](https://github.com/saleor/saleor-dashboard/pull/5377) [`b1af6f2`](https://github.com/saleor/saleor-dashboard/commit/b1af6f25deb975e72dcb3f05f0d5f9d44a5a4548) Thanks [@poulch](https://github.com/poulch)! - Activates list items on the welcome page no longer implies that they are clickable
+## 3.20.27
 
-- [#5557](https://github.com/saleor/saleor-dashboard/pull/5557) [`7cd7594`](https://github.com/saleor/saleor-dashboard/commit/7cd75942e9739639a693eedd783eee81bdac4f0e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Fixed Jest tests being flakey (randomly faling) due to not clearing fake timers
+### Patch Changes
 
-- [#5913](https://github.com/saleor/saleor-dashboard/pull/5913) [`becc31e`](https://github.com/saleor/saleor-dashboard/commit/becc31e7cd6d762077afd1bc50699e862bc00132) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Added "Model type" column to the Models list page.
+- a4041bb: Now product links on the collection points to the correct url.
 
-- [#5644](https://github.com/saleor/saleor-dashboard/pull/5644) [`e525950`](https://github.com/saleor/saleor-dashboard/commit/e525950238f6846cee5f325842adad896e84e21e) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Renamed modeling related pages:
-  - `/pages` -> `/models`
-  - `/page-types` -> `/model-types`
-  - `/navigation` -> `/structures`
+## 3.20.26
 
-- [#5791](https://github.com/saleor/saleor-dashboard/pull/5791) [`0fb5b71`](https://github.com/saleor/saleor-dashboard/commit/0fb5b7161e4b5fd249aea17c79eb4e2c9fff25e0) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Order list view now uses new `where` API for filtering. This means that additional new filter options were added:
+### Patch Changes
 
-  Payment filters:
-  - `authorizeStatus` - Authorization status (replaces part of old paymentStatus)
-  - `chargeStatus` - Charge status (replaces part of old paymentStatus)
-  - `totalGross` - Total gross amount with range support
-  - `totalNet` - Total net amount with range support
-  - `transactions.transactionsPaymentType` - Payment type used in transactions
-  - `transactions.transactionsCardBrand` - Card brand used in transactions
+- f0870c5: Opening item in new tab using cmd key on datagrid now takes into account mounting point
+- 87b8124: Now you can re-order products within the collection.
+- 19bdcd4: Order transaction list now displays the name of a transaction
+- e0f586e: Now you can see pageviews in the posthog.
+- 1c3a125: You can now edit note in order details. Notes in order details now show id of note, id of related note and type of note "added" or "updated"
+- 41dfb69: You can now open datagrid list item in new tab using cmd/ctrl button
+- a3a1eca: After creating a new collection, you should see a list of assigned channels
+- 79b8255: Modals in the Dashboard are now aligned, all have the same max height. Loading items on scroll works when the dialog is displayed in large screen.
+- 08e3449: Dashboard now sends source header to API, when ENABLED_SERVICE_NAME_HEADER=true. Requires core >=3.20.68.
+- 36bc1be: Activates list items on the welcome page no longer implies that they are clickable
+- 52cf576: Editor.js no more cause error during saving
+- 6a4f082: You can now navigate back from collection details to collection list
 
-  Order content filters:
-  - `hasInvoices` - Boolean filter for orders with invoices
-  - `hasFulfillments` - Boolean filter for orders with fulfillments
-  - `invoices.createdAt` - Invoice creation date with datetime range
-  - `number` - Order number (exact match or range)
-  - `linesCount` - Number of order lines (exact or range)
-  - `checkoutId` - Checkout ID (exact match)
-  - `voucherCode` - Voucher code used
-  - `fulfilments.warehouse` - Warehouse from which fulfillment was made
+## 3.20.25
 
-  Customer details filters:
-  - `userEmail` - Customer email (more specific than old customer)
-  - `billingPhoneNumber` - Billing phone number
-  - `billingCountry` - Billing country
-  - `shippingPhoneNumber` - Shipping phone number
-  - `shippingCountry` - Shipping country
+### Patch Changes
 
-  Metadata filters:
-  - `lines.metadata` - Order lines metadata
-  - `transactions.metadata` - Transactions metadata
-  - `fulfillments.metadata` - Fulfillments metadata
+- c9df392: Order sidebar now uses buttons from new macaw
+- 9737ff3: Collection details page uses now Buttons from new macaw
+- 616ad52: You can now see buttons from macaw-ui-next in customer details view and gift card details view.
+- cb5fd4f: Add tracking button on order details uses button from new macaw
+- 1053db7: Users are now properly anonymously identified
+- ba9d6f5: This Pr is separating sources in testmo for playwright and cypress tests, and adding results for runs on PR to testmo
 
-  Modified Filters:
-  - `giftCard` was split into:
-    - `isGiftCardBought` - Boolean for gift card purchases inside order
-    - `isGiftCardUsed` - Boolean for gift card usage
-  - `status` - Now "Order Status" (previously named "Fulfillment Status"), has options for order statuses (e.g. Cancelled, Draft, etc.)
-  - `fulfilments.status` (previously `fulfillmentStatus`) - Separate fulfillment status filter (e.g. Fulfilled, Partially Fulfilled, Refunded, etc.)
+## 3.20.24
 
-  Due to migration to `where` API, following filters were removed:
-  - `preorder` - Preorder filter completely removed
-  - `paymentStatus` - Replaced by more specific payment status filters
+### Patch Changes
 
-- [#5369](https://github.com/saleor/saleor-dashboard/pull/5369) [`d1c02d1`](https://github.com/saleor/saleor-dashboard/commit/d1c02d107043a7d5ae6981cdd34c19a4c56a50a1) Thanks [@szczecha](https://github.com/szczecha)! - Editor.js no more cause error during saving
+- f986ca7: You can now see contextual links to documentation in product, webhooks, order, staff members lists and Graphql Playground panel.
+- 3c9889b: Some sentry errors have been fixed.
+- 4ea5566: Now CI workflows use updated action to upload and download artifacts
+- b44516b: You can now use custom auth headers in graphiql dev mode panel.
+- 5717954: Now there can only be one login request running at a time. This means using a password manager to log in no longer cause an error. If there are too many login requests Dashboard now shows a corresponding error message.
+- e2ce3c4: Product data is now properly displayed in webhook dry run modal.
+  Add warning alert in webhook dry run modal for webhooks that don't have a valid object ids.
+- 65ae19b: Batch of sentry errors has been fixed
+- 109565e: Added explicit max width to transaction event tooltip. Thanks to that longer message won't overflow.
+- d939e6b: Added switch focus using tab button, that may delay saving before input is filled.
+- 0be566e: Posthog no longer collect the events from the staging environments. This means we track the data only in production environments.
+- d56c9a5: Prevent a call update channel after voucher create when no voucher id returns from response
+- f1f9898: App buttons no longer clip with app contents
+- d120bae: Removed waitFor and set expanded metadata section to avoid flakyness
+- 081c5c0: Now category and subcategories show proper description
+- ffaa00f: You can now close order manual transaction modal by clicking the close button
+- 4b42974: Split select link option into 2 different ones to avoid flakyness in tests
+- 184297b: Now it's possible to filter orders by its metadata.
+- 35b508d: Warning banner in tax settings and delete app modal now display properly in dark mode
+- 6a89f7a: Add GitHub Workflow to check licenses
+- 752b988: Playwright tests raport is generated even test failed
+- 85fd37c: Add explicit waits for draft order shipping carrier button interaction
+- f0cd832: Run test by cron workflow has been removed
+- 35a74fb: Now webhooks permission alert displays appropriately in dark mode
+- 47d93f0: Increased the maximum display length for `plainText` attribute to 10,000 characters.
+- 7b0c73b: Discounts no longer blocks the UI when the user has no permissions for managing channels.
 
-- [#5367](https://github.com/saleor/saleor-dashboard/pull/5367) [`70dbf11`](https://github.com/saleor/saleor-dashboard/commit/70dbf119cc84e377965aa3b01feb049505337a5c) Thanks [@poulch](https://github.com/poulch)! - You can now navigate back from collection details to collection list
+## 3.20.23
 
-- [#5629](https://github.com/saleor/saleor-dashboard/pull/5629) [`8185085`](https://github.com/saleor/saleor-dashboard/commit/81850851e0ea313f76a2f98397b2062eb09aae88) Thanks [@witoszekdev](https://github.com/witoszekdev)! - Extension details page now hides webhook deliveries that have no attempt (e.g. deleted after some time by Saleor) and if no delivery has an attempt is shows a message with explanation.
+### Patch Changes
+
+- 3c4462a: App buttons no longer clip with app contents
+- ea74e8a: Warning banner in tax settings and delete app modal now display properly in dark mode
+
+## 3.20.22
+
+### Patch Changes
+
+- e964e95: You can now see contextual links to documentation in product, webhooks, order, staff members lists and Graphql Playground panel.
+- fb56837: Now there can only be one login request running at a time. This means using a password manager to log in no longer cause an error. If there are too many login requests Dashboard now shows a corresponding error message.
+- 20b10c7: Removed waitFor and set expanded metadata section to avoid flakyness
+- 3299739: Run test by cron workflow has been removed
+- 1b5b001: Now webhooks permission alert displays appropriately in dark mode
+
+## 3.20.21
+
+### Patch Changes
+
+- 8d08677: Removing value from area input in address form no more cause error
+- c48e50b: The app no longer changes the url when it is already been updated.
+- 38d9a92: Selecting sale entries no longer fails when browsing the sales list
+- 315676c: The double success banner no longer appears during app installation
+- 3e89b07: Assign product dialog no more crash when product has no channels
+- 36fb327: Prevent a call update channel after voucher create when no voucher id returns from response
+- 917c0f8: Adding tranalstions to shipping methods no more cause error
+- 5013483: Assigning product to collection no more cause error
+- 749a09f: Update variant file attribute value no more cause error
+
+## 3.20.20
+
+### Patch Changes
+
+- a40691f: Environments created via Saleor Cloud now identify and report to PostHog. This means Dashboard now sends telemetry data regarding home page onboarding steps and links.
+- da3e53b: Removed unnecessary expect that was waiting for the success banner, as it was causing delays on CI. Instead, the test rely on other assertions to verify that changes have been applied
+- 3f2ca21: Onboarding state is now stored in user metadata, that means that onboarding state is persisted between logins on different machines
+- c40fdf7: Add environment variables to GitHub Workflow to control when to show onboarding for new users
+- d677431: Now the list app page shows footer that allows the user to sumbmit a demanded app.
+- 479ae66: Merged expectSuccessBannerMessage and expectSuccessBanner into a single method, removed the redundant method, and updated tests to use the new unified method.
+- 24691c4: Rename newHome to wecomePage to allow seamlessly removing a feature flag
+- 13f63c2: New home page layout is now reponsive, it means that layout adjusts to desktop, tablet and mobile devices
+- 67687b3: User onboardng steps are now checking when user does required actions
+- e947997: E2E tests are now updated for new home page meaing that they don't fail when new home page is enabled.
+- 18a4eae: Activity section in home page now has uniform padding with header, stock and sales.
+- f1e5f34: Enhanced success banner verification in basePage.ts by adding network idle state check and parallel assertions, while modernizing array operations in shipping methods tests using spread syntax instead of .concat()
+- 0c2971b: Add integration test for new home sidebar
+- fab4b4e: Refactored tests by replacing direct banner visibility checks with `expectSuccessBanner()`.
+  Removed unnecessary `waitForNetworkIdleAfterAction` wrappers.
+  Simplified test scope for `staffMembers` and removed explicit timeouts where appropriate.
+- f9130c4: You can now see an onboarding component that guides the user through Saleor Dashboard features.
+- 9cd4da2: You can now see new sidebar with analytics and activities
+- 981a0bc: Removed waitForNetworkIdleAfterAction and replaced it with a direct navigation call.Added blur actions on metadataKeyInput and metadataValueInput to ensure input stability before saving in scope of SALEOR_128
+- 6990b1e: New home page with onboarding is now enabled, old home page code has been removed
+- d9600ab: Removed waitForNetworkIdleAfterAction and added direct element waits to ensure readiness before actions.
+- e48622c: Test set now includes tests for welcome page onboarding component.
+- 8bc92e3: You can now see information tiles regarding Saleor Docs, community, and technical help in the home page.
+- 4d9d127: Adjust inline discount test for precise floating-point comparison with .toFixed(2)
+- 7250d03: Padding under home page tiles is now increased to prevent clipping
+
+## 3.20.19
+
+### Patch Changes
+
+- fd98d31: Selecting sale entries no longer fails when browsing the sales list
+- 05a2be7: Variant creation no longer reports an error when API call fails, this means this scenario is now handled gracefully.
+- bd125e8: List item links are no longer rendered outside of cursor. This means you can now copy the item's URL with mouse right click or use middle click to open page in new tab.
+- 747030e: Enhanced success banner verification in basePage.ts by adding network idle state check and parallel assertions, while modernizing array operations in shipping methods tests using spread syntax instead of .concat()
+- 73f4a95: Refactored tests by replacing direct banner visibility checks with `expectSuccessBanner()`.
+  Removed unnecessary `waitForNetworkIdleAfterAction` wrappers.
+  Simplified test scope for `staffMembers` and removed explicit timeouts where appropriate.
+- e1c0868: The "Save" button in Change Password form now submits the form data to Saleor.
+- f4466d9: Now, codeql action is no longer needed since we enabled code analysis via GH configuration with default settings.
+- a28cd97: Prepare base layout for new home, hide new home page under feature flag
+- 54e77d2: You can now select attribute value from dropdown in datagrid cell
+- 82cd647: Adjust inline discount test for precise floating-point comparison with .toFixed(2)
+
+## 3.20.18
+
+### Patch Changes
+
+- 9436450: Optimize test by reusing an existing order instead of creating a new one
+- 3db9f24: Increase global single test timeout to avoid false neagtive test results
+- abdd791: Refactor tests to replace `waitForDOMToFullyLoad` with `waitForLoaderToDisappear`, making the test shorter by waiting only for the loader to disappear instead of the entire DOM to load.
+- 711c368: Upgrade lz-string library to version that supports MIT license
+
+## 3.20.17
+
+### Patch Changes
+
+- 725ab22: `.env.template` no longer references Demo environment.
+- 4feda35: Increase global single test timeout to avoid false neagtive test results
+- 55988f0: Moving test cases for activation and deactivation staff members to other file and running it in serial mode to avoid login in two tests in the same time (it can cause error with code LOGIN_ATTEMPT_DELAYED)
+- 048b0fb: Added support for the new channel setting: `checkoutSettings.automaticallyCompleteFullyPaidCheckouts`. Setting can be changed in channel configuration page.
+- a230369: Link value input in Navigation no longer overrides input value with cached value.
+
+## 3.20.16
+
+### Patch Changes
+
+- 8f225fa: Fixes a bug when the text truncating breaks on undefined attribute value.
+
+## 3.20.15
+
+### Patch Changes
+
+- bfb6237: Mailpit service uses has been removed due to issues with checking email during E2E runs on PRs. This means the tests no longer check if export emails have been received.
+- 5b50332: The value of attribute type `plainText` is now capped. This prevents the UI from freezing when the value is very large.
+- 3948065: The tax app version no longer displayed in the tax select input because showing the initial installed app version caused confusing
+
+## 3.20.14
+
+### Patch Changes
+
+- 12edac4: Now dependencies are installed properly in our pipelines, this means auth scripts are no longer stopping.
+- d15aff5: Now, swatch presents the preview of the selected image.
+- 80869fb: When deleting product type with products the "View products" link now navigates to product list with correctly applied product type filter
+- b9c8291: Now cron-workflow that runs e2e tests takes proper urls to for preparing accounts action
+- 6c85d52: Back buttons now navigate to the list with previously used filters and pagination applied.
+- 89b9170: "changeset/cli" version is now bumped to the latest version
+- 75751b0: Now the create category button is consistent with the other views
+- 4ef03df: When navigating to order details from the order list, the back button will now return you to the previous page with the same filters and pagination applied.
+- 4e0a555: Now accounts are decoded using an encryption key
+
+## 3.20.13
+
+### Patch Changes
+
+- 04d16fc37: Add e2e for managing products on draft order. Add e2e for placing draft order for non-existing customer.
+- 8ea94af11: Enable by default feature flag for discount rules. Remove feature flags for product and order expression filters, so that expression filter will always show. Cleanup dead code after remove feature flags.
+- 1ff350a22: Assigning product to shipping method weight rate no more cause error
+- be5d5e65e: Modals in the Dashboard have been aligned, so that all contains close button
+- fc80e34ef: Knip was added to the codebase and workflow triggered on pull request. This means developers will now be informed about unused exports and files.
+
+## 3.20.12
+
+### Patch Changes
+
+- 8db152e60: Clicking a select channel on a product list and then click close button clear filter state, so when you click again select button, only one channel filter will be selected
+- 3f74d5cb2: You can now see app's webhooks' event delivery attempts in app settings. These include last 6 failed or pending deliveries with their details: payload, status and date.
+- c330adeb7: You can now provide 0 variant price value during product creation
+- 350194c3d: Removing not required dropdown attribue value no longer cause error
+
+## 3.20.11
+
+### Patch Changes
+
+- 9fb5665f1: Test for readonly access to apps are more table, so that should not check anything before content load.
+- 858439dd7: You can now see a new card in home page that can redirect you to Saleor solution engineers contact information if you need technical advice.
+- e831f9b95: Selecting channel from product list does not trigger URL change, so that clicking "Select channel" button without selecting channel will not be saved in URL.
+- cce3b2cba: Adds conditional logic to the Merge Playwright Reports workflow, ensuring that the merge and upload steps are only triggered when the pull request has the run pw-e2e label applied.
+- a5b84712a: Implementing timeouts ensures the workflow automatically terminates jobs taking too long, improving resource utilization and avoiding potential workflow hangs.
+- 7e1e6a10d: Some end-to-end Playwright tests now have extended timeouts for UI elements to load. This means that automation tests should fail less. Playwright retires value has been set to 0.
+- bd54e6b54: Fix a group of errors caused by reading property of undefined
+
+## 3.20.10
+
+### Patch Changes
+
+- 73387c130: History timeline sections now have a bolded, dark header without a line separating them from the events.
+- e91e592f7: E2E tests are no longer executed on every commit, this means performing e2e tests happens only when you add a label "run pw-e2e"
+- 660f6c119: Users with "MANAGE_STAFF" permission no longer get an error when entering order details. This means that to access `privateMetadata` in variant "MANAGE_PRODUCTS" permission is required.
+- 55d5a5f44: Shipping destination alert when creating a new order now has a correct link to shipping settings.
+- 3dc1c6d9b: Grid no longer crashes when removing row.
+
+## 3.20.9
+
+### Patch Changes
+
+- 069e6cc2c: You can now make a refund with shipping costs or custom shipping amount. This means you can make a refund without selecting line items.
+
+## 3.20.8
+
+### Patch Changes
+
+- 640d5f6f5: SALEOR_119 now has increased timeouts for app instalation. This means the test should fail less.
+- 09cf2adaf: SALEOR_191 now waits for the refund page to fully load
+- 0eb90df03: Menu item dialog now use components form new Macaw
+- bef2cbde2: Docker images will be automatically tag with with both the full version and just the minor
+- 331af3943: You can now see draft order alert messages when channel is inactive or has no products
+- ba5d47e8e: Modals for adding discounts and confirming deletion now use new MacawUI styles
+- 942bb01db: Now you can set proper attribute value when editting content page.
+- 762463819: Dashboard now scrolls the product list page to the top when you click on "Select channel" so that you can see the filter window
+- ece769a9a: The gift card modals now use new macaw-ui components.
+- 330012e11: MacawUI in Dashboard is now the newest available version. Dashboard no longer shows an error while installing packages. Price in shipping method select component now aligns to the right.
+- f1b06f8e8: Remove skip from installing app tests and update workflow to run it only on releases or manual
+- c052612f6: Now manual tests and tests on release can run on multiple projects
+
+## 3.20.7
+
+### Patch Changes
+
+- ce05ffba2: Order details page now displays the name of the applied voucher.
+- f8e6049fe: Now staging environments have changed domain, that means "staging-cloud.saleor.io" is no longer referenced in our pipelines
+- b428bcd9f: Legacy Dialog component is no longer used
+- e5bfa1218: You can now navigate on dropdown list. Dropdown stays close on focus.
+- bbba0d2dc: You can now see permission edit list use default list color instead of accent blue color.
+- 642e9f7cb: Showing negative amount in order details has been aligned
+- efbca2b00: Now, missing translations are properly added to the order details.
+- 037c67cb2: The stock settings no longer show a message that you need to create a warehouse when warehouses are already configured.
+- f879d525a: App install error page now uses macaw-ui-next styles meaning that MaterialUI is no longer used in this view.
+
+## 3.20.6
+
+### Patch Changes
+
+- c8a6d86d0: Login, password reset and error pages now use new Macaw buttons, text and styles.
+- 5e3cc3fa0: You can now see a message instead of a loading animation when there are no categories, collections, products or variants assigned in Discounts
+- 48b4146a0: You can now add and remove tags for gift cards without any application crash
+- edaf42b95: Gift card details page and customer details page no longer crash when you have only some required permissions. This means that you can now view gift card details page if you have only gift card permissions and customer details page if you have only customer permissions.
+- e73034386: You can click save button on voucher creation page to trigger validation
+- 6289fbde4: You can now delete draft voucher codes during creation of new voucher
+- 061412866: You can now update quantity per checkout in site settings
+- 9434aea16: Make MenuItems' container scrollable in navigation section
+
+## 3.20.5
+
+### Patch Changes
+
+- 0b9296f1c: You can now replace all environment variables instead of only API_URL in Docker and nginx
+- d29c3f89d: Tests for shipping methods now wait to content load to start test
+- fd29d47cb: Now developer can see the traces within Sentry
+- f89484cc4: Plugin details view now displays channel list with proper padding and text with proper size.
+- b464ee243: Now sentry sample rate sents only 10% of the traffic
+- cfe015ab2: You can now see errors when required attributes are empty during product or page edition
+- a1420b2c4: Page type page now displays section description in multiple lines.
+- 8b345e605: Transaction capture modal no longer shows "Error" text when API error occurs. This means that the modal closes when mutation finishes so that result is visible.
+- cf2eb131f: Now you can see initials in your account details when there is no avatar image set for your account.
+- ef1c9cba5: Subscription query editor no longer shows incorrect required permissions for inserted query.
+- 5098f2674: You can now assign more than 22 attribute for product and page type
+- 508e53e6f: Category input in product page is no longer collapsed when empty
+
+## 3.20.4
+
+### Patch Changes
+
+- 55d49ee01: You can now run all e2e tests without attributes.spec interference
+- e094fa61e: The migrated dropdown components and there types no longer exist within the codebase
+- e14df76d8: You can now run E2E tests locally with no issues
+- 54b212460: Rich text editor errors related to 'holder' no longer are sent to Sentry.
+- 4a593993c: You can run order e2e tests with updated test data
+- e635bc153: You can now view channel and product details pages on tablets
+- f29141acc: You can now search by order number in Navigator search.
+- a711406f2: Components that show app token now display text in multiple lines instead of one.
+
+## 3.20.3
+
+### Patch Changes
+
+- bd8fc8757: You can run e2e test for an order type discount in a draft order
+- b39b04c50: Text in Dashboard now is aligned and is displayed correctly
+
+## 3.20.2
+
+### Patch Changes
+
+- fd36e8e08: From now dashboard will be deployed to load test services in dev cloud
+- 6f45d4435: Drop legacy Dialog and replace it with new macaw Dialog component in action dialogs,
+  order change warehouse dialog, order payment dialog, add staff member dialog,
+  staff user password restart dialog, tax select country dialog.
+- 5b8262d72: Button for adding new refund now has a shorter label
+- a565113e6: Fix custom ref checkout in dev deployment CI workflow
+- 9f10e1bdb: Dashboard no longer uses Typography and Skeleton from Material. These components were replaced with MacawUI ones
+- 088842b70: You can run E2E tests for inline discounts in draft orders
+- a77ff9f9e: You can now see tax dropdown taking full width
+- 15d5b8747: Saleor Dashboard no longer uses MUI Card component, it uses DashboardCard instead.
+- 5a1025570: Add new service to dev deployment CI workflow
+
+## 3.20.1
+
+### Patch Changes
+
+- 81d909bd1: You can now see macaw ui migration progress
+- 125883658: Product variant forms now show missing price and name errors when these fields are empty.
+- 55e72b855: Edit refund view no longer display title with typo when edit refund with line items
+- 27a47265a: The legacy selects are no longer present within the codebase, this means you should use the ones from new macaw when developing the UI
+- d4e284996: You can run e2e for updating order with non-manual refunds in status draft/failure
+
+## 3.20.0
+
+### Minor Changes
+
+- 618bb01aa: E2E Fixing flaky navigation tests
+- f9d1b2b7c: Adding CodeInspector plugin
+- 8943ae241: Now you can see columns and their ordering that you previously selected when swtich betetween listing pages.
+- 563b86557: Add tests for thirdparty apps
+- 1fc4c348d: Swap new refund with with old one when feature flag toggle
+- cb5988f38: E2E tests for customer CRUD
+- 8856e2f03: You can now see Marketplace app list on automation deployment.
+- 1dcb956f4: Adding e2e tests for promotion CRUD
+- bdfb5e8e3: Now selected columns on the product list are being saved when browsing order details.
+- 12622c182: Migrate dashboard to new font tokens
+- 6c5be6662: Fix flaky test - TC: SALEOR_3 Create basic product with variant
+- 5c30c8d46: Replace back icon with cloud one in sidebar return to cloud link, update copy to just Saleor Cloud
+- 2111f9305: Now, the developer can access sidebar components on each page directly.
+- e08dd6420: Introduces new refund flow for orders that allow users to refund items base on transactions. Grant refund and send refund is a single flow. User first has to create draft refund and then can transfer funds in one flow.
+- bed0fa3b5: The list of transactions is now placed under the new section called "Transactions" when you visit order details page
+- 93f5dcebf: You can now run e2e test for a manual refund type
+- f1e716e86: Order Refund views no longer display duplicated errors or no errors at all when submitting the form.
+- c14402c4a: You can now run E2E Playwright tests for staff members CRUD
+- 687b1346e: You can now browse listing pages without additional reloadings
+- e02050a43: This change adds a reusable GridTable component for ephemeral data edition.
+- a9745e492: Remove brackets next to each order status title due to cause confusing for the clients
+- 66f565d24: Adding tests for promotion rules CRUD
+- ca23d8547: You can now create refund with lines even if all lines have been previously refunded.
+- f7bb80cbe: The API_URI is no longer used across the codebase. API_URI stays in workflows for backward compatibility
+- 0589970ef: Always show charge and authorized amount in payment section of order details
+- d9bc7544e: Cypress tests are no longer possible to be executed
+- 9c5e78652: This change disallows creating refund for orders created in transaction flow channels that have no transactions, as well as orders that have no refundable transactions
+- 92ed22708: Allow to manually override number of shards to use during manual re-runs
+- 68eb5cd62: Refund add dialog no longer allows proceeding to refund with lines view when all lines have been refunded and manual refund view when user doesn't have payment permissions.
+- 9b87e78d4: You can now select created at column in product list
+- 202b18fb5: Refactoring playwright setup file and moving auth specs
+- 1c01b463a: Modal for refund reason now has an improved copy
+- 4c919c106: Grid peersistance implementation
+- 172bbe089: Adding prettier for code formatting
+- be40ffd78: Fixing flaky tests - TC: SALEOR_32 and TC: SALEOR_33
+- 4603cc532: Refund with lines view no longer allows creating/editing a refund with amount exceeding charged amount for selected transaction
+- ceada3108: Changed trigger to workflow_dispatch and switched from issues to pr as a source of metrics
+- d65766193: Warning message on manual refund view is no longer unreadable on dark mode
+- b3a87cd5e: Implement refund add modal
+- 1c8df0f59: Refund table now displays user initials on the avatar and full name on hover instead of an email.
+- f25bf71fc: Adding e2e tests for permission groups
+- 06678d0bd: Fixing flaky test - TC: SALEOR_106 Issue gift card with specific customer and expiry date
+- e2e5c716c: Add playwright tests for edit and remove product types
+- dbfe9b7f7: Rewritten tests for setting balance and exporting gift cards
+- f84515021: E2E Test for adding promotion rules
+- 08b55d409: Fixing flaky e2e tests
+- d46265dfe: Introduce view for manual refund transaction
+- b41583432: E2E Playwright tests: SALEOR_187, SALEOR_205, SALEOR_59, SALEOR_198, SALEOR_106 are no longer flaky
+- 6597aaaef: Fixes incorrect button label for adding or editing refund reason
+- ae560bf9d: Fixing assertions in flaky Playwright tests
+- 1a3748728: Adding the new variant as a row is no longer possible from the product details. This means "add new variant" button now leads you to the variant creation page
+- 04ca14958: For old verions tests with "old release" tag will be executing. Additionally adds more detailed title to results on slack and testmo"
+- c0031af37: Amount input in refund form no longer displays incorrectly formatted prices after recalculation
+- 1bfc3f5ab: Transaction refund related views no longer display confusing descriptions.
+- c3ca12283: You can now toggle improved refund flow in features preview
+- 3af5ac04c: Filters for orders now allow filtering by ID. This means its form handles one or multiple ID that you can attach by using comma, space, or enter for separation.
+- ca83d3acb: Manual refund form no longer allows values greater than charged amount for selected transaction and now allows positive values lower than 1
+- 88138bef4: Fixing another batch of flaky E2E tests
+- d6c03b077: QA Adding back tests-nightly workflow
+- 2c84b7aee: You can now open channel selection by clicking "Select channel" within any price cell on the product list. This means the dash "-" sign is no longer displayed there
+- 5faad9ee3: Introduce menu items with sortcuts for GraphQL playground and search actions in sidebar.
+  Move "Go to Saleor Cloud" button at bottom of sidebar
+- bde2fe886: Changed e2e test case ids to remove duplicate case ids and fix inconsistencies between repo and Testmo. Thanks to this, our QA reports will be more accurate
+- 31e4575df: add playwright test for translations
+- d61fdb0b6: Add site settings e2e test
+- 16b47e2bf: Fix duplicate validations on refund view
+- 634265976: Show all transaction in manual refund view, disabled those that are not refundable
+- a6ed4570f: Removing skips from e2e tests
+- 2a091894f: This change replaces refund datagrid on order details view with GridTable for better clarity and UX.
+- 024f2d012: # Optimizing playwright setup and playwright.config.ts files
+
+  -Adding a conditioning to auth.setup.ts file to use existing auth json file if it's applicable
+  -Added some optimizations to playwright config file
+  -Cleaned up gh action for playwright tests (removed Cypress references)
+  -Updating gh workflow for PR automation with extra test sharding
+  -General cleanup of redundant code
+
+- 488c8e409: Implement refunds datagrid on order details
+- fb4d33a5c: Orders: In order list view you can now use new, easy to use and improved filters.
+- 855a97419: You can now run E2E tests for refunds
+- f95fcc447: Vertical lines are no longer visible for read-only grid tables
+- 151f42b3d: E2E fixing flaky gift cards tests
+- 2b0f7602f: Adding e2e navigation tests
+- 7a7f0e447: Run tests from other repo
+- bb16de58e: You can now see pending manual refunds on order details view.
+- 70b2c40d0: Fixing still flaky test - TC: SALEOR_205 Bulk delete customers
+- 434b169ab: Fixing flaky test - TC: SALEOR_205 Bulk delete customers
+- 6a2c4a0a4: This change replaces the datagrid on refund create & edit views with GridTable component
+- b048a5090: Introduce new icons for menu, remove not used icons
+- 005713e8e: Now savebar is aligned with the rest of layout
+- a47581e31: Adding e2e tests for attributes
+- 99a9c2837: Fixing flaky e2e tests
+- dd8d60a4e: Fixing flaky test: TC: SALEOR_87 Edit voucher Usage Limits: used in total, per customer, staff only, code used once
+- 12d7b9021: Open release PR after automation tests for core releases passes
+- fd8368fd4: Fixes button font weights
+- ec21ae379: Add playwright tests for page types
+- 7d7fd4e12: New github action gathering repo metrics
+- 18492763f: Now you can see the updated appearance of the bottom bar that holds save and back actions. This means functionality has not be changed
+- c956f3543: Fixing flaky E2E test for gift cards
+- 251e206f3: Remove branch name warning from pre-push
+- 7077d6a55: Use dummy app in delete app test
+- 99d1c6f83: Fix typo in postTestsResults.js
+- b8bd24297: Refund views have now more consistent UI
+
+### Patch Changes
+
+- 7ff18ac1e: Product edition no longer change the others work when changing different fields simultaneously. This means UI sends only form fields that were changed.
+- dfb19e5e2: The legacy multiselect are not longer present within the codebase. this means you should use the ones from new macaw when developing the UI
+- 9d8a21f51: Login via API in order to setup playwright tests is working in serial mode
+- f53973f2d: Manual transaction modal has now improved design that matches other modals.
+- 345eeb041: You can now run e2e tests without flakiness
+- f99fc51cd: Fix building docker image after move service worker to assets dir
+- a9c750a01: You can no longer see a duplicated cancel button when canceling the transaction. This means you now can go back to edition by using "back" button and "cancel" to continue your intention
+- 31a73ea21: Fixes a bug where order and gift card details views show incorrect avatar in history component. Notes added by apps will now show app's name and avatar. All events will now use the same date format to improve consistency.
+- 2952fe571: The selected value is no longer filtering the options when using any select list with autocomplete
+- a246798df: Fix showing empty tooltip when no content by bumping macaw-ui to newest
+- 7f729f2d2: Dashboard will now allow to set publication date and availability date with time. This change also replaces deprecated date fileds with datetime fields.
+- 97c0c844d: Read-only metadata keys and values will now be displayed as regular inputs, making them easier to read and preventing them from looking disabled.
+- ea3c28809: Transaction titles in order details now include its ordinal number and creation date. This means that all titles now follow the same format.
+- 9226dc965: Fix showing empty price when value is zero
+  Improve showing discount type in order payment details
+- d0ef1f3d8: App and User avatars in order details now all have the same color.
+- 1028d48d8: You can now open issue gift card modal without any flickering
+- 4eaa036cc: Fix product list crash when description contains empty object
+  Improve description by removing html tags and &nbsp;
+- f6d44a902: Manipulating timeouts of Playwright tests
+- ad3ad6d84: The boolean attribute has been changed from a toggle to a select. This change helps visualize when the attribute has not been set.
+- 3231bb525: You can now properly edit permission groups when you have full access
+- 528fef012: Product details view will not show product categories with its ancestors. It will make it easier to choose product's category.
+- c10dd8a6a: Add clarity to order cancel dialog
+- b475eb8b5: Add product analytics on cloud
+- 0fb6777c4: History component's texts will now have unified colors
+- 18cb0ec76: Adding tests for readonly access to Apps
+- db8b2d9b9: Flow settings in channel creation will now persist after channel is created
+- 56eb4d649: Searching for countries and other items is now more efficient, making it easier to find what you need. Additionally, the Dashboard Navigator UI has been improved to match the rest of the application, providing a more consistent experience.
+- 232cd2a12: Previously we allowed user to select either flat rates or any tax app. To avoid problems if there are more tax apps installed this change adds ability to select tax app that will be used to calculated taxes per channel. User can also select tax app for country exception while configuring taxes. Related [RFC](https://github.com/saleor/saleor/issues/12942)
+- e7e639b79: Addedd support for the BrokerProperties webhook header
+- 9edf2eabc: Products in a list of products to be excluded from shipping will no longer be selectable if not available in chosen channels.
+- e234ddc0f: Fix showing promotion discount type in order summary
+- ddd28ecf1: Increase playwright maxFailures to 10 (how many allowed failures, if exceeding skip remaining tests)
+- 290104119: Waits if editorjs is ready before it's destroyed. This change aims to lower number of alerts caused by editorjs
+- c8f4b0ad3: Set codeowners based on new GH groups
+- f82600a16: Fixes an issue that prevented users from pasting values smaller than 10 into datagrid cells
+- d1430ea40: Avatars in transaction events no longer show broken image instead of initials.
+- 4bd369b09: Now you can see the reason why shipping methods are incorrect when creating draft orders. This means creating new draft orders will pop up an error with the details of incorrect shipping.
+- 217cb106d: The selected value is no longer filtering the options when using any select list in product variant table
+- 69d2c6bec: This change replaces old service worker with a noop service worker. Saleor Dashboard will no longer actively use service worker for caching and registering fonts.
+- 51a360f2a: Improve error color on datagrid
+- dfedc1010: The action buttons in the transaction section of the order view are now unified with the other buttons in that view.
+- dfe8e1d20: Fixes an issue where product export threw an error due to invalid input data
+- 9edf2eabc: Show info and disable checkbox in AssignProductDialog when product does have channels overlap with selected channels
+- 2830c9cfe: Fix release workflow
+- 8e0e208fd9: Fix dockerfile build error caused by deleted file and bash script
+- 80b8c785e: Show all gift card used in order details
+- 756681f46: Show discount name for promotion discount type

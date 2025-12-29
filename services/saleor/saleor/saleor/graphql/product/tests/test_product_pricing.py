@@ -44,14 +44,6 @@ FRAGMENT_PRICING = (
         ...Price
       }
     }
-    priceRangePrior {
-      start {
-        ...Price
-      }
-      stop {
-        ...Price
-      }
-    }
   }
 """
     + FRAGMENT_PRICE

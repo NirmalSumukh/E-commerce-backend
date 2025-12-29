@@ -1,17 +1,17 @@
 import { TableCell } from "@material-ui/core";
 import { Button } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 import { stopPropagation } from "../../misc";
 
-interface IconButtonTableCellProps {
+export interface IconButtonTableCellProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
   onClick: () => void;
 }
 
-const IconButtonTableCell = (props: IconButtonTableCellProps) => {
+const IconButtonTableCell: React.FC<IconButtonTableCellProps> = props => {
   const { children, className, disabled, onClick } = props;
 
   return (

@@ -1,5 +1,8 @@
 from unittest.mock import ANY
 
+import pytest
+from django_countries import countries
+
 from ....tests.utils import get_graphql_content
 
 VOUCHERS_QUERY = """
@@ -39,6 +42,13 @@ VOUCHERS_QUERY = """
         }
     }
 """
+
+
+@pytest.fixture
+def voucher_with_many_channels_and_countries(voucher_with_many_channels):
+    voucher_with_many_channels.countries = countries
+    voucher_with_many_channels.save(update_fields=["countries"])
+    return voucher_with_many_channels
 
 
 def test_voucher_query(

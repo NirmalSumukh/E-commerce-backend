@@ -2,13 +2,12 @@
 import { QueryResult } from "@apollo/client";
 import {
   getReferenceAttributeEntityTypeFromAttribute,
-  handleContainerReferenceAssignment,
+  mergeAttributeValues,
 } from "@dashboard/attributes/utils/data";
-import { useUser } from "@dashboard/auth";
-import { hasPermission } from "@dashboard/auth/misc";
 import { ChannelPriceData } from "@dashboard/channels/utils";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import AssignAttributeValueDialog from "@dashboard/components/AssignAttributeValueDialog";
+import { Container } from "@dashboard/components/AssignContainerDialog";
 import {
   AttributeInput,
   Attributes,
@@ -18,16 +17,14 @@ import CardSpacer from "@dashboard/components/CardSpacer";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import Grid from "@dashboard/components/Grid";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
+import { MetadataFormData } from "@dashboard/components/Metadata";
 import { Metadata } from "@dashboard/components/Metadata/Metadata";
 import { Savebar } from "@dashboard/components/Savebar";
 import {
-  PermissionEnum,
   ProductChannelListingErrorFragment,
   ProductErrorWithAttributesFragment,
   ProductVariantFragment,
   SearchAttributeValuesQuery,
-  SearchCategoriesQuery,
-  SearchCollectionsQuery,
   SearchPagesQuery,
   SearchProductsQuery,
   SearchWarehousesQuery,
@@ -36,17 +33,13 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import { VariantDetailsChannelsAvailabilityCard } from "@dashboard/products/components/ProductVariantChannels/ChannelsAvailabilityCard";
 import { productUrl } from "@dashboard/products/urls";
 import { getSelectedMedia } from "@dashboard/products/utils/data";
-import { TranslationsButton } from "@dashboard/translations/components/TranslationsButton/TranslationsButton";
-import { productVariantUrl } from "@dashboard/translations/urls";
-import { useCachedLocales } from "@dashboard/translations/useCachedLocales";
-import { Container, FetchMoreProps, RelayToFlat, ReorderAction } from "@dashboard/types";
+import { FetchMoreProps, RelayToFlat, ReorderAction } from "@dashboard/types";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
-import { Box } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { ProductShipping } from "../ProductShipping";
-import { ProductStocks } from "../ProductStocks";
+import { ProductStockInput, ProductStocks } from "../ProductStocks";
 import { useManageChannels } from "../ProductVariantChannels/useManageChannels";
 import { VariantChannelsDialog } from "../ProductVariantChannels/VariantChannelsDialog";
 import ProductVariantCheckoutSettings from "../ProductVariantCheckoutSettings/ProductVariantCheckoutSettings";
@@ -57,9 +50,8 @@ import ProductVariantName from "../ProductVariantName";
 import ProductVariantNavigation from "../ProductVariantNavigation";
 import { ProductVariantPrice } from "../ProductVariantPrice";
 import ProductVariantSetDefault from "../ProductVariantSetDefault";
-import {
+import ProductVariantUpdateForm, {
   ProductVariantUpdateData,
-  ProductVariantUpdateForm,
   ProductVariantUpdateHandlers,
   ProductVariantUpdateSubmitData,
 } from "./form";
@@ -76,6 +68,21 @@ const messages = defineMessages({
     description: "attributes, section header",
   },
 });
+
+export interface ProductVariantPageFormData extends MetadataFormData {
+  costPrice: string;
+  price: string;
+  sku: string;
+  trackInventory: boolean;
+  weight: string;
+}
+
+export interface ProductVariantPageSubmitData extends ProductVariantPageFormData {
+  attributes: AttributeInput[];
+  addStocks: ProductStockInput[];
+  updateStocks: ProductStockInput[];
+  removeStocks: string[];
+}
 
 function byAttributeScope(scope: VariantAttributeScope) {
   return (attribute: AttributeInput) => attribute.data.variantAttributeScope === scope;
@@ -96,18 +103,12 @@ interface ProductVariantPageProps {
   variant?: ProductVariantFragment;
   referencePages?: RelayToFlat<SearchPagesQuery["search"]>;
   referenceProducts?: RelayToFlat<SearchProductsQuery["search"]>;
-  referenceCategories?: RelayToFlat<SearchCategoriesQuery["search"]>;
-  referenceCollections?: RelayToFlat<SearchCollectionsQuery["search"]>;
   attributeValues: RelayToFlat<SearchAttributeValuesQuery["attribute"]["choices"]>;
   fetchMoreReferencePages?: FetchMoreProps;
   fetchMoreReferenceProducts?: FetchMoreProps;
-  fetchMoreReferenceCategories?: FetchMoreProps;
-  fetchMoreReferenceCollections?: FetchMoreProps;
   fetchMoreAttributeValues?: FetchMoreProps;
   fetchReferencePages?: (data: string) => void;
   fetchReferenceProducts?: (data: string) => void;
-  fetchReferenceCategories?: (data: string) => void;
-  fetchReferenceCollections?: (data: string) => void;
   fetchAttributeValues: (query: string, attributeId: string) => void;
   onAssignReferencesClick: (attribute: AttributeInput) => void;
   onCloseDialog: () => void;
@@ -121,10 +122,9 @@ interface ProductVariantPageProps {
   onWarehouseConfigure: () => any;
   fetchMoreWarehouses: () => void;
   searchWarehousesResult: QueryResult<SearchWarehousesQuery>;
-  searchWarehouses: (query: string) => void;
 }
 
-export const ProductVariantPage = ({
+const ProductVariantPage: React.FC<ProductVariantPageProps> = ({
   productId,
   channels,
   channelErrors,
@@ -138,8 +138,6 @@ export const ProductVariantPage = ({
   variant,
   referencePages = [],
   referenceProducts = [],
-  referenceCategories = [],
-  referenceCollections = [],
   attributeValues,
   onDelete,
   onSubmit,
@@ -152,29 +150,21 @@ export const ProductVariantPage = ({
   onAssignReferencesClick,
   fetchReferencePages,
   fetchReferenceProducts,
-  fetchReferenceCategories,
-  fetchReferenceCollections,
   fetchAttributeValues,
   fetchMoreReferencePages,
   fetchMoreReferenceProducts,
-  fetchMoreReferenceCategories,
-  fetchMoreReferenceCollections,
   fetchMoreAttributeValues,
   onCloseDialog,
   onAttributeSelectBlur,
   fetchMoreWarehouses,
   searchWarehousesResult,
-  searchWarehouses,
-}: ProductVariantPageProps) => {
+}) => {
   const intl = useIntl();
-  const { user } = useUser();
-  const canTranslate = user && hasPermission(PermissionEnum.MANAGE_TRANSLATIONS, user);
-  const { lastUsedLocaleOrFallback } = useCachedLocales();
   const navigate = useNavigator();
   const { isOpen: isManageChannelsModalOpen, toggle: toggleManageChannels } = useManageChannels();
-  const [isModalOpened, setModalStatus] = useState(false);
+  const [isModalOpened, setModalStatus] = React.useState(false);
   const toggleModal = () => setModalStatus(!isModalOpened);
-  const [isEndPreorderModalOpened, setIsEndPreorderModalOpened] = useState(false);
+  const [isEndPreorderModalOpened, setIsEndPreorderModalOpened] = React.useState(false);
   const productMedia = [...(variant?.product?.media ?? [])]?.sort((prev, next) =>
     prev.sortOrder > next.sortOrder ? 1 : -1,
   );
@@ -188,11 +178,17 @@ export const ProductVariantPage = ({
     data: ProductVariantUpdateData,
     handlers: ProductVariantUpdateHandlers,
   ) => {
-    handleContainerReferenceAssignment(
+    handlers.selectAttributeReference(
       assignReferencesAttributeId,
-      attributeValues,
-      data.attributes,
-      handlers,
+      mergeAttributeValues(
+        assignReferencesAttributeId,
+        attributeValues.map(({ id }) => id),
+        data.attributes,
+      ),
+    );
+    handlers.selectAttributeReferenceMetadata(
+      assignReferencesAttributeId,
+      attributeValues.map(({ name, id }) => ({ value: id, label: name })),
     );
     onCloseDialog();
   };
@@ -201,16 +197,7 @@ export const ProductVariantPage = ({
     <DetailPageLayout gridTemplateColumns={1}>
       <TopNav href={productUrl(productId)} title={header}>
         {variant?.product?.defaultVariant?.id !== variant?.id && (
-          <Box marginRight={3}>
-            <ProductVariantSetDefault onSetDefaultVariant={onSetDefaultVariant} />
-          </Box>
-        )}
-        {canTranslate && (
-          <TranslationsButton
-            onClick={() =>
-              navigate(productVariantUrl(lastUsedLocaleOrFallback, productId, variant?.id))
-            }
-          />
+          <ProductVariantSetDefault onSetDefaultVariant={onSetDefaultVariant} />
         )}
       </TopNav>
       <DetailPageLayout.Content>
@@ -220,16 +207,10 @@ export const ProductVariantPage = ({
           currentChannels={channels}
           referencePages={referencePages}
           referenceProducts={referenceProducts}
-          referenceCategories={referenceCategories}
-          referenceCollections={referenceCollections}
           fetchReferencePages={fetchReferencePages}
           fetchMoreReferencePages={fetchMoreReferencePages}
           fetchReferenceProducts={fetchReferenceProducts}
           fetchMoreReferenceProducts={fetchMoreReferenceProducts}
-          fetchReferenceCategories={fetchReferenceCategories}
-          fetchMoreReferenceCategories={fetchMoreReferenceCategories}
-          fetchReferenceCollections={fetchReferenceCollections}
-          fetchMoreReferenceCollections={fetchMoreReferenceCollections}
           assignReferencesAttributeId={assignReferencesAttributeId}
           loading={loading}
         >
@@ -370,7 +351,7 @@ export const ProductVariantPage = ({
                         searchWarehousesResult?.data?.search?.pageInfo?.hasNextPage
                       }
                       data={data}
-                      loading={loading}
+                      disabled={loading}
                       hasVariants={true}
                       errors={errors}
                       stocks={data.stocks}
@@ -380,7 +361,6 @@ export const ProductVariantPage = ({
                       onWarehouseStockDelete={handlers.deleteStock}
                       onWarehouseConfigure={onWarehouseConfigure}
                       isCreate={false}
-                      searchWarehouses={searchWarehouses}
                     />
                     <CardSpacer />
                     <Metadata data={data} onChange={handlers.changeMetadata} />
@@ -405,8 +385,6 @@ export const ProductVariantPage = ({
                     confirmButtonState={"default"}
                     products={referenceProducts}
                     pages={referencePages}
-                    collections={referenceCollections}
-                    categories={referenceCategories}
                     attribute={data.attributes.find(({ id }) => id === assignReferencesAttributeId)}
                     hasMore={handlers.fetchMoreReferences?.hasMore}
                     open={canOpenAssignReferencesAttributeDialog}
@@ -456,3 +434,4 @@ export const ProductVariantPage = ({
 };
 
 ProductVariantPage.displayName = "ProductVariantPage";
+export default ProductVariantPage;

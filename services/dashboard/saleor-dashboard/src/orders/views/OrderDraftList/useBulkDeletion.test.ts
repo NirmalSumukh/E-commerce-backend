@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react-hooks";
 
 import { useBulkDeletion } from "./useBulkDeletion";
 
+jest.mock("react-intl");
 jest.mock("@dashboard/graphql", () => ({
   useOrderDraftBulkCancelMutation: jest.fn(() => [jest.fn(), {}]),
 }));

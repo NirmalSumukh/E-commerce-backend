@@ -9,10 +9,17 @@ import {
 } from "@dashboard/graphql";
 import { RelayToFlat } from "@dashboard/types";
 import { TextCell } from "@glideapps/glide-data-grid";
-import { testIntlInstance } from "@test/intl";
+import { intlMock } from "@test/intl";
 import { renderHook } from "@testing-library/react-hooks";
 
 import { getCustomerCellContent, getPaymentCellContent, useGetCellContent } from "./datagrid";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x),
+  })),
+  defineMessages: jest.fn(x => x),
+}));
 
 jest.mock("@saleor/macaw-ui-next", () => ({
   useTheme: () => ({ theme: "defaultLight" }),
@@ -150,7 +157,11 @@ describe("useGetCellContent", () => {
     });
     expect(getCellContent([4, 0], contentOpts)).toEqual({
       allowOverlay: true,
-      copyData: "Fulfilled",
+      copyData: {
+        defaultMessage: "Fulfilled",
+        description: "order status",
+        id: "pkjXPD",
+      },
       cursor: "pointer",
       data: {
         color: {
@@ -159,7 +170,11 @@ describe("useGetCellContent", () => {
           text: "#415a41",
         },
         kind: "auto-tags-cell",
-        value: "Fulfilled",
+        value: {
+          defaultMessage: "Fulfilled",
+          description: "order status",
+          id: "pkjXPD",
+        },
       },
       kind: "custom",
       readonly: false,
@@ -208,7 +223,7 @@ describe("getPaymentCellContent", () => {
     } as RowDataType;
 
     // Act
-    const result = getPaymentCellContent(testIntlInstance, "defaultLight", data);
+    const result = getPaymentCellContent(intlMock, "defaultLight", data);
 
     // Assert
     expect((result.data as PillCell["data"]).value).toEqual("PAID");
@@ -221,7 +236,7 @@ describe("getPaymentCellContent", () => {
     } as RowDataType;
 
     // Act
-    const result = getPaymentCellContent(testIntlInstance, "defaultLight", data);
+    const result = getPaymentCellContent(intlMock, "defaultLight", data);
 
     // Assert
     expect((result.data as PillCell["data"]).value).toEqual("Overcharged");

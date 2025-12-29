@@ -1,5 +1,6 @@
 import { Name } from "@dashboard/featureFlags/availableFlags";
 import { Box, Button, CloseIcon, Modal } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import { Content } from "./Content";
 import { FlagList } from "./FlagList";

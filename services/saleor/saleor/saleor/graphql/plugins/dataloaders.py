@@ -3,7 +3,6 @@ from functools import partial, wraps
 
 from promise import Promise
 
-from ...core.middleware import Requestor
 from ...plugins.manager import PluginsManager, get_plugins_manager
 from ...plugins.models import EmailTemplate
 from ..app.dataloaders import get_app_promise
@@ -11,7 +10,7 @@ from ..core import SaleorContext
 from ..core.dataloaders import DataLoader
 
 
-class EmailTemplatesByPluginConfigurationLoader(DataLoader[int, list[EmailTemplate]]):
+class EmailTemplatesByPluginConfigurationLoader(DataLoader):
     """Loads email templates by plugin configuration ID."""
 
     context_key = "email_template_by_plugin_configuration"
@@ -28,7 +27,7 @@ class EmailTemplatesByPluginConfigurationLoader(DataLoader[int, list[EmailTempla
         return [config_to_template[key] for key in keys]
 
 
-class PluginManagerByRequestorDataloader(DataLoader[Requestor, PluginsManager]):
+class PluginManagerByRequestorDataloader(DataLoader):
     context_key = "plugin_manager_by_requestor"
 
     def batch_load(self, keys):
@@ -36,7 +35,7 @@ class PluginManagerByRequestorDataloader(DataLoader[Requestor, PluginsManager]):
         return [get_plugins_manager(allow_replica, lambda: user) for user in keys]
 
 
-class AnonymousPluginManagerLoader(DataLoader[None, PluginsManager]):
+class AnonymousPluginManagerLoader(DataLoader):
     context_key = "anonymous_plugin_manager"
 
     def batch_load(self, keys):

@@ -1,11 +1,12 @@
-import datetime
 import os
 from collections import defaultdict
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch
 
 import graphene
 import pytest
+import pytz
 from freezegun import freeze_time
 from prices import Money
 
@@ -13,7 +14,7 @@ from ...account import events as account_events
 from ...attribute.utils import associate_attribute_values_to_instance
 from ...discount import RewardValueType
 from ...discount.models import PromotionRule
-from ...graphql.product.filters.product_attributes import (
+from ...graphql.product.filters import (
     _clean_product_attributes_boolean_filter_input,
     _clean_product_attributes_date_time_range_filter_input,
     filter_products_by_attributes_values,
@@ -165,7 +166,7 @@ def test_clean_product_attributes_date_time_range_filter_input(
     filter_value = [
         (
             date_attribute.slug,
-            {"gte": datetime.datetime(2020, 10, 5, tzinfo=datetime.UTC)},
+            {"gte": datetime(2020, 10, 5, tzinfo=pytz.utc)},
         )
     ]
     values_qs = _clean_product_attributes_date_time_range_filter_input(
@@ -177,10 +178,7 @@ def test_clean_product_attributes_date_time_range_filter_input(
     filter_value = [
         (
             date_attribute.slug,
-            {
-                "gte": datetime.datetime(2020, 10, 5, tzinfo=datetime.UTC).date(),
-                "lte": datetime.datetime(2020, 11, 4, tzinfo=datetime.UTC).date(),
-            },
+            {"gte": datetime(2020, 10, 5).date(), "lte": datetime(2020, 11, 4).date()},
         )
     ]
     values_qs = _clean_product_attributes_date_time_range_filter_input(
@@ -195,7 +193,7 @@ def test_clean_product_attributes_date_time_range_filter_input(
     filter_value = [
         (
             date_attribute.slug,
-            {"lte": datetime.datetime(2020, 11, 4, tzinfo=datetime.UTC)},
+            {"lte": datetime(2020, 11, 4, tzinfo=timezone.utc)},
         )
     ]
     values_qs = _clean_product_attributes_date_time_range_filter_input(
@@ -209,7 +207,7 @@ def test_clean_product_attributes_date_time_range_filter_input(
     filter_value = [
         (
             date_attribute.slug,
-            {"lte": datetime.datetime(2020, 10, 4, tzinfo=datetime.UTC)},
+            {"lte": datetime(2020, 10, 4, tzinfo=timezone.utc)},
         )
     ]
     values_qs = _clean_product_attributes_date_time_range_filter_input(
@@ -333,10 +331,10 @@ def test_get_price_overridden_price_with_discount(
         price_amount=price_amount,
         currency=channel_USD.currency_code,
     )
-    price_override = Decimal(20)
+    price_override = Decimal("20")
 
-    reward_value_1 = Decimal(10)
-    reward_value_2 = Decimal(5)
+    reward_value_1 = Decimal("10")
+    reward_value_2 = Decimal("5")
     rule_1, rule_2 = PromotionRule.objects.bulk_create(
         [
             PromotionRule(

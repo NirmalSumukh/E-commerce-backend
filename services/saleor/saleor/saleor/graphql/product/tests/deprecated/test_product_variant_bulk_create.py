@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 from unittest.mock import ANY, patch
 from uuid import uuid4
 
@@ -7,6 +7,7 @@ import graphene
 from .....attribute import AttributeInputType
 from .....product.error_codes import ProductVariantBulkErrorCode
 from .....product.models import ProductChannelListing, ProductVariant
+from .....tests.utils import flush_post_commit_hooks
 from ....tests.utils import get_graphql_content
 
 PRODUCT_VARIANT_BULK_CREATE_MUTATION = """
@@ -103,6 +104,7 @@ def test_product_variant_bulk_create_by_name(
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     # then
@@ -156,6 +158,7 @@ def test_product_variant_bulk_create_by_attribute_id(
         PRODUCT_VARIANT_BULK_CREATE_MUTATION, variables
     )
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantBulkCreate"]
 
     assert not data["errors"]
@@ -459,7 +462,7 @@ def test_product_variant_bulk_create_stocks_input(
         assert variant_data["sku"] in expected_result
         expected_variant = expected_result[variant_data["sku"]]
         expected_stocks = expected_variant["stocks"]
-        assert all(stock in expected_stocks for stock in variant_data["stocks"])
+        assert all([stock in expected_stocks for stock in variant_data["stocks"]])
 
 
 def test_product_variant_bulk_create_duplicated_warehouses(
@@ -624,8 +627,10 @@ def test_product_variant_bulk_create_channel_listings_input(
         expected_variant = expected_result[variant_data["sku"]]
         expected_channel_listing = expected_variant["channelListings"]
         assert all(
-            channelListing in expected_channel_listing
-            for channelListing in variant_data["channelListings"]
+            [
+                channelListing in expected_channel_listing
+                for channelListing in variant_data["channelListings"]
+            ]
         )
 
 
@@ -649,7 +654,7 @@ def test_product_variant_bulk_create_preorder_channel_listings_input(
 
     global_threshold = 10
     end_date = (
-        (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=3))
+        (datetime.now() + timedelta(days=3))
         .astimezone()
         .replace(microsecond=0)
         .isoformat()
@@ -738,9 +743,11 @@ def test_product_variant_bulk_create_preorder_channel_listings_input(
             for channel_listing in expected_variant["channelListings"]
         ]
         assert all(
-            channel_listing["preorderThreshold"]["quantity"]
-            in expected_channel_listing_thresholds
-            for channel_listing in variant_data["channelListings"]
+            [
+                channel_listing["preorderThreshold"]["quantity"]
+                in expected_channel_listing_thresholds
+                for channel_listing in variant_data["channelListings"]
+            ]
         )
         preorder_data = variant_data["preorder"]
         assert preorder_data["globalThreshold"] == global_threshold

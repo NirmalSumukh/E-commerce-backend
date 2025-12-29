@@ -1,10 +1,9 @@
-import datetime
+from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 
 from django.utils import timezone
 
-from ....webhook import const
 from ....webhook.event_types import WebhookEventSyncType
 from ....webhook.payloads import generate_checkout_payload
 from ....webhook.transport.shipping import (
@@ -63,7 +62,7 @@ def test_get_shipping_methods_for_checkout_set_cache(
 
 @mock.patch("saleor.webhook.transport.synchronous.transport.cache.set")
 @mock.patch("saleor.webhook.transport.synchronous.transport.send_webhook_request_sync")
-def test_get_shipping_methods_no_webhook_response_sets_short_term_cache(
+def test_get_shipping_methods_no_webhook_response_does_not_set_cache(
     mocked_webhook,
     mocked_cache_set,
     webhook_plugin,
@@ -72,17 +71,6 @@ def test_get_shipping_methods_no_webhook_response_sets_short_term_cache(
 ):
     # given
     mocked_webhook.return_value = None
-
-    payload = generate_checkout_payload(checkout_with_item)
-    key_data = get_cache_data_for_shipping_list_methods_for_checkout(payload)
-    target_url = shipping_app.webhooks.first().target_url
-    cache_key = generate_cache_key_for_webhook(
-        key_data,
-        target_url,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        shipping_app.id,
-    )
-
     plugin = webhook_plugin()
 
     # when
@@ -90,11 +78,7 @@ def test_get_shipping_methods_no_webhook_response_sets_short_term_cache(
 
     # then
     assert mocked_webhook.called
-    mocked_cache_set.assert_called_once_with(
-        cache_key,
-        const.SYNC_WEBHOOK_FAILURE_SENTINEL,
-        timeout=const.SYNC_WEBHOOK_FAILURE_CACHE_TTL,
-    )
+    assert not mocked_cache_set.called
 
 
 @mock.patch("saleor.webhook.transport.synchronous.transport.cache.get")
@@ -238,7 +222,7 @@ def test_ignore_selected_fields_on_generating_cache_key(
     plugin = webhook_plugin()
 
     # when
-    checkout_with_item.last_change = timezone.now() + datetime.timedelta(seconds=30)
+    checkout_with_item.last_change = timezone.now() + timedelta(seconds=30)
     checkout_with_item.save(update_fields=["last_change"])
     new_payload = generate_checkout_payload(checkout_with_item)
     new_key_data = get_cache_data_for_shipping_list_methods_for_checkout(new_payload)

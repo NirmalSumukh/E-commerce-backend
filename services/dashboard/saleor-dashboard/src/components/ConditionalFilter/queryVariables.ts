@@ -1,11 +1,18 @@
 import {
   AttributeFilterInput,
+  AttributeInput,
   CollectionFilterInput,
+  CollectionPublished,
   CustomerFilterInput,
+  DateRangeInput,
+  DateTimeFilterInput,
+  DateTimeRangeInput,
+  DecimalFilterInput,
   GiftCardFilterInput,
+  GlobalIdFilterInput,
   OrderDraftFilterInput,
-  OrderWhereInput,
   PageFilterInput,
+  ProductTypeConfigurable,
   ProductTypeFilterInput,
   ProductWhereInput,
   PromotionWhereInput,
@@ -14,171 +21,433 @@ import {
 } from "@dashboard/graphql";
 
 import { FilterContainer } from "./FilterElement";
-import { FiltersQueryBuilder, QueryApiType } from "./FiltersQueryBuilder";
-import { FilterQueryVarsBuilderResolver } from "./FiltersQueryBuilder/FilterQueryVarsBuilderResolver";
-import { AddressFieldQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/AddressFieldQueryVarsBuilder";
-import { ArrayMetadataQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/ArrayMetadataQueryVarsBuilder";
-import { ArrayNestedFieldQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/ArrayNestedFieldQueryVarsBuilder";
-import { DateTimeRangeQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/DateTimeRangeQueryVarsBuilder";
-import { FulfillmentStatusQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/FulfillmentStatusQueryVarsBuilder";
-import { FulfillmentWarehouseQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/FulfillmentWarehouseQueryVarsBuilder";
-import { IntFilterQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/IntFilterQueryVarsBuilder";
-import { MetadataFilterInputQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/MetadataFilterInputQueryVarsBuilder";
-import { OrderChannelQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/OrderChannelQueryVarsBuilder";
-import { OrderCustomerIdQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/OrderCustomerIdQueryVarsBuilder";
-import { OrderIdQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/OrderIdQueryVarsBuilder";
-import { OrderInvoiceDateQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/OrderInvoiceDateQueryVarsBuilder";
-import { PriceFilterQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/PriceFilterQueryVarsBuilder";
-import { SlugChannelQueryVarsBuilder } from "./FiltersQueryBuilder/queryVarsBuilders/SlugChannelQueryVarsBuilder";
+import { ConditionSelected } from "./FilterElement/ConditionSelected";
+import { isItemOption, isItemOptionArray, isTuple } from "./FilterElement/ConditionValue";
+
+type StaticQueryPart = string | GlobalIdFilterInput | boolean | DecimalFilterInput;
+
+const createStaticQueryPart = (selected: ConditionSelected): StaticQueryPart => {
+  if (!selected.conditionValue) return "";
+
+  const { label } = selected.conditionValue;
+  const { value } = selected;
+
+  if (label === "lower") {
+    return { range: { lte: value } };
+  }
+
+  if (label === "greater") {
+    return { range: { gte: value } };
+  }
+
+  if (isTuple(value) && label === "between") {
+    const [gte, lte] = value;
+
+    return { range: { lte, gte } };
+  }
+
+  if (isItemOption(value) && ["true", "false"].includes(value.value)) {
+    return value.value === "true";
+  }
+
+  if (isItemOption(value)) {
+    return { eq: value.value };
+  }
+
+  if (isItemOptionArray(value)) {
+    return { oneOf: value.map(x => x.value) };
+  }
+
+  if (typeof value === "string") {
+    if (["true", "false"].includes(value)) {
+      return value === "true";
+    }
+
+    return { eq: value };
+  }
+
+  if (Array.isArray(value)) {
+    return { eq: value };
+  }
+
+  return value;
+};
+
+export const mapStaticQueryPartToLegacyVariables = (queryPart: StaticQueryPart) => {
+  if (typeof queryPart !== "object") {
+    return queryPart;
+  }
+
+  if ("range" in queryPart) {
+    return queryPart.range;
+  }
+
+  if ("eq" in queryPart) {
+    return queryPart.eq;
+  }
+
+  if ("oneOf" in queryPart) {
+    return queryPart.oneOf;
+  }
+
+  return queryPart;
+};
+
+const getRangeQueryPartByType = (value: [string, string], type: string) => {
+  const [gte, lte] = value;
+
+  switch (type) {
+    case "datetime.range":
+      return { dateTime: { lte, gte } };
+    case "date.range":
+      return { date: { lte, gte } };
+    case "number.range":
+    default:
+      return { valuesRange: { lte: parseFloat(lte), gte: parseFloat(gte) } };
+  }
+};
+
+const getQueryPartByType = (value: string, type: string, what: "lte" | "gte") => {
+  switch (type) {
+    case "datetime":
+      return { dateTime: { [what]: value } };
+    case "date":
+      return { date: { [what]: value } };
+    default:
+      return { valuesRange: { [what]: parseFloat(value) } };
+  }
+};
+
+const createAttributeQueryPart = (
+  attributeSlug: string,
+  selected: ConditionSelected,
+): AttributeInput => {
+  if (!selected.conditionValue) return { slug: attributeSlug };
+
+  const { label, type } = selected.conditionValue;
+  const { value } = selected;
+
+  if (label === "lower" && typeof value === "string") {
+    return { slug: attributeSlug, ...getQueryPartByType(value, type, "lte") };
+  }
+
+  if (label === "greater" && typeof value === "string") {
+    return { slug: attributeSlug, ...getQueryPartByType(value, type, "gte") };
+  }
+
+  if (isTuple(value) && label === "between") {
+    return {
+      slug: attributeSlug,
+      ...getRangeQueryPartByType(value, type),
+    };
+  }
+
+  if (isItemOption(value)) {
+    return { slug: attributeSlug, values: [value.originalSlug || value.value] };
+  }
+
+  if (isItemOptionArray(value)) {
+    return {
+      slug: attributeSlug,
+      values: value.map(x => x.originalSlug || x.value),
+    };
+  }
+
+  if (typeof value === "string") {
+    return { slug: attributeSlug, values: [value] };
+  }
+
+  if (Array.isArray(value)) {
+    return { slug: attributeSlug, values: value };
+  }
+
+  if (value === "true" || value === "false") {
+    return { slug: attributeSlug, boolean: value };
+  }
+
+  return value;
+};
 
 type ProductQueryVars = ProductWhereInput & { channel?: { eq: string } };
-type VoucherQueryVars = VoucherFilterInput & { channel?: string };
-type CollectionQueryVars = CollectionFilterInput & { channel?: string };
 
-export const createProductQueryVariables = (filterContainer: FilterContainer): ProductQueryVars => {
-  const { topLevel, filters } = new FiltersQueryBuilder<ProductQueryVars, "channel">({
-    apiType: QueryApiType.WHERE,
-    filterContainer,
-    topLevelKeys: ["channel"],
-  }).build();
+/*
+  Map to ProductQueryVars as long as it does not have "where" filter - it would use mostly same keys.
+*/
+export type OrderQueryVars = ProductQueryVars & { created?: DateTimeRangeInput | DateRangeInput };
 
-  return { ...filters, ...topLevel };
+export const createProductQueryVariables = (value: FilterContainer): ProductQueryVars => {
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
+
+    if (c.isStatic()) {
+      p[c.value.value as keyof ProductWhereInput] = createStaticQueryPart(c.condition.selected);
+    }
+
+    if (c.isAttribute()) {
+      p.attributes = p.attributes || [];
+      p.attributes!.push(createAttributeQueryPart(c.value.value, c.condition.selected));
+    }
+
+    return p;
+  }, {} as ProductWhereInput);
 };
 
 export const createDiscountsQueryVariables = (value: FilterContainer): PromotionWhereInput => {
-  const { filters } = new FiltersQueryBuilder<PromotionWhereInput>({
-    apiType: QueryApiType.WHERE,
-    filterContainer: value,
-  }).build();
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    p[c.value.value as "endDate" | "startDate"] = createStaticQueryPart(
+      c.condition.selected,
+    ) as DateTimeFilterInput;
+
+    return p;
+  }, {} as PromotionWhereInput);
 };
 
-// TODO: We should probably map fields based on query + field name, not using simple `canHandle` strategy
-// E.g. Orders query uses DateTimeRangeInput for createdAt, updatedAt, but Product query uses DateTimeFilterInput for updatedAt
-// Fields have the same name for both queries, but different input types
-export const createOrderQueryVariables = (value: FilterContainer): OrderWhereInput => {
-  const { filters } = new FiltersQueryBuilder<OrderWhereInput>({
-    apiType: QueryApiType.WHERE,
-    filterContainer: value,
-    useAndWrapper: true, // Wrap all root-level fields into `AND` to avoid mixing operators
-    filterDefinitionResolver: new FilterQueryVarsBuilderResolver([
-      new OrderChannelQueryVarsBuilder(), // Map channels -> channelId
-      new OrderCustomerIdQueryVarsBuilder(), // Map customer -> user
-      new OrderIdQueryVarsBuilder(), // Handle ids as plain arrays
-      new OrderInvoiceDateQueryVarsBuilder(), // Handle invoice date filtering
-      new AddressFieldQueryVarsBuilder(), // Handle address fields (billing/shipping phone/country)
-      new ArrayNestedFieldQueryVarsBuilder(), // Handle nested fields in transactions (payment type/card brand)
-      new ArrayMetadataQueryVarsBuilder(), // Handle metadata in arrays (lines, transactions, fulfillments)
-      new FulfillmentStatusQueryVarsBuilder(), // Handle fulfillment status nested in arrays
-      new FulfillmentWarehouseQueryVarsBuilder(), // Handle fulfillment warehouse nested in arrays
-      new IntFilterQueryVarsBuilder(), // Orders query use IntFilterInput, not IntRangeInput
-      new PriceFilterQueryVarsBuilder(), // Handle price/amount fields
-      new DateTimeRangeQueryVarsBuilder(), // Orders query use DateTimeRangeInput, not DateTimeFilterInput
-      new MetadataFilterInputQueryVarsBuilder(), // Orders query uses MetadataFilterInput, not MetadataInput
-      ...FilterQueryVarsBuilderResolver.getDefaultQueryVarsBuilders(),
-    ]),
-  }).build();
+export const createOrderQueryVariables = (value: FilterContainer) => {
+  return value.reduce((p: OrderQueryVars, c) => {
+    if (typeof c === "string" || Array.isArray(c)) {
+      return p;
+    }
 
-  return filters;
+    if (c.value.type === "metadata") {
+      p.metadata = p.metadata || [];
+
+      const [key, value] = c.condition.selected.value as [string, string];
+
+      p.metadata.push({ key, value });
+
+      return p;
+    }
+
+    if (c.value.type === "updatedAt" || c.value.type === "created") {
+      p[c.value.value as "updatedAt" | "created"] = createStaticQueryPart(c.condition.selected) as
+        | DateTimeRangeInput
+        | DateRangeInput;
+
+      return p;
+    }
+
+    if (c.isStatic()) {
+      p[c.value.value as keyof OrderQueryVars] = createStaticQueryPart(c.condition.selected);
+
+      return p;
+    }
+
+    return p;
+  }, {} as OrderQueryVars);
 };
 
-export const createVoucherQueryVariables = (
+export const creatVoucherQueryVariables = (
   value: FilterContainer,
 ): { filters: VoucherFilterInput; channel: string | undefined } => {
-  const { filters, topLevel } = new FiltersQueryBuilder<VoucherQueryVars, "channel">({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-    topLevelKeys: ["channel"],
-    filterDefinitionResolver: new FilterQueryVarsBuilderResolver([
-      // VoucherPage expects channel to be a slug, not id
-      new SlugChannelQueryVarsBuilder(),
-      ...FilterQueryVarsBuilderResolver.getDefaultQueryVarsBuilders(),
-    ]),
-  }).build();
+  let channel: string | undefined;
+
+  const filters = value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
+
+    if (c.value.type === "channel") {
+      if (isItemOption(c.condition.selected.value)) {
+        channel = c.condition.selected.value.slug;
+      } else {
+        channel = c.condition.selected.value as string;
+      }
+
+      return p;
+    }
+
+    if (c.value.type === "timesUsed") {
+      if (typeof c.condition.selected.value === "string") {
+        p["timesUsed"] = {
+          gte: Number(c.condition.selected.value),
+          lte: Number(c.condition.selected.value),
+        };
+
+        return p;
+      }
+    }
+
+    if (c.value.type === "voucherStatus") {
+      p["status"] = mapStaticQueryPartToLegacyVariables(
+        createStaticQueryPart(c.condition.selected),
+      );
+
+      return p;
+    }
+
+    p[c.value.value as keyof VoucherFilterInput] = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as VoucherFilterInput);
 
   return {
+    channel,
     filters,
-    channel: topLevel.channel,
   };
 };
 
 export const createPageQueryVariables = (value: FilterContainer): PageFilterInput => {
-  const { filters } = new FiltersQueryBuilder<PageFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    p[c.value.value as keyof PageFilterInput] = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as PageFilterInput);
 };
 
-export const createDraftOrderQueryVariables = (value: FilterContainer): OrderDraftFilterInput => {
-  const { filters } = new FiltersQueryBuilder<OrderDraftFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+export const creatDraftOrderQueryVariables = (value: FilterContainer): OrderDraftFilterInput => {
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    p[c.value.value as keyof OrderDraftFilterInput] = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as OrderDraftFilterInput);
 };
 
-export const createGiftCardQueryVariables = (value: FilterContainer): GiftCardFilterInput => {
-  const { filters } = new FiltersQueryBuilder<GiftCardFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+export const createGiftCardQueryVariables = (value: FilterContainer) => {
+  return value.reduce<GiftCardFilterInput>((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    if (c.isStatic()) {
+      (p[c.value.value as keyof GiftCardFilterInput] as any) = mapStaticQueryPartToLegacyVariables(
+        createStaticQueryPart(c.condition.selected),
+      );
+    }
+
+    return p;
+  }, {} as GiftCardFilterInput);
 };
 
 export const createCustomerQueryVariables = (value: FilterContainer): CustomerFilterInput => {
-  const { filters } = new FiltersQueryBuilder<CustomerFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    if (c.value.type === "numberOfOrders" && c.condition.selected.conditionValue?.label === "is") {
+      p["numberOfOrders"] = {
+        gte: Number(c.condition.selected.value),
+        lte: Number(c.condition.selected.value),
+      };
+
+      return p;
+    }
+
+    if (c.value.type === "metadata") {
+      p.metadata = p.metadata || [];
+
+      const [key, value] = c.condition.selected.value as [string, string];
+
+      p.metadata.push({ key, value });
+
+      return p;
+    }
+
+    p[c.value.value as keyof CustomerFilterInput] = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as CustomerFilterInput);
 };
 
-export const createCollectionsQueryVariables = (
-  value: FilterContainer,
-): { filter: CollectionFilterInput; channel: string | undefined } => {
-  const { topLevel, filters } = new FiltersQueryBuilder<CollectionQueryVars, "channel">({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-    topLevelKeys: ["channel"],
-  }).build();
+type CollectionQueryVars = CollectionFilterInput & { channel?: { eq: string } };
 
-  return {
-    channel: topLevel.channel,
-    filter: filters,
-  };
+export const createCollectionsQueryVariables = (value: FilterContainer): CollectionQueryVars => {
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
+
+    const value = mapStaticQueryPartToLegacyVariables(createStaticQueryPart(c.condition.selected));
+
+    if (c.value.type === "metadata") {
+      p.metadata = p.metadata || [];
+
+      const [key, value] = c.condition.selected.value as [string, string];
+
+      p.metadata.push({ key, value });
+
+      return p;
+    }
+
+    if (c.value.type === "published") {
+      p["published"] = value === true ? CollectionPublished.PUBLISHED : CollectionPublished.HIDDEN;
+
+      return p;
+    }
+
+    p[c.value.value as keyof CollectionFilterInput] = value;
+
+    return p;
+  }, {} as CollectionQueryVars);
 };
 
 export const createProductTypesQueryVariables = (
   value: FilterContainer,
 ): ProductTypeFilterInput => {
-  const { filters } = new FiltersQueryBuilder<ProductTypeFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    const value = mapStaticQueryPartToLegacyVariables(createStaticQueryPart(c.condition.selected));
+
+    if (c.value.type === "typeOfProduct") {
+      p["productType"] = value;
+
+      return p;
+    }
+
+    if (c.value.type === "configurable") {
+      p["configurable"] =
+        value === true ? ProductTypeConfigurable.CONFIGURABLE : ProductTypeConfigurable.SIMPLE;
+
+      return p;
+    }
+
+    (p[c.value.value as keyof ProductTypeFilterInput] as ProductTypeFilterInput) = value;
+
+    return p;
+  }, {} as ProductTypeFilterInput);
 };
 
 export const createStaffMembersQueryVariables = (value: FilterContainer): StaffUserInput => {
-  const { filters } = new FiltersQueryBuilder<StaffUserInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    if (c.value.type === "staffMemberStatus") {
+      p["status"] = mapStaticQueryPartToLegacyVariables(
+        createStaticQueryPart(c.condition.selected),
+      );
+
+      return p;
+    }
+
+    p[c.value.value as keyof StaffUserInput] = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as StaffUserInput);
 };
 
-export const createAttributesQueryVariables = (value: FilterContainer): AttributeFilterInput => {
-  const { filters } = new FiltersQueryBuilder<AttributeFilterInput>({
-    apiType: QueryApiType.FILTER,
-    filterContainer: value,
-  }).build();
+export const creatAttributesQueryVariables = (value: FilterContainer): AttributeFilterInput => {
+  return value.reduce((p, c) => {
+    if (typeof c === "string" || Array.isArray(c)) return p;
 
-  return filters;
+    if (c.value.type === "attributeType") {
+      p["type"] = mapStaticQueryPartToLegacyVariables(createStaticQueryPart(c.condition.selected));
+
+      return p;
+    }
+
+    (p[c.value.value as keyof AttributeFilterInput] as any) = mapStaticQueryPartToLegacyVariables(
+      createStaticQueryPart(c.condition.selected),
+    );
+
+    return p;
+  }, {} as AttributeFilterInput);
 };

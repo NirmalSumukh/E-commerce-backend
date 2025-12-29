@@ -6,7 +6,6 @@ export interface SidebarMenuItem {
   label?: string | ReactNode;
   id: string;
   url?: string;
-  matchUrls?: string[];
   permissions?: PermissionEnum[];
   type: "item" | "itemGroup" | "divider";
   icon?: ReactNode;

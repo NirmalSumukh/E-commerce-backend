@@ -8,6 +8,7 @@ import {
 } from "@dashboard/graphql";
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { transformAddressToForm } from "@dashboard/misc";
+import React from "react";
 
 import OrderCustomerAddressesEditDialog, {
   OrderCustomerAddressesEditDialogProps,
@@ -31,7 +32,7 @@ interface OrderAddressFieldsProps {
   orderBillingAddress: AddressFragment;
 }
 
-const OrderAddressFields = ({
+const OrderAddressFields: React.FC<OrderAddressFieldsProps> = ({
   action,
   isDraft,
   customerAddressesLoading,
@@ -43,7 +44,7 @@ const OrderAddressFields = ({
   errors,
   orderShippingAddress,
   orderBillingAddress,
-}: OrderAddressFieldsProps) => {
+}) => {
   const addressFieldCommonProps: Omit<OrderCustomerAddressesEditDialogProps, "open" | "variant"> = {
     loading: customerAddressesLoading,
     confirmButtonState,

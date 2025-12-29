@@ -1,17 +1,47 @@
+from decimal import Decimal
 from unittest.mock import MagicMock, Mock
+
+import pytest
 
 from ...attribute import AttributeInputType
 from ...attribute.models import AttributeValue
 from ...attribute.utils import associate_attribute_values_to_instance
-from ..models import ProductType
+from ...product import ProductTypeKind
+from ...product.models import ProductVariantChannelListing
+from ..models import Product, ProductType, ProductVariant
 from ..tasks import _update_variants_names
 from ..utils.variants import generate_and_set_variant_name
+
+
+@pytest.fixture
+def variant_with_no_attributes(category, channel_USD):
+    """Create a variant having no attributes, the same for the parent product."""
+    product_type = ProductType.objects.create(
+        name="Test product type",
+        has_variants=True,
+        is_shipping_required=True,
+        kind=ProductTypeKind.NORMAL,
+    )
+    product = Product.objects.create(
+        name="Test product",
+        product_type=product_type,
+        category=category,
+    )
+    variant = ProductVariant.objects.create(product=product, sku="123")
+    ProductVariantChannelListing.objects.create(
+        variant=variant,
+        channel=channel_USD,
+        cost_price_amount=Decimal(1),
+        price_amount=Decimal(10),
+        currency=channel_USD.currency_code,
+    )
+    return variant
 
 
 def test_generate_and_set_variant_name_different_attributes(
     variant_with_no_attributes, color_attribute_without_values, size_attribute
 ):
-    """Test variant name generation with a mix of (non-)selection attributes."""
+    """Test variant name generation with a mix of mix of (non-)selection attributes."""
 
     variant = variant_with_no_attributes
     color_attribute = color_attribute_without_values
@@ -127,7 +157,7 @@ def test_generate_and_set_variant_name_only_not_variant_selection_attributes(
                 attribute=file_attribute,
                 name="test_file_3.txt",
                 slug="test_file3txt",
-                file_url="https://example.com/test_media/test_file3.txt",
+                file_url="http://mirumee.com/test_media/test_file3.txt",
                 content_type="text/plain",
             ),
         ]

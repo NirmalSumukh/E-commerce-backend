@@ -11,3 +11,5 @@ export function useUpdateEffect(fn: () => void, depArr: any[]) {
     mounted.current = true;
   }, depArr);
 }
+
+export default useUpdateEffect;

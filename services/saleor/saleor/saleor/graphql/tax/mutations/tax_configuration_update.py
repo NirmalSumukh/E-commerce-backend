@@ -1,5 +1,3 @@
-from typing import Any
-
 import graphene
 from django.core.exceptions import ValidationError
 
@@ -9,9 +7,9 @@ from ....plugins import PLUGIN_IDENTIFIER_PREFIX
 from ....tax import error_codes, models
 from ...account.enums import CountryCodeEnum
 from ...core import ResolveInfo
-from ...core.descriptions import ADDED_IN_319, ADDED_IN_321
+from ...core.descriptions import ADDED_IN_39, ADDED_IN_319
 from ...core.doc_category import DOC_CATEGORY_TAXES
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import BaseInputObjectType, Error, NonNullList
 from ...core.utils import get_duplicates_items
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -54,15 +52,6 @@ class TaxConfigurationPerCountryInput(BaseInputObjectType):
             "tax configuration." + ADDED_IN_319
         ),
     )
-    use_weighted_tax_for_shipping = graphene.Boolean(
-        description=(
-            "Determines whether to use weighted tax for shipping. When set to true, "
-            "the tax rate for shipping will be calculated based on the weighted average "
-            "of tax rates from the order or checkout lines. Default value is `False`."
-            "Can be used only with `taxCalculationStrategy` set to `FLAT_RATES`."
-            + ADDED_IN_321
-        ),
-    )
 
     class Meta:
         doc_category = DOC_CATEGORY_TAXES
@@ -99,15 +88,6 @@ class TaxConfigurationUpdateInput(BaseInputObjectType):
         CountryCodeEnum,
         description="List of country codes for which to remove the tax configuration.",
     )
-    use_weighted_tax_for_shipping = graphene.Boolean(
-        description=(
-            "Determines whether to use weighted tax for shipping. When set to true, "
-            "the tax rate for shipping will be calculated based on the weighted average "
-            "of tax rates from the order or checkout lines. Default value is `False`."
-            "Can be used only with `taxCalculationStrategy` set to `FLAT_RATES`."
-            + ADDED_IN_321
-        ),
-    )
     tax_app_id = graphene.String(
         description=(
             "The tax app `App.identifier` that will be used to calculate the taxes for the given channel. "
@@ -137,7 +117,7 @@ class TaxConfigurationUpdateError(Error):
         doc_category = DOC_CATEGORY_TAXES
 
 
-class TaxConfigurationUpdate(DeprecatedModelMutation):
+class TaxConfigurationUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(description="ID of the tax configuration.", required=True)
         input = TaxConfigurationUpdateInput(
@@ -146,7 +126,7 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
         )
 
     class Meta:
-        description = "Updates tax configuration for a channel."
+        description = "Update tax configuration for a channel." + ADDED_IN_39
         error_type_class = TaxConfigurationUpdateError
         model = models.TaxConfiguration
         object_type = TaxConfiguration
@@ -155,7 +135,6 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
     @classmethod
     def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
         cls.clean_tax_app_id(info, instance, data)
-        cls.clean_use_weighted_tax_for_shipping(info, instance, data)
         update_countries_configuration = data.get("update_countries_configuration", [])
         update_country_codes = [
             item["country_code"] for item in update_countries_configuration
@@ -176,77 +155,6 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
             raise ValidationError(message=message, code=code, params=params)
 
         return super().clean_input(info, instance, data, **kwargs)
-
-    @classmethod
-    def _clean_use_weighted_tax_for_shipping(
-        cls,
-        instance: models.TaxConfiguration | models.TaxConfigurationPerCountry,
-        data: dict[str, Any],
-    ):
-        use_weighted_tax_for_shipping = data.get("use_weighted_tax_for_shipping")
-        if use_weighted_tax_for_shipping is None:
-            use_weighted_tax_for_shipping = instance.use_weighted_tax_for_shipping
-        if use_weighted_tax_for_shipping:
-            current_tax_strategy = (
-                data.get("tax_calculation_strategy")
-                or instance.tax_calculation_strategy
-            )
-            if current_tax_strategy != TaxCalculationStrategy.FLAT_RATES.value:
-                message = "`useWeightedTaxForShipping` can be used only with `taxCalculationStrategy` set to `FLAT_RATES`."
-                raise ValidationError(message=message)
-
-    @classmethod
-    def clean_use_weighted_tax_for_shipping(
-        cls, info: ResolveInfo, instance: TaxConfiguration, data: dict[str, Any]
-    ):
-        try:
-            cls._clean_use_weighted_tax_for_shipping(instance, data)
-        except ValidationError as e:
-            raise ValidationError(
-                {
-                    "use_weighted_tax_for_shipping": ValidationError(
-                        message=e.message,
-                        code=error_codes.TaxConfigurationUpdateErrorCode.INVALID.value,
-                        params={"country_codes": []},
-                    )
-                }
-            ) from e
-
-        if update_countries_configuration := data.get(
-            "update_countries_configuration", []
-        ):
-            error_country_codes = []
-            country_exceptions = instance.country_exceptions.filter(
-                country__in=[
-                    country_data["country_code"]
-                    for country_data in update_countries_configuration
-                ]
-            )
-            input_country_exception_map = {
-                country_data["country_code"]: country_data
-                for country_data in update_countries_configuration
-            }
-
-            for country_exception in country_exceptions:
-                try:
-                    cls._clean_use_weighted_tax_for_shipping(
-                        country_exception,
-                        input_country_exception_map[country_exception.country],
-                    )
-                except ValidationError:
-                    error_country_codes.append(country_exception.country.code)
-            if error_country_codes:
-                raise ValidationError(
-                    {
-                        "use_weighted_tax_for_shipping": ValidationError(
-                            message="`useWeightedTaxForShipping` can be used only "
-                            "with `taxCalculationStrategy` set to `FLAT_RATES` for "
-                            "country codes: " + ", ".join(error_country_codes),
-                            code=error_codes.TaxConfigurationUpdateErrorCode.INVALID.value,
-                            params={"country_codes": error_country_codes},
-                        )
-                    }
-                )
 
     @classmethod
     def clean_tax_app_id(cls, info: ResolveInfo, instance, data):
@@ -297,10 +205,8 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
         info: ResolveInfo,
         app_identifier,
         active_tax_app_identifiers,
-        country_codes=None,
+        country_codes=[],
     ):
-        if country_codes is None:
-            country_codes = []
         if app_identifier not in active_tax_app_identifiers:
             message = "Did not found Tax App with provided taxAppId."
             code = error_codes.TaxConfigurationUpdateErrorCode.NOT_FOUND.value
@@ -324,14 +230,7 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
             obj.display_gross_prices = data["display_gross_prices"]
             obj.tax_calculation_strategy = data.get("tax_calculation_strategy")
             obj.tax_app_id = data.get("tax_app_id")
-
-            if data.get("use_weighted_tax_for_shipping") is not None:
-                obj.use_weighted_tax_for_shipping = data[
-                    "use_weighted_tax_for_shipping"
-                ]
-
             updated_countries.append(obj.country.code)
-
         models.TaxConfigurationPerCountry.objects.bulk_update(
             to_update,
             fields=(
@@ -339,7 +238,6 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
                 "display_gross_prices",
                 "tax_calculation_strategy",
                 "tax_app_id",
-                "use_weighted_tax_for_shipping",
             ),
         )
 
@@ -352,9 +250,6 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
                 tax_calculation_strategy=item.get("tax_calculation_strategy"),
                 display_gross_prices=item["display_gross_prices"],
                 tax_app_id=item.get("tax_app_id"),
-                use_weighted_tax_for_shipping=item.get(
-                    "use_weighted_tax_for_shipping", False
-                ),
             )
             for item in countries_configuration
             if item["country_code"] not in updated_countries
@@ -368,7 +263,7 @@ class TaxConfigurationUpdate(DeprecatedModelMutation):
         ).delete()
 
     @classmethod
-    def save(cls, _info, instance, cleaned_input, instance_tracker=None):
+    def save(cls, _info, instance, cleaned_input):
         instance.save()
         update_countries_configuration = cleaned_input.get(
             "update_countries_configuration", []

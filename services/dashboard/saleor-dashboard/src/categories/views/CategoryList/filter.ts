@@ -7,7 +7,7 @@ import {
   CategoryListUrlQueryParams,
 } from "../../urls";
 
-const CATEGORY_FILTERS_KEY = "categoryFilters";
+export const CATEGORY_FILTERS_KEY = "categoryFilters";
 
 export function getFilterVariables(params: CategoryListUrlFilters): CategoryFilterInput {
   return {
@@ -17,7 +17,7 @@ export function getFilterVariables(params: CategoryListUrlFilters): CategoryFilt
 
 export const storageUtils = createFilterTabUtils<string>(CATEGORY_FILTERS_KEY);
 
-export const { getActiveFilters } = createFilterUtils<
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
   CategoryListUrlQueryParams,
   CategoryListUrlFilters
 >(CategoryListUrlFiltersEnum);

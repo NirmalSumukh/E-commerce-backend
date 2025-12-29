@@ -1,5 +1,7 @@
 import datetime
 
+import pytz
+
 from ...utils import get_graphql_content
 
 PRODUCT_CHANNEL_LISTING_UPDATE_MUTATION = """
@@ -76,7 +78,7 @@ def create_product_channel_listing(
     publication_date=datetime.date(2007, 1, 1),
     is_published=True,
     visible_in_listings=True,
-    available_for_purchase_datetime=datetime.datetime(2007, 1, 1, tzinfo=datetime.UTC),
+    available_for_purchase_datetime=datetime.datetime(2007, 1, 1, tzinfo=pytz.utc),
     is_available_for_purchase=True,
 ):
     response = raw_create_product_channel_listing(

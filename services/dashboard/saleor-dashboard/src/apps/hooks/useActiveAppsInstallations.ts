@@ -22,8 +22,7 @@ interface UseActiveAppsInstallations {
   onRemoveInProgressAppSuccess: () => void;
 }
 
-/** @deprecated use hook from extensions/ */
-export function useActiveAppsInstallations({
+function useActiveAppsInstallations({
   appsInProgressData,
   appsInProgressRefetch,
   appInProgressLoading,
@@ -175,3 +174,4 @@ export function useActiveAppsInstallations({
     },
   };
 }
+export default useActiveAppsInstallations;

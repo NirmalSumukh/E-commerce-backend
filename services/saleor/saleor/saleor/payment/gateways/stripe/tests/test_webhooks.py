@@ -3,6 +3,7 @@ import logging
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
+import before_after
 import pytest
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -14,7 +15,7 @@ from .....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from .....order.actions import order_charged, order_refunded, order_voided
 from .....payment.models import Transaction
 from .....plugins.manager import get_plugins_manager
-from .....tests import race_condition
+from .....tests.utils import flush_post_commit_hooks
 from .... import ChargeStatus, TransactionKind
 from ....utils import price_to_minor_unit
 from ..consts import (
@@ -452,7 +453,7 @@ def test_handle_successful_payment_intent_checkout_with_voucher_ongoing_completi
     def call_webhook_success_event(*args, **kwargs):
         handle_successful_payment_intent(payment_intent, plugin.config, channel.slug)
 
-    with race_condition.RunAfter(
+    with before_after.after(
         "saleor.checkout.complete_checkout._process_payment", call_webhook_success_event
     ):
         order_from_checkout, action_required, _ = complete_checkout(
@@ -1185,7 +1186,7 @@ def test_handle_fully_refund(stripe_plugin, payment_stripe_for_order, channel_US
 
     assert payment.charge_status == ChargeStatus.FULLY_REFUNDED
     assert payment.is_active is False
-    assert payment.captured_amount == Decimal(0)
+    assert payment.captured_amount == Decimal("0")
 
 
 def test_handle_partial_refund(stripe_plugin, payment_stripe_for_order, channel_USD):
@@ -1204,7 +1205,7 @@ def test_handle_partial_refund(stripe_plugin, payment_stripe_for_order, channel_
     plugin = stripe_plugin()
 
     refund = StripeObject(id="refund_id")
-    refund["amount"] = price_to_minor_unit(Decimal(10), payment.currency)
+    refund["amount"] = price_to_minor_unit(Decimal("10"), payment.currency)
     refund["currency"] = payment.currency
     refund["last_response"] = None
 
@@ -1219,7 +1220,7 @@ def test_handle_partial_refund(stripe_plugin, payment_stripe_for_order, channel_
 
     assert payment.charge_status == ChargeStatus.PARTIALLY_REFUNDED
     assert payment.is_active is True
-    assert payment.captured_amount == payment.total - Decimal(10)
+    assert payment.captured_amount == payment.total - Decimal("10")
 
 
 def test_handle_refund_already_processed(
@@ -1227,7 +1228,7 @@ def test_handle_refund_already_processed(
 ):
     payment = payment_stripe_for_order
     payment.charge_status = ChargeStatus.PARTIALLY_REFUNDED
-    payment.captured_amount = payment.total - Decimal(10)
+    payment.captured_amount = payment.total - Decimal("10")
     payment.save()
 
     refund_id = "refund_abc"
@@ -1243,7 +1244,7 @@ def test_handle_refund_already_processed(
     plugin = stripe_plugin()
 
     refund = StripeObject(id=refund_id)
-    refund["amount"] = price_to_minor_unit(Decimal(10), payment.currency)
+    refund["amount"] = price_to_minor_unit(Decimal("10"), payment.currency)
     refund["currency"] = payment.currency
     refund["last_response"] = None
 
@@ -1258,7 +1259,7 @@ def test_handle_refund_already_processed(
 
     assert payment.charge_status == ChargeStatus.PARTIALLY_REFUNDED
     assert payment.is_active is True
-    assert payment.captured_amount == payment.total - Decimal(10)
+    assert payment.captured_amount == payment.total - Decimal("10")
 
 
 @patch("saleor.payment.gateways.stripe.webhooks.stripe.Charge.retrieve")
@@ -1302,7 +1303,7 @@ def test_handle_refund_missing_refunds(
 
     assert payment.charge_status == ChargeStatus.FULLY_REFUNDED
     assert payment.is_active is False
-    assert payment.captured_amount == Decimal(0)
+    assert payment.captured_amount == Decimal("0")
 
 
 @pytest.mark.parametrize("called", [True, False])
@@ -1661,7 +1662,6 @@ def test_handle_successful_payment_intent_for_checkout_when_already_processing_c
     checkout_with_items,
     stripe_plugin,
     channel_USD,
-    django_capture_on_commit_callbacks,
 ):
     # given
     plugin = stripe_plugin()
@@ -1694,24 +1694,24 @@ def test_handle_successful_payment_intent_for_checkout_when_already_processing_c
 
     # when
     def call_webhook_notification(*args, **kwargs):
+        flush_post_commit_hooks()
         handle_successful_payment_intent(
             payment_intent, plugin.config, channel_USD.slug
         )
 
-    with race_condition.RunAfter(
+    with before_after.after(
         "saleor.checkout.complete_checkout._process_payment",
         call_webhook_notification,
     ):
-        with django_capture_on_commit_callbacks(execute=True):
-            complete_checkout(
-                manager,
-                checkout_info,
-                lines_info,
-                {},
-                False,
-                None,
-                None,
-            )
+        complete_checkout(
+            manager,
+            checkout_info,
+            lines_info,
+            {},
+            False,
+            None,
+            None,
+        )
 
     # then
     payment.refresh_from_db()

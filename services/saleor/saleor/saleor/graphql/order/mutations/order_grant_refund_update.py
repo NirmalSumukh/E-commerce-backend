@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any, Union, cast
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -7,11 +7,14 @@ from graphql import GraphQLError
 
 from ....order import OrderGrantedRefundStatus, models
 from ....order.utils import update_order_charge_data
-from ....page.models import Page
 from ....permission.enums import OrderPermissions
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import ADDED_IN_320, ADDED_IN_322, PREVIEW_FEATURE
+from ...core.descriptions import (
+    ADDED_IN_313,
+    ADDED_IN_315,
+    ADDED_IN_320,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.scalars import Decimal
@@ -19,8 +22,6 @@ from ...core.types import BaseInputObjectType
 from ...core.types.common import Error, NonNullList
 from ...core.utils import from_global_id_or_error
 from ...payment.types import TransactionItem
-from ...payment.utils import validate_and_resolve_refund_reason_context
-from ...site.dataloaders import get_site_promise
 from ..enums import OrderGrantRefundUpdateErrorCode, OrderGrantRefundUpdateLineErrorCode
 from ..types import Order, OrderGrantedRefund
 from .order_grant_refund_utils import (
@@ -45,12 +46,16 @@ class OrderGrantRefundUpdateError(Error):
 
     add_lines = NonNullList(
         OrderGrantRefundUpdateLineError,
-        description="List of lines to add which cause the error.",
+        description="List of lines to add which cause the error."
+        + ADDED_IN_315
+        + PREVIEW_FEATURE,
         required=False,
     )
     remove_lines = NonNullList(
         OrderGrantRefundUpdateLineError,
-        description="List of lines to remove which cause the error.",
+        description="List of lines to remove which cause the error."
+        + ADDED_IN_315
+        + PREVIEW_FEATURE,
         required=False,
     )
 
@@ -78,21 +83,24 @@ class OrderGrantRefundUpdateInput(BaseInputObjectType):
         )
     )
     reason = graphene.String(description="Reason of the granted refund.")
-    reason_reference = graphene.ID(
-        description="ID of a `Page` (Model) to reference in reason." + ADDED_IN_322
-    )
     add_lines = NonNullList(
         OrderGrantRefundUpdateLineAddInput,
-        description="Lines to assign to granted refund.",
+        description="Lines to assign to granted refund."
+        + ADDED_IN_315
+        + PREVIEW_FEATURE,
         required=False,
     )
     remove_lines = NonNullList(
         graphene.ID,
-        description="Lines to remove from granted refund.",
+        description="Lines to remove from granted refund."
+        + ADDED_IN_315
+        + PREVIEW_FEATURE,
         required=False,
     )
     grant_refund_for_shipping = graphene.Boolean(
-        description="Determine if granted refund should include shipping costs.",
+        description="Determine if granted refund should include shipping costs."
+        + ADDED_IN_315
+        + PREVIEW_FEATURE,
         required=False,
     )
     transaction_id = graphene.ID(
@@ -130,7 +138,7 @@ class OrderGrantRefundUpdate(BaseMutation):
         )
 
     class Meta:
-        description = "Updates granted refund."
+        description = "Updates granted refund." + ADDED_IN_313 + PREVIEW_FEATURE
         permissions = (OrderPermissions.MANAGE_ORDERS,)
         error_type_class = OrderGrantRefundUpdateError
         doc_category = DOC_CATEGORY_ORDERS
@@ -168,7 +176,8 @@ class OrderGrantRefundUpdate(BaseMutation):
             and not only_reason_provided
         ):
             fields_from_input = set(input.keys())
-            fields_from_input.discard("reason")
+            if "reason" in fields_from_input:
+                fields_from_input.remove("reason")
             error_msg = (
                 "Only reason can be updated when `OrderGrantedRefund.status` is PENDING"
                 " or SUCCESS."
@@ -226,7 +235,7 @@ class OrderGrantRefundUpdate(BaseMutation):
     def clean_add_lines(
         cls,
         order: models.Order,
-        lines: list[dict[str, str | int]],
+        lines: list[dict[str, Union[str, int]]],
         errors: list[dict[str, Any]],
         line_ids_exclude: list[int],
     ) -> list[models.OrderGrantedRefundLine]:
@@ -250,30 +259,6 @@ class OrderGrantRefundUpdate(BaseMutation):
         return list(input_lines_data.values())
 
     @classmethod
-    def _resolve_refund_reason_instance(
-        cls, /, reason_reference_id: str, refund_reason_reference_type: int
-    ):
-        reason_reference_pk = cls.get_global_id_or_error(
-            reason_reference_id, only_type="Page", field="reason_reference"
-        )
-
-        try:
-            return Page.objects.get(
-                pk=reason_reference_pk,
-                page_type=refund_reason_reference_type,
-            )
-
-        except (Page.DoesNotExist, ValueError):
-            raise ValidationError(
-                {
-                    "reason_reference": ValidationError(
-                        "Invalid reason reference. Must be an ID of a Model (Page)",
-                        code=OrderGrantRefundUpdateErrorCode.INVALID.value,
-                    )
-                }
-            ) from None
-
-    @classmethod
     def clean_input(
         cls,
         info: ResolveInfo,
@@ -291,10 +276,6 @@ class OrderGrantRefundUpdate(BaseMutation):
         add_lines = input.get("add_lines", [])
         remove_lines = input.get("remove_lines", [])
         grant_refund_for_shipping = input.get("grant_refund_for_shipping", None)
-        reason_reference_id = input.get("reason_reference")
-
-        requestor_is_app = info.context.app is not None
-        requestor_is_user = info.context.user is not None and not requestor_is_app
 
         line_ids_to_remove = []
         if remove_lines:
@@ -377,38 +358,13 @@ class OrderGrantRefundUpdate(BaseMutation):
         if errors:
             raise ValidationError(errors)
 
-        site = get_site_promise(info.context).get()
-
-        refund_reason_context = validate_and_resolve_refund_reason_context(
-            reason_reference_id=reason_reference_id,
-            requestor_is_user=bool(requestor_is_user),
-            refund_reference_field_name="reason_reference",
-            error_code_enum=OrderGrantRefundUpdateErrorCode,
-            site_settings=site.settings,
-        )
-
-        should_apply = refund_reason_context["should_apply"]
-        refund_reason_reference_type = refund_reason_context[
-            "refund_reason_reference_type"
-        ]
-
-        reason_reference_instance: Page | None = None
-
-        if should_apply:
-            reason_reference_instance = cls._resolve_refund_reason_instance(
-                str(reason_reference_id),
-                refund_reason_reference_type.pk,
-            )
-
         cleaned_input = {
             "amount": amount,
             "reason": reason,
-            "reason_reference": reason_reference_id,
             "add_lines": lines_to_add,
             "remove_lines": line_ids_to_remove,
             "grant_refund_for_shipping": grant_refund_for_shipping,
             "transaction_item": transaction_item,
-            "reason_reference_instance": reason_reference_instance,
         }
         return cleaned_input
 
@@ -457,11 +413,6 @@ class OrderGrantRefundUpdate(BaseMutation):
             if reason is not None:
                 granted_refund.reason = reason
 
-            reason_reference_instance = cleaned_input["reason_reference_instance"]
-
-            if reason_reference_instance:
-                granted_refund.reason_reference = reason_reference_instance
-
             granted_refund.save(
                 update_fields=[
                     "amount_value",
@@ -469,7 +420,6 @@ class OrderGrantRefundUpdate(BaseMutation):
                     "shipping_costs_included",
                     "updated_at",
                     "transaction_item",
-                    "reason_reference",
                 ]
             )
 
@@ -486,10 +436,6 @@ class OrderGrantRefundUpdate(BaseMutation):
         order = granted_refund.order
 
         cleaned_input = cls.clean_input(info, granted_refund, input)
-
         cls.process_update_for_granted_refund(order, granted_refund, cleaned_input)
         update_order_charge_data(order)
-        return cls(
-            order=SyncWebhookControlContext(order),
-            granted_refund=SyncWebhookControlContext(granted_refund),
-        )
+        return cls(order=order, granted_refund=granted_refund)

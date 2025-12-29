@@ -1,6 +1,7 @@
 import logging
 import time
 from io import BytesIO
+from typing import Optional, Union
 
 import requests
 from celery.exceptions import MaxRetriesExceededError
@@ -16,7 +17,6 @@ from requests import HTTPError, Response
 from .. import schema_version
 from ..app.headers import AppHeaders, DeprecatedAppHeaders
 from ..celeryconf import app
-from ..core.db.connection import allow_writer
 from ..core.http_client import HTTPClient
 from ..core.utils import build_absolute_uri, get_domain
 from ..permission.enums import get_permission_names
@@ -43,14 +43,14 @@ class AppInstallationError(HTTPError):
 def validate_app_install_response(response: Response):
     try:
         response.raise_for_status()
-    except HTTPError as e:
+    except HTTPError as err:
         try:
             error_msg = str(response.json()["error"]["message"])
         except Exception:
-            raise e from None
+            raise err
         raise AppInstallationError(
             error_msg, request=response.request, response=response
-        ) from e
+        )
 
 
 def send_app_token(target_url: str, token: str):
@@ -79,7 +79,7 @@ def fetch_icon_image(
     *,
     max_file_size=MAX_ICON_FILE_SIZE,
     timeout=settings.COMMON_REQUESTS_TIMEOUT,
-) -> File:
+) -> File | None:
     filename = get_filename_from_url(url)
     size_error_msg = f"File too big. Maximal icon image file size is {max_file_size}."
     code = AppErrorCode.INVALID.value
@@ -131,7 +131,7 @@ def fetch_brand_data(manifest_data, timeout=settings.COMMON_REQUESTS_TIMEOUT):
     return brand_data
 
 
-def _set_brand_data(brand_obj: App | AppInstallation | None, logo: File):
+def _set_brand_data(brand_obj: Optional[Union[App, AppInstallation]], logo: File):
     if not brand_obj:
         return
     try:
@@ -148,7 +148,6 @@ def _set_brand_data(brand_obj: App | AppInstallation | None, logo: File):
 
 
 @app.task(bind=True, retry_backoff=30, retry_kwargs={"max_retries": 5})
-@allow_writer()
 def fetch_brand_data_task(
     self, brand_data: dict, *, app_installation_id=None, app_id=None
 ):
@@ -161,8 +160,9 @@ def fetch_brand_data_task(
             return
     try:
         logo_img = fetch_icon_image(brand_data["logo"]["default"])
-        _set_brand_data(app_inst, logo_img)
-        _set_brand_data(app, logo_img)
+        if logo_img:
+            _set_brand_data(app_inst, logo_img)
+            _set_brand_data(app, logo_img)
     except ValidationError as error:
         extra = {
             "app_id": app_id,
@@ -192,8 +192,8 @@ def fetch_brand_data_task(
 def fetch_brand_data_async(
     manifest_data: dict,
     *,
-    app_installation: AppInstallation | None = None,
-    app: App | None = None,
+    app_installation: Optional[AppInstallation] = None,
+    app: Optional[App] = None,
 ):
     if brand_data := manifest_data.get("brand"):
         app_id = app.pk if app else None
@@ -241,35 +241,12 @@ def install_app(app_installation: AppInstallation, activate: bool = False):
 
     app.permissions.set(app_installation.permissions.all())
     for extension_data in manifest_data.get("extensions", []):
-        # Manifest is already "clean" so values are snake case
-        options = extension_data.get("options", {})
-        new_tab_target = options.get("new_tab_target")
-        widget_target = options.get("widget_target")
-
-        # Ensure proper extraction of the method values from the options
-        http_target_method = None
-
-        if (
-            new_tab_target
-            and isinstance(new_tab_target, dict)
-            and "method" in new_tab_target
-        ):
-            http_target_method = new_tab_target["method"]
-
-        if (
-            widget_target
-            and isinstance(widget_target, dict)
-            and "method" in widget_target
-        ):
-            http_target_method = widget_target["method"]
-
         extension = AppExtension.objects.create(
             app=app,
             label=extension_data.get("label"),
             url=extension_data.get("url"),
             mount=extension_data.get("mount"),
             target=extension_data.get("target", AppExtensionTarget.POPUP),
-            http_target_method=http_target_method,
         )
         extension.permissions.set(extension_data.get("permissions", []))
 
@@ -287,7 +264,7 @@ def install_app(app_installation: AppInstallation, activate: bool = False):
 
     webhook_events = []
     for db_webhook, manifest_webhook in zip(
-        webhooks, manifest_data.get("webhooks", []), strict=False
+        webhooks, manifest_data.get("webhooks", [])
     ):
         for event_type in manifest_webhook["events"]:
             webhook_events.append(

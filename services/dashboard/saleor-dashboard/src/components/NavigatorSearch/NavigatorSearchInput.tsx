@@ -1,59 +1,55 @@
-import useDebounce from "@dashboard/hooks/useDebounce";
-import { Box, SearchIcon, sprinkles } from "@saleor/macaw-ui-next";
-import { useState } from "react";
-import * as React from "react";
+import { Box, InputProps, SearchIcon, sprinkles, Text } from "@saleor/macaw-ui-next";
+import React from "react";
+import { useIntl } from "react-intl";
 
-interface NavigatorSearchInputProps {
-  onSearch: (query: string) => void;
-  value: string;
+import { getModePlaceholder, getModeSymbol } from "./modes/utils";
+import { QuickSearchMode } from "./types";
+
+interface NavigatorSearchInputProps
+  extends Omit<InputProps, "size" | "height" | "width" | "label" | "as" | "type" | "color"> {
+  mode: QuickSearchMode;
 }
 
-const NavigatorSearchInput = ({ onSearch, value }: NavigatorSearchInputProps) => {
-  const [inputValue, setInputValue] = useState(value);
-  const onSearchDebounced = useDebounce(onSearch);
+const NavigatorSearchInput = React.forwardRef<HTMLInputElement, NavigatorSearchInputProps>(
+  (props, ref) => {
+    const { mode, ...rest } = props;
+    const intl = useIntl();
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-    onSearchDebounced(e.target.value);
-  };
+    return (
+      <Box display="flex" padding={4} height={12}>
+        {mode !== "default" ? (
+          <Text width={4} alignSelf="center" marginRight={1} textAlign="center">
+            {getModeSymbol(mode)}
+          </Text>
+        ) : (
+          <SearchIcon
+            size="small"
+            className={sprinkles({
+              alignSelf: "center",
+              marginRight: 2,
+            })}
+          />
+        )}
+        <Box
+          as="input"
+          role="input"
+          autoFocus
+          autoComplete="off"
+          style={{
+            border: "none",
+            outline: "none",
+            width: "100%",
+            backgroundColor: "transparent",
+            padding: 0,
+          }}
+          placeholder={getModePlaceholder(mode, intl) ?? undefined}
+          ref={ref}
+          {...rest}
+        />
+      </Box>
+    );
+  },
+);
 
-  return (
-    <Box
-      display="flex"
-      padding={4}
-      __height="50px"
-      borderBottomWidth={1}
-      borderBottomStyle="solid"
-      borderColor="default1"
-    >
-      <SearchIcon
-        size="small"
-        className={sprinkles({
-          alignSelf: "center",
-          marginRight: 2,
-        })}
-      />
-      <Box
-        id="navigator-search-input"
-        as="input"
-        role="input"
-        autoFocus
-        onChange={handleSearch}
-        value={inputValue}
-        autoComplete="off"
-        style={{
-          border: "none",
-          outline: "none",
-          width: "100%",
-          backgroundColor: "transparent",
-          padding: 0,
-        }}
-        placeholder="Search"
-        aria-activedescendant="/orders/"
-        aria-expanded
-      />
-    </Box>
-  );
-};
-
+NavigatorSearchInput.displayName = "NavigatorSearchInput";
 export default NavigatorSearchInput;

@@ -17,7 +17,7 @@ const messages = defineMessages({
   },
 });
 
-type ShippingError = Omit<ShippingErrorFragment, "__typename"> | ChannelError | undefined;
+export type ShippingError = Omit<ShippingErrorFragment, "__typename"> | ChannelError | undefined;
 
 function getShippingErrorMessage(err: ShippingError, intl: IntlShape): string | undefined {
   if (err && "code" in err) {

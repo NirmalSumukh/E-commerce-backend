@@ -1,8 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
-from django.db.models import QuerySet
-
 from ..checkout.lock_objects import checkout_qs_select_for_update
 from ..order.lock_objects import order_qs_select_for_update
 from .models import TransactionItem
@@ -12,7 +10,7 @@ if TYPE_CHECKING:
     from ..order.models import Order
 
 
-def transaction_item_qs_select_for_update() -> QuerySet[TransactionItem]:
+def transaction_item_qs_select_for_update():
     return TransactionItem.objects.order_by("pk").select_for_update(of=["self"])
 
 

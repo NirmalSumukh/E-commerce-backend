@@ -2,7 +2,6 @@ import { ExpressionFilters } from "@dashboard/components/AppLayout/ListFilters/c
 import { LegacyFiltersPresetsAlert } from "@dashboard/components/AppLayout/ListFilters/components/LegacyFiltersPresetsAlert";
 import SearchInput from "@dashboard/components/AppLayout/ListFilters/components/SearchInput";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { ButtonGroupWithDropdown } from "@dashboard/components/ButtonGroupWithDropdown";
 import { DashboardCard } from "@dashboard/components/Card";
 import { FilterPresetsSelect } from "@dashboard/components/FilterPresetsSelect";
 import { ListPageLayout } from "@dashboard/components/Layouts";
@@ -11,25 +10,19 @@ import {
   DiscountListUrlSortField,
   discountUrl,
 } from "@dashboard/discounts/discountsUrls";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import {
-  getExtensionItemsForOverviewCreate,
-  getExtensionsItemsForDiscountOverviewActions,
-} from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import { PromotionFragment } from "@dashboard/graphql";
 import { getPrevLocationState } from "@dashboard/hooks/useBackLinkWithState";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { FilterPresetsProps, PageListProps, SortPage } from "@dashboard/types";
 import { Box, Button, ChevronRightIcon } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router";
 
 import { DiscountListDatagrid } from "../DiscountListDatagrid";
 
-interface DiscountListPageProps
+export interface DiscountListPageProps
   extends PageListProps,
     FilterPresetsProps,
     SortPage<DiscountListUrlSortField> {
@@ -38,7 +31,7 @@ interface DiscountListPageProps
   promotions: PromotionFragment[];
 }
 
-const DiscountListPage = ({
+const DiscountListPage: React.FC<DiscountListPageProps> = ({
   initialSearch,
   onSearchChange,
   onFilterPresetChange,
@@ -51,7 +44,7 @@ const DiscountListPage = ({
   selectedFilterPreset,
 
   ...listProps
-}: DiscountListPageProps) => {
+}) => {
   const intl = useIntl();
   const navigation = useNavigator();
   const location = useLocation();
@@ -61,14 +54,6 @@ const DiscountListPage = ({
       state: getPrevLocationState(location),
     });
   };
-
-  const { DISCOUNT_OVERVIEW_CREATE, DISCOUNT_OVERVIEW_MORE_ACTIONS } = useExtensions(
-    extensionMountPoints.DISCOUNT_LIST,
-  );
-  const extensionMenuItems = getExtensionsItemsForDiscountOverviewActions(
-    DISCOUNT_OVERVIEW_MORE_ACTIONS,
-  );
-  const extensionCreateButtonItems = getExtensionItemsForOverviewCreate(DISCOUNT_OVERVIEW_CREATE);
 
   return (
     <ListPageLayout>
@@ -101,29 +86,14 @@ const DiscountListPage = ({
               })}
             />
           </Box>
-          <Box display="flex" alignItems="center" gap={2}>
-            {extensionMenuItems.length > 0 && <TopNav.Menu items={extensionMenuItems} />}
-            {extensionCreateButtonItems.length > 0 ? (
-              <ButtonGroupWithDropdown
-                options={extensionCreateButtonItems}
-                data-test-id="create-discount"
-                onClick={() => navigation(discountAddUrl())}
-              >
-                <FormattedMessage
-                  id="+MJW+8"
-                  defaultMessage="Create Discount"
-                  description="button"
-                />
-              </ButtonGroupWithDropdown>
-            ) : (
-              <Button data-test-id="create-discount" onClick={() => navigation(discountAddUrl())}>
-                <FormattedMessage
-                  id="+MJW+8"
-                  defaultMessage="Create Discount"
-                  description="button"
-                />
-              </Button>
-            )}
+          <Box>
+            <Button
+              onClick={() => navigation(discountAddUrl())}
+              variant="primary"
+              data-test-id="create-sale"
+            >
+              <FormattedMessage id="+MJW+8" defaultMessage="Create Discount" description="button" />
+            </Button>
           </Box>
         </Box>
       </TopNav>

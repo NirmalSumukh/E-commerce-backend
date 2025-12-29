@@ -3,6 +3,7 @@ import { DashboardCard } from "@dashboard/components/Card";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Skeleton, vars } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 const messages = defineMessages({
@@ -59,7 +60,7 @@ interface ProductMediaNavigationProps {
   onRowClick: (id: string) => () => void;
 }
 
-const ProductMediaNavigation = (props: ProductMediaNavigationProps) => {
+const ProductMediaNavigation: React.FC<ProductMediaNavigationProps> = props => {
   const { highlighted, media, onRowClick } = props;
   const classes = useStyles(props);
   const intl = useIntl();

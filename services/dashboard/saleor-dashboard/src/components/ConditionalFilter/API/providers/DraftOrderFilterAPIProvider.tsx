@@ -4,13 +4,12 @@ export const useDraftOrderFilterAPIProvider = (): FilterAPIProvider => {
   const fetchRightOptions = async () => {
     return [];
   };
-
-  const fetchAttributeOptions = async () => {
+  const fetchLeftOptions = async () => {
     return [];
   };
 
   return {
     fetchRightOptions,
-    fetchAttributeOptions,
+    fetchLeftOptions,
   };
 };

@@ -1,11 +1,11 @@
 import logging
 from collections.abc import Iterable
 from decimal import Decimal
-from uuid import UUID
+from typing import Optional
 
 from django.conf import settings
 from django.db import transaction
-from django.utils import timezone
+from django.db.models import prefetch_related_objects
 from prices import Money, TaxedMoney
 
 from ..core.db.connection import allow_writer
@@ -17,16 +17,7 @@ from ..core.taxes import (
     TaxError,
     zero_taxed_money,
 )
-from ..discount.utils.order import (
-    handle_order_promotion,
-    refresh_manual_line_discount_object,
-    refresh_order_line_discount_objects_for_catalogue_promotions,
-    update_unit_discount_data_on_order_lines_info,
-)
-from ..discount.utils.voucher import (
-    create_or_update_line_discount_objects_from_voucher,
-    get_the_cheapest_line,
-)
+from ..discount.utils.order import create_or_update_discount_objects_for_order
 from ..payment.model_helpers import get_subtotal
 from ..plugins import PLUGIN_IDENTIFIER_PREFIX
 from ..plugins.manager import PluginsManager
@@ -38,21 +29,14 @@ from ..tax.utils import (
     get_tax_app_identifier_for_order,
     get_tax_calculation_strategy_for_order,
     normalize_tax_rate_for_db,
+    validate_tax_data,
 )
-from . import ORDER_EDITABLE_STATUS, OrderStatus
-from .base_calculations import base_order_line_total, calculate_prices
-from .fetch import (
-    EditableOrderLineInfo,
-    fetch_draft_order_lines_info,
-    reattach_apply_once_per_order_voucher_info,
-)
+from . import ORDER_EDITABLE_STATUS
+from .base_calculations import apply_order_discounts, base_order_line_total
+from .fetch import EditableOrderLineInfo, fetch_draft_order_lines_info
 from .interface import OrderTaxedPricesData
 from .models import Order, OrderLine
-from .utils import (
-    calculate_draft_order_line_price_expiration_date,
-    log_address_if_validation_skipped_for_order,
-    order_info_for_logs,
-)
+from .utils import log_address_if_validation_skipped_for_order, order_info_for_logs
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +44,10 @@ logger = logging.getLogger(__name__)
 def fetch_order_prices_if_expired(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
-) -> tuple[Order, Iterable[OrderLine] | None]:
+) -> tuple[Order, Optional[Iterable[OrderLine]]]:
     """Fetch order prices with taxes.
 
     First applies order level discounts, then calculates taxes.
@@ -75,38 +58,26 @@ def fetch_order_prices_if_expired(
     if order.status not in ORDER_EDITABLE_STATUS:
         return order, lines
 
-    expired_line_ids = get_expired_line_ids(order, lines)
-    if not force_update and not order.should_refresh_prices and not expired_line_ids:
+    if not force_update and not order.should_refresh_prices:
         return order, lines
 
-    tax_strategy = get_tax_calculation_strategy_for_order(order)
-    if tax_strategy == TaxCalculationStrategy.TAX_APP and not allow_sync_webhooks:
-        return order, lines
-
-    if expired_line_ids:
-        # handle line base price expiration
-        lines_info = refresh_order_base_prices_and_discounts(
-            order, expired_line_ids, lines
-        )
-    else:
-        lines_info = fetch_draft_order_lines_info(order, lines)
-
-    # order promotion is qualified based on the most actual prices, therefor need to be assessed
-    # on the every recalculation
-    handle_order_promotion(order, lines_info, database_connection_name)
-
-    lines = [line_info.line for line_info in lines_info]
-    calculate_prices(
-        order,
-        lines,
-        database_connection_name=database_connection_name,
+    # handle promotions
+    lines_info: list[EditableOrderLineInfo] = fetch_draft_order_lines_info(order, lines)
+    create_or_update_discount_objects_for_order(
+        order, lines_info, database_connection_name
     )
+    lines = [line_info.line for line_info in lines_info]
 
-    calculate_taxes(
+    _clear_prefetched_discounts(order, lines)
+    with allow_writer():
+        # TODO: Load discounts with a dataloader and pass as argument
+        prefetch_related_objects([order], "discounts")
+
+    # handle taxes
+    _recalculate_prices(
         order,
         manager,
         lines,
-        tax_calculation_strategy=tax_strategy,
         database_connection_name=database_connection_name,
     )
 
@@ -141,40 +112,47 @@ def fetch_order_prices_if_expired(
                     "undiscounted_total_price_net_amount",
                     "undiscounted_total_price_gross_amount",
                     "tax_rate",
+                    "unit_discount_amount",
+                    "unit_discount_reason",
+                    "unit_discount_type",
+                    "unit_discount_value",
+                    "base_unit_price_amount",
                 ],
             )
 
         return order, lines
 
 
-def get_expired_line_ids(order: Order, lines: Iterable[OrderLine] | None) -> list[UUID]:
-    if order.status != OrderStatus.DRAFT:
-        return []
+def _clear_prefetched_discounts(order, lines):
+    if hasattr(order, "_prefetched_objects_cache"):
+        order._prefetched_objects_cache.pop("discounts", None)
 
-    if lines is None:
-        lines = order.lines.all()
-    now = timezone.now()
-    return [
-        line.pk
-        for line in lines
-        if line.draft_base_price_expire_at and line.draft_base_price_expire_at < now
-    ]
+    for line in lines:
+        if hasattr(line, "_prefetched_objects_cache"):
+            line._prefetched_objects_cache.pop("discounts", None)
 
 
-def calculate_taxes(
+def _recalculate_prices(
     order: Order,
     manager: PluginsManager,
     lines: Iterable[OrderLine],
-    tax_calculation_strategy: str,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
 ):
+    """Calculate prices after handling order level discounts and taxes."""
     tax_configuration = order.channel.tax_configuration
+    tax_calculation_strategy = get_tax_calculation_strategy_for_order(order)
     prices_entered_with_tax = tax_configuration.prices_entered_with_tax
     charge_taxes = get_charge_taxes_for_order(order)
     should_charge_tax = charge_taxes and not order.tax_exemption
     tax_app_identifier = get_tax_app_identifier_for_order(order)
 
     order.tax_error = None
+
+    apply_order_discounts(
+        order,
+        lines,
+        database_connection_name=database_connection_name,
+    )
     if prices_entered_with_tax:
         # If prices are entered with tax, we need to always calculate it anyway, to
         # display the tax rate to the user.
@@ -190,10 +168,7 @@ def calculate_taxes(
             )
         except TaxDataError as e:
             if str(e) != TaxDataErrorMessage.EMPTY:
-                extra = order_info_for_logs(order, lines)
-                if e.errors:
-                    extra["errors"] = e.errors
-                logger.warning(str(e), extra=extra)
+                logger.warning(str(e), extra=order_info_for_logs(order, lines))
             order.tax_error = str(e)
 
         if not should_charge_tax:
@@ -218,10 +193,7 @@ def calculate_taxes(
                 )
             except TaxDataError as e:
                 if str(e) != TaxDataErrorMessage.EMPTY:
-                    extra = order_info_for_logs(order, lines)
-                    if e.errors:
-                        extra["errors"] = e.errors
-                    logger.warning(str(e), extra=extra)
+                    logger.warning(str(e), extra=order_info_for_logs(order, lines))
                 order.tax_error = str(e)
         else:
             remove_tax(order, lines, prices_entered_with_tax)
@@ -229,7 +201,7 @@ def calculate_taxes(
 
 def _calculate_and_add_tax(
     tax_calculation_strategy: str,
-    tax_app_identifier: str | None,
+    tax_app_identifier: Optional[str],
     order: "Order",
     lines: Iterable["OrderLine"],
     manager: "PluginsManager",
@@ -245,12 +217,10 @@ def _calculate_and_add_tax(
             # In Saleor 4.0 `tax_app_identifier` should be required and the flow should
             # be dropped.
             _recalculate_with_plugins(manager, order, lines, prices_entered_with_tax)
-            # Get the taxes calculated with apps and apply to order.
-            # We should allow empty tax_data in case any tax webhook has not been
-            # configured - handled by `allowed_empty_tax_data`
-            tax_data = _get_taxes_for_order(
-                order, tax_app_identifier, manager, allowed_empty_tax_data=True
-            )
+            tax_data = manager.get_taxes_for_order(order, tax_app_identifier)
+            if not tax_data:
+                log_address_if_validation_skipped_for_order(order, logger)
+            validate_tax_data(tax_data, lines, allow_empty_tax_data=True)
             _apply_tax_data(order, lines, tax_data, prices_entered_with_tax)
         else:
             _call_plugin_or_tax_app(
@@ -294,35 +264,11 @@ def _call_plugin_or_tax_app(
         if order.tax_error:
             raise TaxDataError(order.tax_error)
     else:
-        tax_data = _get_taxes_for_order(order, tax_app_identifier, manager)
-        _apply_tax_data(order, lines, tax_data, prices_entered_with_tax)
-
-
-def _get_taxes_for_order(
-    order: "Order",
-    tax_app_identifier: str | None,
-    manager: "PluginsManager",
-    allowed_empty_tax_data: bool = False,
-):
-    """Get taxes for order from tax apps.
-
-    The `allowed_empty_tax_data` flag prevents an error from being raised when tax data
-    is missing due to the absence of a configured tax app.
-    """
-    tax_data = None
-    try:
         tax_data = manager.get_taxes_for_order(order, tax_app_identifier)
-    except TaxDataError as e:
-        raise e from e
-    finally:
-        # log in case the tax_data is missing
         if tax_data is None:
             log_address_if_validation_skipped_for_order(order, logger)
-
-    if not tax_data and not allowed_empty_tax_data:
-        raise TaxDataError(TaxDataErrorMessage.EMPTY)
-
-    return tax_data
+        validate_tax_data(tax_data, lines)
+        _apply_tax_data(order, lines, tax_data, prices_entered_with_tax)
 
 
 def _recalculate_with_plugins(
@@ -330,7 +276,7 @@ def _recalculate_with_plugins(
     order: Order,
     lines: Iterable[OrderLine],
     prices_entered_with_tax: bool,
-    plugin_ids: list[str] | None = None,
+    plugin_ids: Optional[list[str]] = None,
 ) -> None:
     """Fetch taxes from plugins and recalculate order/lines prices.
 
@@ -390,9 +336,8 @@ def _recalculate_with_plugins(
     except TaxError:
         pass
 
-    undiscounted_shipping_price = order.undiscounted_base_shipping_price
     order.undiscounted_total = undiscounted_subtotal + TaxedMoney(
-        net=undiscounted_shipping_price, gross=undiscounted_shipping_price
+        net=order.base_shipping_price, gross=order.base_shipping_price
     )
     order.subtotal = get_subtotal(lines, order.currency)
     order.total = manager.calculate_order_total(order, lines, plugin_ids=plugin_ids)
@@ -420,7 +365,7 @@ def _get_undiscounted_price(
 def _apply_tax_data(
     order: Order,
     lines: Iterable[OrderLine],
-    tax_data: TaxData | None,
+    tax_data: Optional[TaxData],
     prices_entered_with_tax: bool,
 ) -> None:
     """Apply all prices from tax data to order and order lines."""
@@ -446,7 +391,7 @@ def _apply_tax_data(
 
     subtotal = zero_taxed_money(order.currency)
     undiscounted_subtotal = zero_taxed_money(order.currency)
-    for order_line, tax_line in zip(lines, tax_data.lines, strict=False):
+    for order_line, tax_line in zip(lines, tax_data.lines):
         line_total_price = TaxedMoney(
             net=Money(tax_line.total_net_amount, currency),
             gross=Money(tax_line.total_gross_amount, currency),
@@ -529,7 +474,7 @@ def _remove_tax_net(order, lines):
 
 
 def _find_order_line(
-    lines: Iterable[OrderLine] | None,
+    lines: Optional[Iterable[OrderLine]],
     order_line: OrderLine,
 ) -> OrderLine:
     """Return order line from provided lines.
@@ -541,107 +486,13 @@ def _find_order_line(
     )
 
 
-def refresh_order_base_prices_and_discounts(
-    order: "Order",
-    line_ids_to_refresh: Iterable[UUID],
-    lines: Iterable[OrderLine] | None = None,
-) -> list[EditableOrderLineInfo]:
-    """Force order to fetch the latest channel listing prices and update discounts."""
-    if order.status != OrderStatus.DRAFT:
-        return []
-
-    lines_info = fetch_draft_order_lines_info(
-        order, lines=lines, fetch_actual_prices=True
-    )
-    if not lines_info:
-        return []
-
-    lines_info_to_update = [
-        line_info
-        for line_info in lines_info
-        if line_info.line.id in line_ids_to_refresh
-    ]
-
-    initial_cheapest_line = get_the_cheapest_line(lines_info)
-
-    # update prices based on the latest channel listing prices
-    _set_channel_listing_prices(lines_info_to_update)
-    # update prices based on the latest catalogue promotions
-    refresh_order_line_discount_objects_for_catalogue_promotions(lines_info_to_update)
-    # update manual line discount object amount based on the new listing prices
-    refresh_manual_line_discount_object(lines_info_to_update)
-
-    # update prices based on the associated voucher
-    is_apply_once_per_order_voucher = (
-        order.voucher and order.voucher.apply_once_per_order
-    )
-    if is_apply_once_per_order_voucher:
-        # voucher of type apply once per order can impact other order line, if the
-        # cheapest line has changed
-        reattach_apply_once_per_order_voucher_info(
-            lines_info, initial_cheapest_line, order
-        )
-        create_or_update_line_discount_objects_from_voucher(lines_info)
-    else:
-        create_or_update_line_discount_objects_from_voucher(lines_info_to_update)
-
-    # update unit discount fields based on updated discounts
-    update_unit_discount_data_on_order_lines_info(lines_info)
-
-    # set price expiration time
-    expiration_time = calculate_draft_order_line_price_expiration_date(
-        order.channel, order.status
-    )
-    for line_info in lines_info_to_update:
-        line_info.line.draft_base_price_expire_at = expiration_time
-
-    lines = [line_info.line for line_info in lines_info]
-    # cleanup after potential outdated prefetched line discounts
-    _clear_prefetched_order_line_discounts(lines)
-    OrderLine.objects.bulk_update(
-        lines,
-        [
-            "unit_discount_amount",
-            "unit_discount_reason",
-            "unit_discount_type",
-            "unit_discount_value",
-            "base_unit_price_amount",
-            "undiscounted_base_unit_price_amount",
-            "draft_base_price_expire_at",
-        ],
-    )
-    return lines_info
-
-
-def _set_channel_listing_prices(lines_info: list[EditableOrderLineInfo]):
-    for line_info in lines_info:
-        line = line_info.line
-        channel_listing = line_info.channel_listing
-        if channel_listing and channel_listing.price_amount:
-            line.undiscounted_base_unit_price_amount = channel_listing.price_amount
-            line.base_unit_price_amount = channel_listing.price_amount
-
-
-def _clear_prefetched_order_line_discounts(lines):
-    for line in lines:
-        if hasattr(line, "_prefetched_objects_cache"):
-            line._prefetched_objects_cache.pop("discounts", None)
-
-
-def refresh_all_order_base_prices_and_discounts(order):
-    lines = order.lines.all()
-    line_ids_to_refresh = [line.id for line in lines]
-    refresh_order_base_prices_and_discounts(order, line_ids_to_refresh, lines)
-
-
 def order_line_unit(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> OrderTaxedPricesData:
     """Return the unit price of provided line, taxes included.
 
@@ -656,7 +507,6 @@ def order_line_unit(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     order_line = _find_order_line(lines, order_line)
     return OrderTaxedPricesData(
@@ -669,10 +519,9 @@ def order_line_total(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> OrderTaxedPricesData:
     """Return the total price of provided line, taxes included.
 
@@ -687,7 +536,6 @@ def order_line_total(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     order_line = _find_order_line(lines, order_line)
     return OrderTaxedPricesData(
@@ -702,11 +550,10 @@ def order_line_tax_rate(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
-) -> Decimal | None:
+) -> Optional[Decimal]:
     """Return the tax rate of provided line.
 
     It takes into account all plugins.
@@ -719,7 +566,6 @@ def order_line_tax_rate(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     order_line = _find_order_line(lines, order_line)
     return order_line.tax_rate
@@ -729,9 +575,8 @@ def order_line_unit_discount(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
-    allow_sync_webhooks: bool = True,
 ) -> Decimal:
     """Return the line unit discount.
 
@@ -744,9 +589,7 @@ def order_line_unit_discount(
     - voucher applied on the line (`SPECIFIC_PRODUCT`, `apply_once_per_order` )
     - manual line discounts
     """
-    _, lines = fetch_order_prices_if_expired(
-        order, manager, lines, force_update, allow_sync_webhooks=allow_sync_webhooks
-    )
+    _, lines = fetch_order_prices_if_expired(order, manager, lines, force_update)
     order_line = _find_order_line(lines, order_line)
     return order_line.unit_discount
 
@@ -755,9 +598,8 @@ def order_line_unit_discount_value(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
-    allow_sync_webhooks: bool = True,
 ) -> Decimal:
     """Return the line unit discount value.
 
@@ -765,9 +607,7 @@ def order_line_unit_discount_value(
     If the prices are expired, call all order price calculation methods
     and save them in the model directly.
     """
-    _, lines = fetch_order_prices_if_expired(
-        order, manager, lines, force_update, allow_sync_webhooks=allow_sync_webhooks
-    )
+    _, lines = fetch_order_prices_if_expired(order, manager, lines, force_update)
     order_line = _find_order_line(lines, order_line)
     return order_line.unit_discount_value
 
@@ -776,19 +616,16 @@ def order_line_unit_discount_type(
     order: Order,
     order_line: OrderLine,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
-    allow_sync_webhooks: bool = True,
-) -> str | None:
+) -> Optional[str]:
     """Return the line unit discount type.
 
     It takes into account all plugins.
     If the prices are expired, call all order price calculation methods
     and save them in the model directly.
     """
-    _, lines = fetch_order_prices_if_expired(
-        order, manager, lines, force_update, allow_sync_webhooks=allow_sync_webhooks
-    )
+    _, lines = fetch_order_prices_if_expired(order, manager, lines, force_update)
     order_line = _find_order_line(lines, order_line)
     return order_line.unit_discount_type
 
@@ -796,10 +633,9 @@ def order_line_unit_discount_type(
 def order_undiscounted_shipping(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> TaxedMoney:
     """Return the undiscounted shipping price of the order.
 
@@ -809,12 +645,7 @@ def order_undiscounted_shipping(
     """
     currency = order.currency
     order, _ = fetch_order_prices_if_expired(
-        order,
-        manager,
-        lines,
-        force_update,
-        database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
+        order, manager, lines, force_update, database_connection_name
     )
     return quantize_price(order.undiscounted_base_shipping_price, currency)
 
@@ -822,10 +653,9 @@ def order_undiscounted_shipping(
 def order_shipping(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> TaxedMoney:
     """Return the shipping price of the order.
 
@@ -840,7 +670,6 @@ def order_shipping(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     return quantize_price(order.shipping_price, currency)
 
@@ -848,11 +677,10 @@ def order_shipping(
 def order_shipping_tax_rate(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
-) -> Decimal | None:
+) -> Optional[Decimal]:
     """Return the shipping tax rate of the order.
 
     It takes into account all plugins.
@@ -865,7 +693,6 @@ def order_shipping_tax_rate(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     return order.shipping_tax_rate
 
@@ -873,10 +700,9 @@ def order_shipping_tax_rate(
 def order_subtotal(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ):
     """Return the total price of the order.
 
@@ -891,7 +717,6 @@ def order_subtotal(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     # Lines aren't returned only if
     # we don't pass them to `fetch_order_prices_if_expired`.
@@ -901,10 +726,9 @@ def order_subtotal(
 def order_total(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> TaxedMoney:
     """Return the total price of the order.
 
@@ -919,7 +743,6 @@ def order_total(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     return quantize_price(order.total, currency)
 
@@ -927,10 +750,9 @@ def order_total(
 def order_undiscounted_total(
     order: Order,
     manager: PluginsManager,
-    lines: Iterable[OrderLine] | None = None,
+    lines: Optional[Iterable[OrderLine]] = None,
     force_update: bool = False,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ) -> TaxedMoney:
     """Return the undiscounted total price of the order.
 
@@ -945,6 +767,5 @@ def order_undiscounted_total(
         lines,
         force_update,
         database_connection_name=database_connection_name,
-        allow_sync_webhooks=allow_sync_webhooks,
     )
     return quantize_price(order.undiscounted_total, currency)

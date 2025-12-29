@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { useState } from "react";
+import React, { useState } from "react";
 
 import { DevModeContext } from "./hooks";
 import { useDevModeKeyTrigger } from "./useDevModeKeyTrigger";

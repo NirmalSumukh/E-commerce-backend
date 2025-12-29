@@ -140,7 +140,7 @@ def load_user_from_request(request):
         raise jwt.InvalidTokenError(
             "Invalid token. Create new one by using tokenCreate mutation."
         )
-    if not user:
+    elif not user:
         raise jwt.InvalidTokenError(
             "Invalid token. User does not exist or is inactive."
         )

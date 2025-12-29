@@ -1,30 +1,35 @@
 import { GridTable } from "@dashboard/components/GridTable";
 import Money from "@dashboard/components/Money";
 import { UserAvatar } from "@dashboard/components/UserAvatar";
+import { useOverflowDetection } from "@dashboard/hooks/useOverflowDetection/useOverflowDetection";
 import { getUserInitials, getUserName, User } from "@dashboard/misc";
-import { refundGridMessages } from "@dashboard/orders/components/OrderDetailsRefundTable/messages";
 import { orderTransactionRefundEditUrl } from "@dashboard/orders/urls";
-import {
-  OrderRefundDisplay,
-  OrderRefundsViewModel,
-} from "@dashboard/orders-v2/order-refunds/order-refunds-view-model";
 import { Box, Button, EditIcon, Text, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
 import { EventTime } from "../OrderTransaction/components/TransactionEvents/components";
 import { OrderTransactionRefundStatusPill } from "../OrderTransactionRefundPage/components/OrderTransactionRefundStatusPill/OrderTransactionRefundStatusPill";
-import { getGrantedRefundStatusMessage, getNotEditableRefundMessage } from "./utils";
+import { DatagridRefund } from "./refunds";
+import {
+  getGrantedRefundStatusMessage,
+  getNotEditabledRefundMessage,
+  isRefundEditable,
+} from "./utils";
 
 interface OrderDetailsRefundLineProps {
-  refund: OrderRefundDisplay;
+  refund: DatagridRefund;
   orderId: string;
 }
 
-export const OrderDetailsRefundLine = ({ refund, orderId }: OrderDetailsRefundLineProps) => {
-  const isEditable = OrderRefundsViewModel.canEditRefund(refund);
+export const OrderDetailsRefundLine: React.FC<OrderDetailsRefundLineProps> = ({
+  refund,
+  orderId,
+}) => {
+  const isEditable = isRefundEditable(refund);
   const intl = useIntl();
-  const noReasonTypeNorNote = !refund.reasonType && !refund.reasonNote;
+  const { isOverflowing, elementRef } = useOverflowDetection<HTMLTableCellElement>();
 
   return (
     <GridTable.Row key={refund.id}>
@@ -40,23 +45,23 @@ export const OrderDetailsRefundLine = ({ refund, orderId }: OrderDetailsRefundLi
           <Money money={refund.amount} />
         </Box>
       </GridTable.Cell>
-      <GridTable.Cell>
-        <Box>
-          {noReasonTypeNorNote && (
-            <Text size={2}>{intl.formatMessage(refundGridMessages.manualRefund)}</Text>
-          )}
-          {refund.reasonType && (
-            <Text size={2} fontWeight="medium">
-              {refund.reasonType}
-              {refund.reasonNote && ": "}
+      <Tooltip open={isOverflowing() ? undefined : false}>
+        <Tooltip.Trigger>
+          <GridTable.Cell
+            ref={elementRef}
+            __maxWidth="200px"
+            overflow="hidden"
+            textOverflow="ellipsis"
+          >
+            <Text ellipsis size={2}>
+              {refund.reason}
             </Text>
-          )}
-          <Text ellipsis size={2} color="default2">
-            {refund.reasonNote}
-          </Text>
-        </Box>
-      </GridTable.Cell>
-
+          </GridTable.Cell>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <Box __maxWidth="300px">{refund.reason}</Box>
+        </Tooltip.Content>
+      </Tooltip>
       <Tooltip>
         <Tooltip.Trigger>
           <GridTable.Cell>
@@ -85,7 +90,7 @@ export const OrderDetailsRefundLine = ({ refund, orderId }: OrderDetailsRefundLi
               </Tooltip.Trigger>
               <Tooltip.Content>
                 <Tooltip.Arrow />
-                <FormattedMessage {...getNotEditableRefundMessage(refund)} />
+                <FormattedMessage {...getNotEditabledRefundMessage(refund)} />
               </Tooltip.Content>
             </Tooltip>
           )}

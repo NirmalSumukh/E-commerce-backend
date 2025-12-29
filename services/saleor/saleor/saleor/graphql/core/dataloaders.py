@@ -1,12 +1,13 @@
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import TypeVar
+from typing import Generic, Optional, TypeVar, Union
 
+import opentracing
+import opentracing.tags
 from promise import Promise
 from promise.dataloader import DataLoader as BaseLoader
 
 from ...core.db.connection import allow_writer_in_context
-from ...core.telemetry import saleor_attributes, tracer
 from ...thumbnail.models import Thumbnail
 from ...thumbnail.utils import get_thumbnail_format
 from . import SaleorContext
@@ -16,7 +17,7 @@ K = TypeVar("K")
 R = TypeVar("R")
 
 
-class DataLoader[K, R](BaseLoader):
+class DataLoader(BaseLoader, Generic[K, R]):
     context_key: str
     context: SaleorContext
     database_connection_name: str
@@ -42,46 +43,29 @@ class DataLoader[K, R](BaseLoader):
     def batch_load_fn(  # pylint: disable=method-hidden
         self, keys: Iterable[K]
     ) -> Promise[list[R]]:
-        with tracer.start_as_current_span(
-            self.__class__.__name__, end_on_exit=False
-        ) as span:
-            span.set_attribute(
-                saleor_attributes.OPERATION_NAME, "dataloader.batch_load"
-            )
+        with opentracing.global_tracer().start_active_span(
+            "dataloader.batch_load"
+        ) as scope:
+            span = scope.span
+            span.set_tag("resource.name", self.__class__.__name__)
 
             with allow_writer_in_context(self.context):
                 results = self.batch_load(keys)
 
             if not isinstance(results, Promise):
-                span.set_attribute(
-                    saleor_attributes.GRAPHQL_RESOLVER_ROW_COUNT, len(results)
-                )
-                span.end()
                 return Promise.resolve(results)
+            return results
 
-            def did_fulfill(results: list[R]) -> list[R]:
-                span.set_attribute(
-                    saleor_attributes.GRAPHQL_RESOLVER_ROW_COUNT, len(results)
-                )
-                span.end()
-                return results
-
-            def did_reject(error: Exception) -> list[R]:
-                span.end()
-                raise error
-
-            return results.then(did_fulfill, did_reject)
-
-    def batch_load(self, keys: Iterable[K]) -> Promise[list[R]] | list[R]:
+    def batch_load(self, keys: Iterable[K]) -> Union[Promise[list[R]], list[R]]:
         raise NotImplementedError()
 
 
 class BaseThumbnailBySizeAndFormatLoader(
-    DataLoader[tuple[int, int, str | None], Thumbnail]
+    DataLoader[tuple[int, int, Optional[str]], Thumbnail]
 ):
     model_name: str
 
-    def batch_load(self, keys: Iterable[tuple[int, int, str | None]]):
+    def batch_load(self, keys: Iterable[tuple[int, int, Optional[str]]]):
         model_name = self.model_name.lower()
         instance_ids = [id for id, _, _ in keys]
         lookup = {f"{model_name}_id__in": instance_ids}
@@ -89,7 +73,7 @@ class BaseThumbnailBySizeAndFormatLoader(
             **lookup
         )
         thumbnails_by_instance_id_size_and_format_map: defaultdict[
-            tuple[int, int, str | None], Thumbnail
+            tuple[int, int, Optional[str]], Thumbnail
         ] = defaultdict()
         for thumbnail in thumbnails:
             format = get_thumbnail_format(thumbnail.format)

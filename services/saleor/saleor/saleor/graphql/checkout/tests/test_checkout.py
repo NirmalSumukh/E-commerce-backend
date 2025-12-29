@@ -1,8 +1,10 @@
 import datetime
 import json
+from collections import defaultdict
 from decimal import Decimal
 from unittest import mock
 
+import before_after
 import graphene
 import pytest
 from django.core.exceptions import ValidationError
@@ -15,11 +17,6 @@ from measurement.measures import Weight
 from prices import Money
 
 from ....checkout import base_calculations, calculations
-from ....checkout.calculations import (
-    _calculate_and_add_tax,
-    _fetch_checkout_prices_if_expired,
-    fetch_checkout_data,
-)
 from ....checkout.checkout_cleaner import (
     clean_checkout_payment,
     clean_checkout_shipping,
@@ -27,11 +24,7 @@ from ....checkout.checkout_cleaner import (
 from ....checkout.error_codes import CheckoutErrorCode
 from ....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from ....checkout.models import Checkout
-from ....checkout.utils import (
-    PRIVATE_META_APP_SHIPPING_ID,
-    add_variant_to_checkout,
-    add_voucher_to_checkout,
-)
+from ....checkout.utils import add_variant_to_checkout, add_voucher_to_checkout
 from ....core.db.connection import allow_writer
 from ....core.prices import quantize_price
 from ....discount import DiscountValueType, VoucherType
@@ -51,7 +44,6 @@ from ....product.models import (
 )
 from ....shipping.models import ShippingMethod, ShippingMethodTranslation
 from ....shipping.utils import convert_to_shipping_method_data
-from ....tests import race_condition
 from ....tests.utils import dummy_editorjs
 from ....warehouse import WarehouseClickAndCollectOption
 from ....warehouse.models import PreorderReservation, Reservation, Stock, Warehouse
@@ -82,7 +74,7 @@ def test_clean_delivery_method_after_shipping_address_changes_stay_the_same(
     delivery_method = convert_to_shipping_method_data(
         shipping_method, shipping_method.channel_listings.first()
     )
-    is_valid_method = clean_delivery_method(checkout_info, delivery_method)
+    is_valid_method = clean_delivery_method(checkout_info, lines, delivery_method)
     assert is_valid_method is True
 
 
@@ -95,7 +87,7 @@ def test_clean_delivery_method_with_preorder_is_valid_for_enabled_warehouse(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    is_valid_method = clean_delivery_method(checkout_info, warehouses_for_cc[1])
+    is_valid_method = clean_delivery_method(checkout_info, lines, warehouses_for_cc[1])
 
     assert is_valid_method is True
 
@@ -110,7 +102,7 @@ def test_clean_delivery_method_does_nothing_if_no_shipping_method(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    is_valid_method = clean_delivery_method(checkout_info, None)
+    is_valid_method = clean_delivery_method(checkout_info, lines, None)
     assert is_valid_method is True
 
 
@@ -136,7 +128,7 @@ def test_update_checkout_shipping_method_if_invalid(
     update_checkout_shipping_method_if_invalid(checkout_info, lines)
 
     assert checkout.shipping_method is None
-    assert checkout_info.get_delivery_method_info().delivery_method is None
+    assert checkout_info.delivery_method_info.delivery_method is None
 
     # Ensure the checkout's shipping method was saved
     checkout.refresh_from_db(fields=["shipping_method"])
@@ -170,7 +162,7 @@ def test_update_checkout_shipping_method_if_invalid_no_checkout_metadata(
 
     # then
     assert checkout.shipping_method is None
-    assert checkout_info.get_delivery_method_info().delivery_method is None
+    assert checkout_info.delivery_method_info.delivery_method is None
 
     # Ensure the checkout's shipping method was saved
     checkout.refresh_from_db(fields=["shipping_method"])
@@ -241,6 +233,7 @@ def test_checkout_available_payment_gateways_valid_info_sent(
     # then
     checkout_info.manager = mock.ANY
     checkout_info.database_connection_name = mock.ANY
+    checkout_info.pregenerated_payloads_for_excluded_shipping_method = defaultdict(dict)
     mocked_list_gateways.assert_called_with(
         currency=currency,
         checkout_info=checkout_info,
@@ -253,7 +246,7 @@ def test_checkout_available_payment_gateways_currency_specified_USD(
     api_client,
     checkout_with_item,
     expected_dummy_gateway,
-    sample_gateway,
+    _sample_gateway,
 ):
     checkout_with_item.currency = "USD"
     checkout_with_item.save(update_fields=["currency"])
@@ -272,7 +265,7 @@ def test_checkout_available_payment_gateways_currency_specified_USD(
 
 
 def test_checkout_available_payment_gateways_currency_specified_EUR(
-    api_client, checkout_with_item, expected_dummy_gateway, sample_gateway
+    api_client, checkout_with_item, expected_dummy_gateway, _sample_gateway
 ):
     checkout_with_item.currency = "EUR"
     checkout_with_item.save(update_fields=["currency"])
@@ -538,74 +531,13 @@ def test_checkout_available_shipping_methods(
 GET_CHECKOUT_SHIPPING_METHODS_QUERY = """
 query getCheckout($id: ID) {
     checkout(id: $id) {
-		shippingMethods{
+		shippingMethods {
             id
             name
         }
     }
 }
 """
-
-
-@mock.patch(
-    "saleor.plugins.webhook.plugin.WebhookPlugin.excluded_shipping_methods_for_checkout"
-)
-@override_settings(PLUGINS=["saleor.plugins.webhook.plugin.WebhookPlugin"])
-def test_query_checkout_empty_address_with_shipping_method_without_exclude_webhook(
-    mock_excluded_shipping_methods_for_checkout,
-    api_client,
-    checkout_with_item,
-    shipping_method,
-):
-    # given checkout without address
-    # and checkout in channel with available shipping methods
-
-    checkout_with_item.metadata_storage.private_metadata = {
-        PRIVATE_META_APP_SHIPPING_ID: "TEST_METHOD"
-    }
-    checkout_with_item.shipping_address = None
-    checkout_with_item.billing_address = None
-
-    checkout_with_item.save(update_fields=["shipping_address", "billing_address"])
-
-    # when query is invoked
-    variables = {"id": to_global_id_or_none(checkout_with_item)}
-    api_client.post_graphql(GET_CHECKOUT_SHIPPING_METHODS_QUERY, variables)
-
-    # then webhook plugin is not executing excluded_shipping_methods_for_checkout
-
-    mock_excluded_shipping_methods_for_checkout.assert_not_called()
-
-
-@mock.patch(
-    "saleor.plugins.webhook.plugin.WebhookPlugin.excluded_shipping_methods_for_checkout"
-)
-@override_settings(PLUGINS=["saleor.plugins.webhook.plugin.WebhookPlugin"])
-def test_query_checkout_with_address_with_shipping_method_without_exclude_webhook(
-    mock_excluded_shipping_methods_for_checkout,
-    api_client,
-    checkout_with_item,
-    shipping_method,
-    address,
-):
-    # GIVEN checkout with address
-    # AND checkout in channel with available shipping methods
-
-    checkout_with_item.metadata_storage.private_metadata = {
-        PRIVATE_META_APP_SHIPPING_ID: "TEST_METHOD"
-    }
-    checkout_with_item.shipping_address = address
-    checkout_with_item.billing_address = address
-
-    checkout_with_item.save(update_fields=["shipping_address", "billing_address"])
-
-    # when query is invoked
-    variables = {"id": to_global_id_or_none(checkout_with_item)}
-    api_client.post_graphql(GET_CHECKOUT_SHIPPING_METHODS_QUERY, variables)
-
-    # then webhook plugin is not executing excluded_shipping_methods_for_checkout
-
-    mock_excluded_shipping_methods_for_checkout.assert_called_once()
 
 
 @mock.patch("saleor.webhook.transport.synchronous.transport.send_webhook_request_sync")
@@ -1923,16 +1855,6 @@ query getCheckout($id: ID) {
               amount
             }
           }
-          priceUndiscounted {
-            gross {
-              amount
-            }
-          }
-          pricePrior {
-            gross {
-              amount
-            }
-        }
         }
         product {
           id
@@ -1941,11 +1863,6 @@ query getCheckout($id: ID) {
           pricing{
             onSale
             discount{
-              gross{
-                amount
-              }
-            }
-            discountPrior {
               gross{
                 amount
               }
@@ -1974,18 +1891,6 @@ query getCheckout($id: ID) {
                 }
               }
             }
-            priceRangePrior{
-              start{
-                gross{
-                  amount
-                }
-              }
-              stop{
-                gross{
-                  amount
-                }
-              }
-            }
           }
         }
       }
@@ -1998,10 +1903,6 @@ query getCheckout($id: ID) {
         amount
         currency
       }
-      priorUnitPrice {
-        amount
-        currency
-      }
       totalPrice {
         currency
         gross {
@@ -2009,10 +1910,6 @@ query getCheckout($id: ID) {
         }
       }
       undiscountedTotalPrice {
-        amount
-        currency
-      }
-      priorTotalPrice {
         amount
         currency
       }
@@ -2116,7 +2013,7 @@ def test_checkout_prices(user_api_client, checkout_with_item):
     lines, _ = fetch_checkout_lines(checkout_with_item)
     checkout_info = fetch_checkout_info(checkout_with_item, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -2309,7 +2206,7 @@ def test_checkout_prices_with_promotion(
     assert data["token"] == str(checkout.token)
     assert len(data["lines"]) == checkout.lines.count()
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -2351,14 +2248,6 @@ def test_checkout_prices_with_promotion(
         data["lines"][0]["undiscountedTotalPrice"]["amount"] == undiscounted_total_price
     )
     assert line_total_price.gross.amount < undiscounted_total_price
-
-    assert data["lines"][0]["priorUnitPrice"] is not None
-    prior_unit_price_amount = (
-        line_info.variant.get_prior_price_amount(line_info.channel_listing) or 0
-    )
-    prior_total_price = prior_unit_price_amount * line_info.line.quantity
-    assert data["lines"][0]["priorUnitPrice"]["amount"] == prior_unit_price_amount
-    assert data["lines"][0]["priorTotalPrice"]["amount"] == prior_total_price
 
 
 @pytest.mark.parametrize(
@@ -2770,7 +2659,7 @@ def test_checkout_prices_with_promotion_line_deleted_in_meantime(
         checkout.lines.first().delete()
 
     # when
-    with race_condition.RunBefore(
+    with before_after.after(
         "saleor.graphql.checkout.dataloaders.promotion_rule_infos.CheckoutLineByIdLoader.load_many",
         delete_checkout_line,
     ):
@@ -2788,7 +2677,7 @@ def test_checkout_prices_with_promotion_line_deleted_in_meantime(
     # as the values cannot be fetched for deleted line
     lines[0].rules_info = []
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -2849,7 +2738,7 @@ def test_checkout_prices_with_promotion_one_line_deleted_in_meantime(
 
     line_count = checkout.lines.count()
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -2866,7 +2755,7 @@ def test_checkout_prices_with_promotion_one_line_deleted_in_meantime(
         checkout_with_item_on_promotion.lines.last().delete()
 
     # when
-    with race_condition.RunBefore(
+    with before_after.after(
         "saleor.graphql.checkout.dataloaders.promotion_rule_infos.CheckoutLineByIdLoader.load_many",
         delete_checkout_line,
     ):
@@ -2912,28 +2801,13 @@ def test_checkout_prices_with_promotion_one_line_deleted_in_meantime(
     assert line_total_price.gross.amount < undiscounted_total_price
 
 
-def test_checkout_display_gross_prices_use_default(user_api_client, checkout_with_item):
-    # given
-    variables = {"id": to_global_id_or_none(checkout_with_item)}
-    tax_config = checkout_with_item.channel.tax_configuration
-    tax_config.country_exceptions.all().delete()
-
-    # when
-    response = user_api_client.post_graphql(QUERY_CHECKOUT_PRICES, variables)
-    content = get_graphql_content(response)
-    data = content["data"]["checkout"]
-
-    # then
-    assert data["displayGrossPrices"] == tax_config.display_gross_prices
-
-
 @mock.patch(
     "saleor.checkout.calculations._calculate_and_add_tax",
-    wraps=_calculate_and_add_tax,
+    wraps=calculations._calculate_and_add_tax,
 )
 @mock.patch(
     "saleor.checkout.calculations.fetch_checkout_data",
-    wraps=fetch_checkout_data,
+    wraps=calculations.fetch_checkout_data,
 )
 def test_checkout_prices_with_checkout_updated_during_price_recalculation(
     mock_fetch_checkout_data,
@@ -2958,7 +2832,7 @@ def test_checkout_prices_with_checkout_updated_during_price_recalculation(
             checkout_to_modify.email = expected_email
             checkout_to_modify.save(update_fields=["email", "last_change"])
 
-    with race_condition.RunAfter(
+    with before_after.before(
         "saleor.checkout.calculations._calculate_and_add_tax", modify_checkout
     ):
         response = user_api_client.post_graphql(QUERY_CHECKOUT_PRICES, variables)
@@ -2991,6 +2865,21 @@ def test_checkout_prices_with_checkout_updated_during_price_recalculation(
         assert line_before_recalculation.quantity == result_line["quantity"]
         # Confirm that line quantities have been updated in database
         assert line_before_recalculation.quantity + 1 == line.quantity
+
+
+def test_checkout_display_gross_prices_use_default(user_api_client, checkout_with_item):
+    # given
+    variables = {"id": to_global_id_or_none(checkout_with_item)}
+    tax_config = checkout_with_item.channel.tax_configuration
+    tax_config.country_exceptions.all().delete()
+
+    # when
+    response = user_api_client.post_graphql(QUERY_CHECKOUT_PRICES, variables)
+    content = get_graphql_content(response)
+    data = content["data"]["checkout"]
+
+    # then
+    assert data["displayGrossPrices"] == tax_config.display_gross_prices
 
 
 def test_checkout_display_gross_prices_use_country_exception(
@@ -3035,7 +2924,7 @@ def test_checkout_prices_with_specific_voucher(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3120,7 +3009,7 @@ def test_checkout_prices_with_specific_voucher_when_line_without_listing(
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3194,7 +3083,7 @@ def test_checkout_prices_with_voucher_once_per_order(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3283,7 +3172,7 @@ def test_checkout_prices_with_voucher_once_per_order_when_line_without_listing(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3359,7 +3248,7 @@ def test_checkout_prices_with_voucher(user_api_client, checkout_with_item_and_vo
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3448,7 +3337,7 @@ def test_checkout_prices_with_voucher_when_line_without_listing(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3527,7 +3416,7 @@ def test_checkout_prices_with_voucher_code_that_doesnt_exist(
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3618,7 +3507,7 @@ def test_checkout_prices_voucher_code_that_doesnt_exist_when_line_without_listin
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3713,7 +3602,7 @@ def test_checkout_prices_variant_listing_price_changed(
     assert data["token"] == str(checkout_with_item.token)
     assert len(data["lines"]) == checkout_with_item.lines.count()
 
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3772,7 +3661,8 @@ def test_checkout_prices_expired_variant_listing_price_changed(
         force_update=True,
     )
     checkout_with_item.price_expiration = timezone.now() - datetime.timedelta(days=1)
-    checkout_with_item.save(update_fields=["price_expiration"])
+    checkout_with_item.discount_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout_with_item.save(update_fields=["price_expiration", "discount_expiration"])
 
     line = lines[0]
     listing = line.variant.channel_listings.get(
@@ -3795,7 +3685,7 @@ def test_checkout_prices_expired_variant_listing_price_changed(
     assert len(data["lines"]) == checkout_with_item.lines.count()
 
     checkout_info.checkout.refresh_from_db()
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -3846,33 +3736,6 @@ CHECKOUTS_QUERY = """
             edges {
                 node {
                     token
-                    totalPrice {
-                        currency
-                        gross {
-                            amount
-                        }
-                    }
-                }
-            }
-        }
-    }
-"""
-
-
-CHECKOUTS_WITH_LINES_TOTAL_PRICE_QUERY = """
-    {
-        checkouts(first: 20) {
-            edges {
-                node {
-                    token
-                    lines{
-                        totalPrice {
-                            currency
-                            gross {
-                                amount
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -3937,105 +3800,6 @@ def test_query_checkouts(
     assert str(checkout.token) == received_checkout["token"]
 
 
-@pytest.mark.parametrize(
-    "query", [CHECKOUTS_QUERY, CHECKOUTS_WITH_LINES_TOTAL_PRICE_QUERY]
-)
-@mock.patch(
-    "saleor.checkout.calculations._fetch_checkout_prices_if_expired",
-    wraps=_fetch_checkout_prices_if_expired,
-)
-@mock.patch("saleor.checkout.calculations._calculate_and_add_tax")
-def test_query_checkouts_do_not_trigger_sync_tax_webhooks(
-    mocked_calculate_and_add_tax,
-    mocked_fetch_checkout_prices_if_expired,
-    query,
-    checkout_with_item,
-    staff_api_client,
-    permission_manage_checkouts,
-    tax_configuration_tax_app,
-):
-    # given
-    checkout = checkout_with_item
-    checkout.price_expiration = timezone.now()
-    checkout.save()
-
-    # when
-    response = staff_api_client.post_graphql(
-        query, {}, permissions=[permission_manage_checkouts]
-    )
-
-    # then
-    content = get_graphql_content(response)
-    assert len(content["data"]["checkouts"]["edges"])
-
-    lines, _ = fetch_checkout_lines(checkout_with_item)
-
-    mocked_calculate_and_add_tax.assert_not_called()
-    mocked_fetch_checkout_prices_if_expired.assert_called_once_with(
-        checkout_info=mock.ANY,
-        allow_sync_webhooks=False,
-        address=None,
-        database_connection_name=mock.ANY,
-        force_update=False,
-        lines=lines,
-        manager=mock.ANY,
-        pregenerated_subscription_payloads=mock.ANY,
-    )
-
-
-@pytest.mark.parametrize(
-    "query", [CHECKOUTS_QUERY, CHECKOUTS_WITH_LINES_TOTAL_PRICE_QUERY]
-)
-@mock.patch(
-    "saleor.checkout.calculations._fetch_checkout_prices_if_expired",
-    wraps=_fetch_checkout_prices_if_expired,
-)
-@mock.patch("saleor.checkout.calculations.update_checkout_prices_with_flat_rates")
-def test_query_checkouts_calculate_flat_taxes(
-    mocked_update_order_prices_with_flat_rates,
-    mocked_fetch_checkout_prices_if_expired,
-    query,
-    checkout_with_item,
-    staff_api_client,
-    permission_manage_checkouts,
-    tax_configuration_flat_rates,
-):
-    # given
-    checkout = checkout_with_item
-    checkout.price_expiration = timezone.now()
-    checkout.save()
-
-    # when
-    response = staff_api_client.post_graphql(
-        query, {}, permissions=[permission_manage_checkouts]
-    )
-
-    # then
-    content = get_graphql_content(response)
-    assert len(content["data"]["checkouts"]["edges"])
-
-    lines, _ = fetch_checkout_lines(checkout_with_item)
-
-    mocked_update_order_prices_with_flat_rates.assert_called_once_with(
-        checkout_with_item,
-        mock.ANY,
-        lines,
-        tax_configuration_flat_rates.prices_entered_with_tax,
-        None,
-        database_connection_name=mock.ANY,
-    )
-    mocked_fetch_checkout_prices_if_expired.assert_called_once_with(
-        checkout_info=mock.ANY,
-        allow_sync_webhooks=False,
-        address=None,
-        database_connection_name=mock.ANY,
-        force_update=False,
-        lines=lines,
-        manager=mock.ANY,
-        pregenerated_subscription_payloads=mock.ANY,
-    )
-
-
 def test_query_with_channel(
     checkouts_list, staff_api_client, permission_manage_checkouts, channel_USD
 ):
@@ -4071,116 +3835,6 @@ def test_query_without_channel(
     assert len(content["data"]["checkouts"]["edges"]) == 5
 
 
-CHECKOUT_LINES_WITH_TOTAL_PRICE = """
-{
-    checkoutLines(first: 20) {
-        edges {
-            node {
-                id
-                totalPrice {
-                    currency
-                    gross {
-                        amount
-                    }
-                }
-            }
-        }
-    }
-}
-"""
-
-
-@mock.patch(
-    "saleor.checkout.calculations._fetch_checkout_prices_if_expired",
-    wraps=_fetch_checkout_prices_if_expired,
-)
-@mock.patch("saleor.checkout.calculations._calculate_and_add_tax")
-def test_query_checkout_lines_do_not_trigger_sync_tax_webhooks(
-    mocked_calculate_and_add_tax,
-    mocked_fetch_checkout_prices_if_expired,
-    checkout_with_item,
-    staff_api_client,
-    permission_manage_checkouts,
-    tax_configuration_tax_app,
-):
-    # given
-    checkout = checkout_with_item
-    checkout.price_expiration = timezone.now()
-    checkout.save()
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHECKOUT_LINES_WITH_TOTAL_PRICE, {}, permissions=[permission_manage_checkouts]
-    )
-
-    # then
-    content = get_graphql_content(response)
-    assert len(content["data"]["checkoutLines"]["edges"])
-
-    lines, _ = fetch_checkout_lines(checkout_with_item)
-
-    mocked_calculate_and_add_tax.assert_not_called()
-    mocked_fetch_checkout_prices_if_expired.assert_called_once_with(
-        checkout_info=mock.ANY,
-        allow_sync_webhooks=False,
-        address=None,
-        database_connection_name=mock.ANY,
-        force_update=False,
-        lines=lines,
-        manager=mock.ANY,
-        pregenerated_subscription_payloads=mock.ANY,
-    )
-
-
-@mock.patch(
-    "saleor.checkout.calculations._fetch_checkout_prices_if_expired",
-    wraps=_fetch_checkout_prices_if_expired,
-)
-@mock.patch("saleor.checkout.calculations.update_checkout_prices_with_flat_rates")
-def test_query_checkout_lines_calculate_flat_taxes(
-    mocked_update_order_prices_with_flat_rates,
-    mocked_fetch_checkout_prices_if_expired,
-    checkout_with_item,
-    staff_api_client,
-    permission_manage_checkouts,
-    tax_configuration_flat_rates,
-):
-    # given
-    checkout = checkout_with_item
-    checkout.price_expiration = timezone.now()
-    checkout.save()
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHECKOUT_LINES_WITH_TOTAL_PRICE, {}, permissions=[permission_manage_checkouts]
-    )
-
-    # then
-    content = get_graphql_content(response)
-    assert len(content["data"]["checkoutLines"]["edges"])
-
-    lines, _ = fetch_checkout_lines(checkout_with_item)
-
-    mocked_update_order_prices_with_flat_rates.assert_called_once_with(
-        checkout_with_item,
-        mock.ANY,
-        lines,
-        tax_configuration_flat_rates.prices_entered_with_tax,
-        None,
-        database_connection_name=mock.ANY,
-    )
-    mocked_fetch_checkout_prices_if_expired.assert_called_once_with(
-        checkout_info=mock.ANY,
-        allow_sync_webhooks=False,
-        address=None,
-        database_connection_name=mock.ANY,
-        force_update=False,
-        lines=lines,
-        manager=mock.ANY,
-        pregenerated_subscription_payloads=mock.ANY,
-    )
-
-
 def test_query_checkout_lines(
     checkout_with_item, staff_api_client, permission_manage_checkouts
 ):
@@ -4208,7 +3862,7 @@ def test_query_checkout_lines(
     ]
     assert expected_lines_ids == checkout_lines_ids
     is_gift_flags = [line["node"]["isGift"] for line in lines]
-    assert all(item is False for item in is_gift_flags)
+    assert all([item is False for item in is_gift_flags])
 
 
 def test_query_checkout_lines_with_meta(
@@ -4234,7 +3888,7 @@ def test_query_checkout_lines_with_meta(
     }
     """
     checkout = checkout_with_item
-    items = list(checkout)
+    items = [item for item in checkout]
 
     metadata_key = "md key"
     metadata_value = "md value"
@@ -4273,7 +3927,7 @@ def test_clean_checkout(checkout_with_item, payment_dummy, address, shipping_met
     lines, _ = fetch_checkout_lines(checkout_with_item)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
     manager = get_plugins_manager(allow_replica=False)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager, checkout_info=checkout_info, lines=lines, address=address
     )
 
@@ -4441,7 +4095,7 @@ def test_checkout_transactions_missing_permission(api_client, checkout):
         name="Credit card",
         psp_reference="123",
         currency="USD",
-        authorized_value=Decimal(15),
+        authorized_value=Decimal("15"),
         available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
     )
     query = QUERY_CHECKOUT_TRANSACTIONS
@@ -4462,7 +4116,7 @@ def test_checkout_transactions_with_manage_checkouts(
         name="Credit card",
         psp_reference="123",
         currency="USD",
-        authorized_value=Decimal(15),
+        authorized_value=Decimal("15"),
         available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
     )
     query = QUERY_CHECKOUT_TRANSACTIONS
@@ -4490,7 +4144,7 @@ def test_checkout_transactions_with_handle_payments(
         name="Credit card",
         psp_reference="123",
         currency="USD",
-        authorized_value=Decimal(15),
+        authorized_value=Decimal("15"),
         available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
     )
     query = QUERY_CHECKOUT_TRANSACTIONS
@@ -4534,9 +4188,9 @@ def test_checkout_payment_statuses(
         name="Credit card",
         psp_reference="123",
         currency="USD",
-        authorized_value=Decimal(15),
-        charged_value=Decimal(5),
-        charge_pending_value=Decimal(6),
+        authorized_value=Decimal("15"),
+        charged_value=Decimal("5"),
+        charge_pending_value=Decimal("6"),
         available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
     )
     query = QUERY_CHECKOUT_STATUSES_AND_BALANCE
@@ -4570,9 +4224,9 @@ def test_checkout_balance(
         name="Credit card",
         psp_reference="123",
         currency="USD",
-        authorized_value=Decimal(15),
-        charged_value=Decimal(5),
-        charge_pending_value=Decimal(6),
+        authorized_value=Decimal("15"),
+        charged_value=Decimal("5"),
+        charge_pending_value=Decimal("6"),
         available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
     )
     query = QUERY_CHECKOUT_STATUSES_AND_BALANCE
@@ -4938,77 +4592,3 @@ def test_query_checkout_voucher_by_customer_no_permission(
 
     # then
     assert_no_permission(response)
-
-
-CHECKOUT_EMAIL_QUERY = """
-query getCheckout($id: ID) {
-    checkout(id: $id) {
-        email
-    }
-}
-"""
-
-
-def test_query_checkout_email_for_anonymous_user_without_email(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-    checkout.user = None
-    checkout.email = None
-    checkout.save(update_fields=["email", "user"])
-
-    variables = {"id": to_global_id_or_none(checkout)}
-
-    # when
-    response = user_api_client.post_graphql(CHECKOUT_EMAIL_QUERY, variables)
-
-    # then
-    content = get_graphql_content(response)
-    assert content["data"]["checkout"]["email"] is None
-
-
-def test_query_checkout_email_for_anonymous_user(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    expected_email = "expected@example.com"
-
-    checkout = checkout_with_item
-    assert checkout.user is None
-    checkout.email = expected_email
-    checkout.save(update_fields=["email"])
-
-    variables = {"id": to_global_id_or_none(checkout)}
-
-    # when
-    response = user_api_client.post_graphql(CHECKOUT_EMAIL_QUERY, variables)
-
-    # then
-    content = get_graphql_content(response)
-    assert content["data"]["checkout"]["email"] == expected_email
-
-
-def test_query_checkout_email_with_explicit_email_for_authenticated_user(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    expected_email = "expected@example.com"
-
-    checkout = checkout_with_item
-    checkout.user = user_api_client.user
-    checkout.email = expected_email
-    checkout.save(update_fields=["user", "email"])
-
-    variables = {"id": to_global_id_or_none(checkout)}
-
-    # when
-    response = user_api_client.post_graphql(CHECKOUT_EMAIL_QUERY, variables)
-
-    # then
-    content = get_graphql_content(response)
-    # Return the email explicitly assigned to the user
-    assert content["data"]["checkout"]["email"] == expected_email

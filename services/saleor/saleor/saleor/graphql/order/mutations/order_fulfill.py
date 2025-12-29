@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Optional
 from uuid import UUID
 
 import graphene
@@ -13,7 +14,7 @@ from ....permission.enums import OrderPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import ADDED_IN_36
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.types import BaseInputObjectType, NonNullList, OrderError
@@ -68,7 +69,7 @@ class OrderFulfillInput(BaseInputObjectType):
         default_value=False,
     )
     tracking_number = graphene.String(
-        description="Fulfillment tracking number.",
+        description="Fulfillment tracking number." + ADDED_IN_36,
         required=False,
     )
 
@@ -232,7 +233,7 @@ class OrderFulfill(BaseMutation):
         lines_for_warehouses: defaultdict[UUID, list[OrderFulfillmentLineInfo]] = (
             defaultdict(list)
         )
-        for line, order_line in zip(lines, order_lines, strict=False):
+        for line, order_line in zip(lines, order_lines):
             for stock in line["stocks"]:
                 if stock["quantity"] > 0:
                     warehouse_pk = UUID(
@@ -250,7 +251,7 @@ class OrderFulfill(BaseMutation):
 
     @classmethod
     def perform_mutation(  # type: ignore[override]
-        cls, _root, info: ResolveInfo, /, *, input, order: str | None = None
+        cls, _root, info: ResolveInfo, /, *, input, order: Optional[str] = None
     ):
         instance = cls.get_node_or_error(
             info,
@@ -278,7 +279,7 @@ class OrderFulfill(BaseMutation):
             "allow_stock_to_be_exceeded", False
         )
         approved = site.settings.fulfillment_auto_approve
-        tracking_number = cleaned_input.get("tracking_number") or ""
+        tracking_number = cleaned_input.get("tracking_number", "")
         try:
             fulfillments = create_fulfillments(
                 user,
@@ -292,14 +293,8 @@ class OrderFulfill(BaseMutation):
                 auto_approved=approved,
                 tracking_number=tracking_number,
             )
-        except InsufficientStock as e:
-            errors = prepare_insufficient_stock_order_validation_errors(e)
-            raise ValidationError({"stocks": errors}) from e
+        except InsufficientStock as exc:
+            errors = prepare_insufficient_stock_order_validation_errors(exc)
+            raise ValidationError({"stocks": errors})
 
-        return OrderFulfill(
-            fulfillments=[
-                SyncWebhookControlContext(node=fulfillment)
-                for fulfillment in fulfillments
-            ],
-            order=SyncWebhookControlContext(instance),
-        )
+        return OrderFulfill(fulfillments=fulfillments, order=instance)

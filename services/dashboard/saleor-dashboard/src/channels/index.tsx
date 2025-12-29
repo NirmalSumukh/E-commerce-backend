@@ -2,6 +2,7 @@ import { Route } from "@dashboard/components/Router";
 import { sectionNames } from "@dashboard/intl";
 import { asSortParams } from "@dashboard/utils/sort";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -17,19 +18,19 @@ import ChannelCreateComponent from "./views/ChannelCreate";
 import ChannelDetailsComponent from "./views/ChannelDetails";
 import ChannelsListComponent from "./views/ChannelsList";
 
-const ChannelDetails = ({ match }: RouteComponentProps<any>) => {
+const ChannelDetails: React.FC<RouteComponentProps<any>> = ({ match }) => {
   const params = parseQs(location.search.substr(1));
 
   return <ChannelDetailsComponent id={decodeURIComponent(match.params.id)} params={params} />;
 };
-const ChannelsList = ({ location }: RouteComponentProps) => {
+const ChannelsList: React.FC<RouteComponentProps> = ({ location }) => {
   const qs = parseQs(location.search.substr(1)) as any;
   const params: ChannelsListUrlQueryParams = asSortParams(qs, ChannelsListUrlSortField);
 
   return <ChannelsListComponent params={params} />;
 };
 
-const ChannelsSection = () => {
+export const ChannelsSection: React.FC<{}> = () => {
   const intl = useIntl();
 
   return (
@@ -43,5 +44,4 @@ const ChannelsSection = () => {
     </>
   );
 };
-
 export default ChannelsSection;

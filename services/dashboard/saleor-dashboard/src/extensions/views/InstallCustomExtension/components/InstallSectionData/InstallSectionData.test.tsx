@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import React from "react";
 import { Control, useWatch } from "react-hook-form";
 
 import { ExtensionInstallFormData, InstallDetailsManifestData } from "../../types";
-import { InstallExtensionManifestData } from "./InstallExtensionManifestData/InstallExtensionManifestData";
+import { InstallExtensionManifestData } from "../InstallExtensionManifestData";
 import { InstallSectionData } from "./InstallSectionData";
 
-jest.mock("./InstallExtensionManifestData/InstallExtensionManifestData", () => ({
+jest.mock("../InstallExtensionManifestData", () => ({
   InstallExtensionManifestData: jest.fn(() => <div>Mock Manifest Data</div>),
 }));
 

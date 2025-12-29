@@ -63,7 +63,9 @@ def test_orders_total(
     # then
     amount = str(content["data"]["ordersTotal"]["gross"]["amount"])
     assert Money(amount, "USD") == order.total.gross
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 ORDER_LINE_DELETE_MUTATION = """
@@ -600,7 +602,7 @@ def test_update_order_line_discount_old_id(
 
     line_price_before_discount = line_to_discount.unit_price
 
-    value = Decimal(5)
+    value = Decimal("5")
     reason = "New reason for unit discount"
     variables = {
         "orderLineId": graphene.Node.to_global_id("OrderLine", line_to_discount.old_id),
@@ -664,9 +666,7 @@ def test_update_order_line_discount_old_id(
 
     assert discount_data["value"] == str(value)
     assert discount_data["value_type"] == DiscountValueTypeEnum.FIXED.value
-    assert discount_data["amount_value"] == str(
-        quantize_price(unit_discount.amount, order.currency)
-    )
+    assert discount_data["amount_value"] == str(unit_discount.amount)
 
 
 ORDER_LINE_DISCOUNT_REMOVE = """
@@ -674,11 +674,6 @@ mutation OrderLineDiscountRemove($orderLineId: ID!){
   orderLineDiscountRemove(orderLineId: $orderLineId){
     orderLine{
       id
-      unitPrice{
-        net{
-          amount
-        }
-      }
     }
     errors{
       field

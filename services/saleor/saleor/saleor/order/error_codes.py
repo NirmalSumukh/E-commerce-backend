@@ -38,7 +38,6 @@ class OrderErrorCode(Enum):
     INVALID_VOUCHER_CODE = "invalid_voucher_code"
     NON_EDITABLE_GIFT_LINE = "non_editable_gift_line"
     NON_REMOVABLE_GIFT_LINE = "non_removable_gift_line"
-    MISSING_ADDRESS_DATA = "missing_address_data"
 
 
 class OrderGrantRefundCreateErrorCode(Enum):

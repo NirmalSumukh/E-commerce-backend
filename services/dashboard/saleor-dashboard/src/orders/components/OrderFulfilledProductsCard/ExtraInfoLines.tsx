@@ -2,6 +2,7 @@ import { FulfillmentStatus, OrderDetailsFragment } from "@dashboard/graphql";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import { Box, Paragraph, Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { extraInfoMessages } from "./messages";
@@ -11,7 +12,7 @@ interface ExtraInfoLinesProps {
   fulfillment?: OrderDetailsFragment["fulfillments"][0];
 }
 
-const ExtraInfoLines = ({ fulfillment }: ExtraInfoLinesProps) => {
+const ExtraInfoLines: React.FC<ExtraInfoLinesProps> = ({ fulfillment }) => {
   const intl = useIntl();
   const classes = useStyles({});
 

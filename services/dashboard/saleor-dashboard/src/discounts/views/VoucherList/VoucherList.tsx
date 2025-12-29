@@ -2,10 +2,11 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import useAppChannel from "@dashboard/components/AppLayout/AppChannelContext";
 import { useConditionalFilterContext } from "@dashboard/components/ConditionalFilter";
-import { createVoucherQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
+import { creatVoucherQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
+import { useFlag } from "@dashboard/featureFlags";
 import { useVoucherBulkDeleteMutation, useVoucherListQuery } from "@dashboard/graphql";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
 import useListSettings from "@dashboard/hooks/useListSettings";
@@ -25,24 +26,25 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems, mapNodeToChoice } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import isEqual from "lodash/isEqual";
-import { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import VoucherListPage from "../../components/VoucherListPage";
 import { voucherListUrl, VoucherListUrlDialog, VoucherListUrlQueryParams } from "../../urls";
-import { getFilterOpts, getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterOpts, getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { canBeSorted, DEFAULT_SORT_KEY, getSortQueryVariables } from "./sort";
 
 interface VoucherListProps {
   params: VoucherListUrlQueryParams;
 }
 
-const VoucherList = ({ params }: VoucherListProps) => {
+export const VoucherList: React.FC<VoucherListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const { updateListSettings, settings } = useListSettings(ListViews.VOUCHER_LIST);
+  const { enabled: isNewGiftCardsFilterEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
-  const { filters, channel } = createVoucherQueryVariables(valueProvider.value);
+  const { filters, channel } = creatVoucherQueryVariables(valueProvider.value);
 
   usePaginationReset(voucherListUrl, params, settings.rowNumber);
 
@@ -57,7 +59,16 @@ const VoucherList = ({ params }: VoucherListProps) => {
     VoucherListUrlQueryParams
   >(navigate, voucherListUrl, params);
   const paginationState = createPaginationState(settings.rowNumber, params);
-  const newFiltersQueryVariables = useMemo(
+  const queryVariables = React.useMemo(
+    () => ({
+      ...paginationState,
+      filter: getFilterVariables(params),
+      sort: getSortQueryVariables(params),
+      channel: params.channel,
+    }),
+    [params, settings.rowNumber],
+  );
+  const newFiltersQueryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: {
@@ -67,12 +78,12 @@ const VoucherList = ({ params }: VoucherListProps) => {
       sort: getSortQueryVariables(params),
       channel,
     }),
-    [params, settings.rowNumber, valueProvider.value, channel],
+    [params, settings.rowNumber, valueProvider.value],
   );
 
   const { data, refetch } = useVoucherListQuery({
     displayLoader: true,
-    variables: newFiltersQueryVariables,
+    variables: isNewGiftCardsFilterEnabled ? newFiltersQueryVariables : queryVariables,
   });
   const {
     clearRowSelection,
@@ -231,5 +242,4 @@ const VoucherList = ({ params }: VoucherListProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default VoucherList;

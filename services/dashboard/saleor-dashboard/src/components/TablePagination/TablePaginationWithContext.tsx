@@ -1,9 +1,10 @@
 // @ts-strict-ignore
 import { usePaginatorContext } from "@dashboard/hooks/usePaginator";
+import React from "react";
 
-import { PaginationProps, TablePagination } from "./TablePagination";
+import TablePagination, { PaginationProps } from "./TablePagination";
 
-type TablePaginationWithContextProps = Omit<
+export type TablePaginationWithContextProps = Omit<
   PaginationProps,
   "nextHref" | "prevHref" | "hasNextPage" | "hasPreviousPage" | "onNextPage" | "onPreviousPage"
 >;

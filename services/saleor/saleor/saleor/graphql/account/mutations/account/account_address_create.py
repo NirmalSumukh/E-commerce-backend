@@ -12,7 +12,7 @@ from .....webhook.event_types import WebhookEventAsyncType
 from ....core import ResolveInfo
 from ....core.descriptions import ADDED_IN_319
 from ....core.doc_category import DOC_CATEGORY_USERS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.types import AccountError
 from ....core.utils import WebhookEventInfo
 from ....plugins.dataloaders import get_plugin_manager_promise
@@ -23,7 +23,7 @@ from ...types import Address, AddressInput, User
 
 
 class AccountAddressCreate(
-    AddressMetadataMixin, DeprecatedModelMutation, I18nMixin, AppImpersonateMixin
+    AddressMetadataMixin, ModelMutation, I18nMixin, AppImpersonateMixin
 ):
     user = graphene.Field(
         User, description="A user instance for which the address was created."
@@ -100,7 +100,7 @@ class AccountAddressCreate(
         return AccountAddressCreate(user=user, address=address)
 
     @classmethod
-    def save(cls, info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
+    def save(cls, info: ResolveInfo, instance, cleaned_input):
         user = cleaned_input.pop("user")
         super().save(info, instance, cleaned_input)
         remove_the_oldest_user_address_if_address_limit_is_reached(user)

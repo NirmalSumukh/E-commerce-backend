@@ -1,5 +1,7 @@
+import { BasicApiService } from "@api/basics";
 import { USERS } from "@data/e2eTestData";
 import { ConfigurationPage } from "@pages/configurationPage";
+import { PermissionGroupsPage } from "@pages/permissionGroupsPage";
 import { StaffMembersPage } from "@pages/staffMembersPage";
 import { expect } from "@playwright/test";
 import { test } from "utils/testWithPermission";
@@ -8,6 +10,8 @@ test.use({ permissionName: "admin" });
 
 let staffMembersPage: StaffMembersPage;
 let config: ConfigurationPage;
+let permissionGroupsPage: PermissionGroupsPage;
+let basicApiService: BasicApiService;
 
 interface StaffMember {
   id?: string;
@@ -19,6 +23,8 @@ interface StaffMember {
 test.beforeEach(async ({ page, request }) => {
   staffMembersPage = new StaffMembersPage(page, request);
   config = new ConfigurationPage(page);
+  permissionGroupsPage = new PermissionGroupsPage(page);
+  basicApiService = new BasicApiService(request);
 
   await config.goToConfigurationView();
   await config.openStaffMembers();
@@ -31,9 +37,7 @@ test("TC: SALEOR_211 Create a staff member #e2e #staff-members", async () => {
     email: `test.staff.john.create@example.com`,
   };
 
-  await expect(async () => {
-    await staffMembersPage.clickInviteStaffMemberButton();
-  }).toPass();
+  await staffMembersPage.clickInviteStaffMemberButton();
   await staffMembersPage.inviteStaffMembersDialog.typeNameLastNameAndEmail(
     staffMember.name,
     staffMember.lastName,

@@ -34,6 +34,7 @@ import useCustomerSearch from "@dashboard/searches/useCustomerSearch";
 import { useOrderVariantSearch } from "@dashboard/searches/useOrderVariantSearch";
 import { PartialMutationProviderOutput } from "@dashboard/types";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { customerUrl } from "../../../../customers/urls";
@@ -79,7 +80,7 @@ interface OrderDraftDetailsProps {
   closeModal: any;
 }
 
-export const OrderDraftDetails = ({
+export const OrderDraftDetails: React.FC<OrderDraftDetailsProps> = ({
   id,
   params,
   loading,
@@ -95,7 +96,7 @@ export const OrderDraftDetails = ({
   orderDraftFinalize,
   openModal,
   closeModal,
-}: OrderDraftDetailsProps) => {
+}) => {
   const order = data.order;
   const navigate = useNavigator();
   const { data: channelUsabilityData } = useChannelUsabilityDataQuery({
@@ -320,3 +321,5 @@ export const OrderDraftDetails = ({
     </>
   );
 };
+
+export default OrderDraftDetails;

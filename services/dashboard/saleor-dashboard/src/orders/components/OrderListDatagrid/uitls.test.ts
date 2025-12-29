@@ -1,3 +1,4 @@
+// @ts-strict-ignore
 import { OrderListQuery } from "@dashboard/graphql";
 import { OrderListUrlSortField } from "@dashboard/orders/urls";
 import { RelayToFlat } from "@dashboard/types";
@@ -14,11 +15,12 @@ describe("OrderListDatagrid utils", () => {
       expect(rowLength).toBe(1);
     });
     it("should return orders length", () => {
-      type NonNullQuery = Exclude<OrderListQuery["orders"], null>;
-
       // Arrange & Act
       const rowLength = getOrdersRowsLength(
-        [{} as RelayToFlat<NonNullQuery>[number], {} as RelayToFlat<NonNullQuery>[number]],
+        [
+          {} as RelayToFlat<OrderListQuery["orders"]>[number],
+          {} as RelayToFlat<OrderListQuery["orders"]>[number],
+        ],
         false,
       );
 

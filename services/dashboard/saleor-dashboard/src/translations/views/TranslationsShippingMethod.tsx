@@ -10,6 +10,7 @@ import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import { stringifyQs } from "@dashboard/utils/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationsShippingMethodPage from "../components/TranslationsShippingMethodPage";
@@ -19,17 +20,17 @@ import { getParsedTranslationInputData } from "../utils";
 export interface TranslationsShippingMethodQueryParams {
   activeField: string;
 }
-interface TranslationsShippingMethodProps {
+export interface TranslationsShippingMethodProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsShippingMethodQueryParams;
 }
 
-const TranslationsShippingMethod = ({
+const TranslationsShippingMethod: React.FC<TranslationsShippingMethodProps> = ({
   id,
   languageCode,
   params,
-}: TranslationsShippingMethodProps) => {
+}) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

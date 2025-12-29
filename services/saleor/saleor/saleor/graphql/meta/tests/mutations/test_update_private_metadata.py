@@ -1,5 +1,6 @@
 import base64
 
+import before_after
 import graphene
 import pytest
 from django.db import transaction
@@ -7,7 +8,6 @@ from django.db import transaction
 from .....checkout.models import Checkout
 from .....core.error_codes import MetadataErrorCode
 from .....core.models import ModelWithMetadata
-from .....tests import race_condition
 from ....tests.utils import assert_no_permission, get_graphql_content
 from . import (
     PRIVATE_KEY,
@@ -220,7 +220,7 @@ def test_update_private_metadata_for_item_on_deleted_instance(
             Checkout.objects.filter(pk=checkout.pk).delete()
 
     # when
-    with race_condition.RunBefore(
+    with before_after.before(
         "saleor.graphql.meta.mutations.update_private_metadata.update_private_metadata",
         delete_checkout_object,
     ):
@@ -258,7 +258,7 @@ def test_update_private_metadata_race_condition(
         checkout.metadata_storage.save(update_fields=["private_metadata"])
 
     # when
-    with race_condition.RunBefore(
+    with before_after.before(
         "saleor.graphql.meta.mutations.update_private_metadata.update_private_metadata",
         update_private_metadata,
     ):

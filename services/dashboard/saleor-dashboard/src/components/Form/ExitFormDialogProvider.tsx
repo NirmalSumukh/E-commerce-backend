@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { createContext } from "react";
+import React from "react";
 
 import ExitFormDialog from "./ExitFormDialog";
 import { ExitFormDialogData } from "./types";
@@ -8,7 +8,7 @@ import { useExitFormDialogProvider } from "./useExitFormDialogProvider";
 
 // Do not use this context directly in components
 // use useExitFormDialog hook instead
-export const ExitFormDialogContext = createContext<ExitFormDialogData>({
+export const ExitFormDialogContext = React.createContext<ExitFormDialogData>({
   setIsDirty: () => undefined,
   setEnableExitDialog: () => undefined,
   setExitDialogSubmitRef: () => undefined,

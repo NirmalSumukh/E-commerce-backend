@@ -9,31 +9,30 @@ RUN apt-get -y update \
 
 # Install Python dependencies
 WORKDIR /app
-COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /uvx /bin/
-ENV UV_COMPILE_BYTECODE=1 UV_SYSTEM_PYTHON=1 UV_PROJECT_ENVIRONMENT=/usr/local
-RUN --mount=type=cache,target=/root/.cache/uv \
-  --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-  uv sync --upgrade --no-install-project --no-editable
+RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install poetry==1.7.0
+RUN poetry config virtualenvs.create false
+COPY poetry.lock pyproject.toml /app/
+RUN --mount=type=cache,mode=0755,target=/root/.cache/pypoetry poetry install --no-root
 
 ### Final image
 FROM python:3.12-slim
 
 RUN groupadd -r saleor && useradd -r -g saleor saleor
 
-# Pillow dependencies
 RUN apt-get update \
   && apt-get install -y \
-  libffi8 \
+  libcairo2 \
   libgdk-pixbuf-2.0-0 \
   liblcms2-2 \
   libopenjp2-7 \
+  libpango-1.0-0 \
+  libpangocairo-1.0-0 \
   libssl3 \
   libtiff6 \
   libwebp7 \
+  libxml2 \
   libpq5 \
   libmagic1 \
-  # Required by celery[sqs] which uses pycurl for AWS SQS support
-  libcurl4 \
   # Required to allows to identify file types when handling file uploads
   media-types \
   && apt-get clean \
@@ -54,11 +53,13 @@ RUN SECRET_KEY=dummy STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --
 EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 
-LABEL org.opencontainers.image.title="saleor/saleor" \
-  org.opencontainers.image.description="The commerce engine for modern software development teams." \
-  org.opencontainers.image.url="https://saleor.io/" \
-  org.opencontainers.image.source="https://github.com/saleor/saleor" \
-  org.opencontainers.image.authors="Saleor Commerce (https://saleor.io)" \
-  org.opencontainers.image.licenses="BSD-3-Clause"
+LABEL org.opencontainers.image.title="saleor/saleor"                                  \
+      org.opencontainers.image.description="\
+A modular, high performance, headless e-commerce platform built with Python, \
+GraphQL, Django, and ReactJS."                                                         \
+      org.opencontainers.image.url="https://saleor.io/"                                \
+      org.opencontainers.image.source="https://github.com/saleor/saleor"               \
+      org.opencontainers.image.authors="Saleor Commerce (https://saleor.io)"           \
+      org.opencontainers.image.licenses="BSD 3"
 
-CMD ["uvicorn", "saleor.asgi:application", "--host=0.0.0.0", "--port=8000", "--workers=2", "--lifespan=off", "--ws=none", "--no-server-header", "--no-access-log", "--timeout-keep-alive=35", "--timeout-graceful-shutdown=30", "--limit-max-requests=10000"]
+CMD ["gunicorn", "--bind", ":8000", "--workers", "4", "--worker-class", "saleor.asgi.gunicorn_worker.UvicornWorker", "saleor.asgi:application"]

@@ -64,7 +64,7 @@ export enum ProductListUrlSortField {
   date = "date",
   created = "created",
 }
-type ProductListUrlSort = Sort<ProductListUrlSortField>;
+export type ProductListUrlSort = Sort<ProductListUrlSortField>;
 export interface ProductListUrlQueryParams
   extends BulkAction,
     Dialog<ProductListUrlDialog>,
@@ -82,7 +82,7 @@ export const productPath = (id: string) => urlJoin(productSection + id);
 export type ProductUrlDialog = "remove" | "assign-attribute-value" | ChannelsAction;
 export type ProductUrlQueryParams = BulkAction & Dialog<ProductUrlDialog> & SingleAction;
 export type ProductCreateUrlDialog = "assign-attribute-value" | ChannelsAction;
-interface ProductCreateUrlProductType {
+export interface ProductCreateUrlProductType {
   "product-type-id"?: string;
 }
 export type ProductCreateUrlQueryParams = Dialog<ProductCreateUrlDialog> &
@@ -91,21 +91,20 @@ export type ProductCreateUrlQueryParams = Dialog<ProductCreateUrlDialog> &
 export const productUrl = (id: string, params?: ProductUrlQueryParams) =>
   productPath(encodeURIComponent(id)) + "?" + stringifyQs(params);
 
-export const productVariantEditPath = (variantId: string) =>
-  urlJoin(productSection, "variant", variantId);
-
-/** @deprecated TODO: Remove in Saleor Dashboard 3.23 */
-export const productVariantLegacyEditPath = (productId: string, variantId: string) =>
+export const productVariantEditPath = (productId: string, variantId: string) =>
   urlJoin(productSection, productId, "variant", variantId);
-
 export type ProductVariantEditUrlDialog = "remove" | "assign-attribute-value";
 export type ProductVariantEditUrlQueryParams = Dialog<ProductVariantEditUrlDialog> & SingleAction;
 export const productVariantEditUrl = (
+  productId: string,
   variantId: string,
   params?: ProductVariantEditUrlQueryParams,
-) => productVariantEditPath(encodeURIComponent(variantId)) + "?" + stringifyQs(params);
+) =>
+  productVariantEditPath(encodeURIComponent(productId), encodeURIComponent(variantId)) +
+  "?" +
+  stringifyQs(params);
 
-type ProductVariantAddUrlDialog = "assign-attribute-value";
+export type ProductVariantAddUrlDialog = "assign-attribute-value";
 export type ProductVariantAddUrlQueryParams = Dialog<ProductVariantAddUrlDialog> & SingleAction;
 export const productVariantAddPath = (productId: string) =>
   urlJoin(productSection, productId, "variant/add");
@@ -116,6 +115,7 @@ export const productVariantAddUrl = (
 
 export const productImagePath = (productId: string, imageId: string) =>
   urlJoin(productSection, productId, "image", imageId);
+export type ProductImageUrlDialog = "remove";
 export type ProductImageUrlQueryParams = Dialog<"remove">;
 export const productImageUrl = (
   productId: string,

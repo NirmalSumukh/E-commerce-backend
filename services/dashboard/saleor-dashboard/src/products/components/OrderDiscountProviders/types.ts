@@ -21,3 +21,8 @@ export interface OrderDiscountConsumerCommonProps {
   closeDialog: () => void;
   isDialogOpen: boolean;
 }
+
+export interface OrderLineDiscountConsumerProps {
+  children: (values: OrderLineDiscountContextConsumerProps) => React.ReactNode;
+  orderLineId: string;
+}

@@ -18,12 +18,13 @@ import { commonMessages } from "@dashboard/intl";
 import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { mapCountriesToChoices } from "@dashboard/utils/maps";
 import { Box, Checkbox, Divider, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import SiteCheckoutSettingsCard from "../SiteCheckoutSettingsCard";
 import { messages } from "./messages";
 
-interface SiteSettingsPageAddressFormData {
+export interface SiteSettingsPageAddressFormData {
   city: string;
   companyName: string;
   country: string;
@@ -42,7 +43,7 @@ export interface SiteSettingsPageFormData extends SiteSettingsPageAddressFormDat
   emailConfirmation: boolean;
 }
 
-interface SiteSettingsPageProps {
+export interface SiteSettingsPageProps {
   disabled: boolean;
   errors: ShopErrorFragment[];
   shop?: SiteSettingsQuery["shop"];
@@ -66,7 +67,7 @@ export function areAddressInputFieldsModified(data: SiteSettingsPageAddressFormD
     .some(field => field !== "");
 }
 
-const SiteSettingsPage = (props: SiteSettingsPageProps) => {
+const SiteSettingsPage: React.FC<SiteSettingsPageProps> = props => {
   const { disabled, errors, saveButtonBarState, shop, onSubmit } = props;
   const intl = useIntl();
   const navigate = useNavigator();

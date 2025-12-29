@@ -4,12 +4,13 @@ import { SearchShippingZonesQuery } from "@dashboard/graphql";
 import { sectionNames } from "@dashboard/intl";
 import { FetchMoreProps, RelayToFlat } from "@dashboard/types";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import AssignmentList from "../AssignmentList";
 import { messages } from "./messages";
 
-interface ShippingZonesProps {
+export interface ShippingZonesProps {
   addShippingZone: (id: string) => void;
   removeShippingZone: (id: string) => void;
   searchShippingZones: (searchPhrase: string) => void;
@@ -20,7 +21,7 @@ interface ShippingZonesProps {
   shippingZonesChoices: RelayToFlat<SearchShippingZonesQuery["search"]>;
 }
 
-const ShippingZones = (props: ShippingZonesProps) => {
+const ShippingZones: React.FC<ShippingZonesProps> = props => {
   const {
     addShippingZone,
     removeShippingZone,

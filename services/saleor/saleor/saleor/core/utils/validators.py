@@ -1,10 +1,11 @@
-import datetime
+from datetime import date
 from typing import Any
 
 import micawber
+from django.core.exceptions import ValidationError
 
 from ...product import ProductMediaTypes
-from ..exceptions import UnsupportedMediaProviderException
+from ...product.error_codes import ProductErrorCode
 
 SUPPORTED_MEDIA_TYPES = {
     "photo": ProductMediaTypes.IMAGE,
@@ -14,7 +15,7 @@ MEDIA_MAX_WIDTH = 1920
 MEDIA_MAX_HEIGHT = 1080
 
 
-def get_oembed_data(url: str) -> tuple[dict[str, Any], str]:
+def get_oembed_data(url: str, field_name: str) -> tuple[dict[str, Any], str]:
     """Get the oembed data from URL or raise an ValidationError."""
     providers = micawber.bootstrap_basic()
 
@@ -23,10 +24,17 @@ def get_oembed_data(url: str) -> tuple[dict[str, Any], str]:
             url, maxwidth=MEDIA_MAX_WIDTH, maxheight=MEDIA_MAX_HEIGHT
         )
         return oembed_data, SUPPORTED_MEDIA_TYPES[oembed_data["type"]]
-    except (micawber.exceptions.ProviderException, KeyError) as e:
-        raise UnsupportedMediaProviderException() from e
+    except (micawber.exceptions.ProviderException, KeyError):
+        raise ValidationError(
+            {
+                field_name: ValidationError(
+                    "Unsupported media provider or incorrect URL.",
+                    code=ProductErrorCode.UNSUPPORTED_MEDIA_PROVIDER.value,
+                )
+            }
+        )
 
 
 def is_date_in_future(given_date):
     """Return true when the date is in the future."""
-    return given_date > datetime.datetime.now(tz=datetime.UTC).date()
+    return given_date > date.today()

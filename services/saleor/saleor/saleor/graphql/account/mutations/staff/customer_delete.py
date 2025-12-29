@@ -5,6 +5,7 @@ from .....permission.enums import AccountPermissions
 from .....webhook.event_types import WebhookEventAsyncType
 from ....account.types import User
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_310
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.types import AccountError
 from ....core.utils import WebhookEventInfo
@@ -33,7 +34,7 @@ class CustomerDelete(CustomerDeleteMixin, UserDelete):
         id = graphene.ID(required=False, description="ID of a customer to delete.")
         external_reference = graphene.String(
             required=False,
-            description="External ID of a customer to update.",
+            description=f"External ID of a customer to update. {ADDED_IN_310}",
         )
 
     @classmethod

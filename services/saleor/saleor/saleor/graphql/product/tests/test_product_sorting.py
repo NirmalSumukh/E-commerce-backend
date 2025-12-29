@@ -1,8 +1,9 @@
-import datetime
 import random
+from datetime import datetime, timedelta
 
 import graphene
 import pytest
+import pytz
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -222,7 +223,7 @@ def test_sort_products_by_published_at(
     product_channel_listings = []
     for iter_value, product in enumerate(product_list):
         product_channel_listing = product.channel_listings.get(channel=channel_USD)
-        product_channel_listing.published_at = timezone.now() - datetime.timedelta(
+        product_channel_listing.published_at = timezone.now() - timedelta(
             days=iter_value
         )
         product_channel_listings.append(product_channel_listing)
@@ -334,7 +335,7 @@ def test_pagination_for_sorting_products_by_published_at_date(
     listings_in_bulk = {listing.product_id: listing for listing in channel_listings}
     for product in product_list:
         listing = listings_in_bulk.get(product.id)
-        listing.published_at = datetime.datetime.now(tz=datetime.UTC)
+        listing.published_at = datetime.now(pytz.UTC)
 
     ProductChannelListing.objects.bulk_update(channel_listings, ["published_at"])
 

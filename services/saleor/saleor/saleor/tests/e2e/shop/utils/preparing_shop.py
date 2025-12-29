@@ -75,7 +75,6 @@ def prepare_shop(
                 "id": channel_id,
                 "warehouse_id": warehouse_id,
                 "slug": created_channel["slug"],
-                "currency": created_channel["currencyCode"],
                 "shipping_zones": [],
                 "order_settings": created_channel["orderSettings"],
                 "checkout_settings": created_channel["checkoutSettings"],
@@ -97,11 +96,11 @@ def prepare_shop(
                 }
             )
 
-            for shipping_method in shipping_zone["shipping_methods"]:
+            for shipping_zone in shipping_zone["shipping_methods"]:
                 created_shipping_method = create_shipping_method(
                     e2e_staff_api_client,
                     shipping_zone_id=created_shipping_zone["id"],
-                    name=shipping_method.get("name"),
+                    name=shipping_zone.get("name"),
                 )
 
                 created_channels[channel_index]["shipping_zones"][shipping_zone_index][
@@ -112,7 +111,7 @@ def prepare_shop(
                     e2e_staff_api_client,
                     shipping_method_id=created_shipping_method["id"],
                     channel_id=created_channel["id"],
-                    add_channels=shipping_method.get("add_channels", None),
+                    add_channels=shipping_zone.get("add_channels", None),
                 )
     created_tax_classes = {}
     tax_rates = {}
@@ -129,7 +128,7 @@ def prepare_shop(
             tax_classes_result = create_and_update_tax_classes(
                 e2e_staff_api_client, tax_rates.values()
             )
-            for tax_type, _tax_rate in tax_rates.items():
+            for tax_type, tax_rate in tax_rates.items():
                 tax_class_id = tax_classes_result.get(tax_type, {}).get("id")
                 if tax_class_id:
                     created_tax_classes[f"{tax_type}_tax_class_id"] = tax_class_id
@@ -137,13 +136,14 @@ def prepare_shop(
     return created_channels, tax_config
 
 
-def prepare_default_shop(e2e_staff_api_client, channel_order_settings=None):
+def prepare_default_shop(
+    e2e_staff_api_client,
+):
     created_warehouse = create_warehouse(e2e_staff_api_client)
 
     created_channel = create_channel(
         e2e_staff_api_client,
         warehouse_ids=[created_warehouse["id"]],
-        order_settings=channel_order_settings,
     )
 
     created_shipping_zone = create_shipping_zone(

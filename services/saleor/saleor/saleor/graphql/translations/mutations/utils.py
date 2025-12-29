@@ -21,7 +21,7 @@ from ...core.descriptions import RICH_CONTENT
 from ...core.doc_category import DOC_CATEGORY_MAP
 from ...core.enums import ErrorPolicyEnum, TranslationErrorCode
 from ...core.fields import JSONString
-from ...core.mutations import BaseMutation, DeprecatedModelMutation
+from ...core.mutations import BaseMutation, ModelMutation
 from ...core.utils import from_global_id_or_error
 from ...plugins.dataloaders import get_plugin_manager_promise
 from .. import types as translation_types
@@ -76,28 +76,7 @@ def validate_input_against_model(model: type[Model], input_data: dict):
     instance.full_clean(exclude=exclude_fields, validate_unique=False)
 
 
-def validate_slug_already_exists(
-    instance, translation_instance, input_data, language_code
-):
-    slug = input_data.get("slug")
-
-    if slug and slug != translation_instance.slug:
-        existing_instance = instance.translations.model.objects.filter(
-            language_code=language_code, slug=input_data["slug"]
-        ).first()
-
-        if existing_instance and existing_instance != translation_instance:
-            raise ValidationError(
-                {
-                    "slug": ValidationError(
-                        "Translation with this slug and language code already exists",
-                        code=TranslationErrorCode.UNIQUE.value,
-                    )
-                }
-            )
-
-
-class BaseTranslateMutation(DeprecatedModelMutation):
+class BaseTranslateMutation(ModelMutation):
     class Meta:
         abstract = True
 
@@ -110,7 +89,7 @@ class BaseTranslateMutation(DeprecatedModelMutation):
 
         try:
             node_type, node_pk = from_global_id_or_error(id)
-        except GraphQLError as e:
+        except GraphQLError:
             raise ValidationError(
                 {
                     "id": ValidationError(
@@ -118,7 +97,7 @@ class BaseTranslateMutation(DeprecatedModelMutation):
                         code=TranslationErrorCode.INVALID,
                     )
                 }
-            ) from e
+            )
 
         # This mutation accepts either model IDs or translatable content IDs. Below we
         # check if provided ID refers to a translatable content which matches with the
@@ -136,7 +115,7 @@ class BaseTranslateMutation(DeprecatedModelMutation):
         validate_input_against_model(cls._meta.model, input_data)
 
     @classmethod
-    def pre_update_or_create(cls, instance, input_data, language_code):
+    def pre_update_or_create(cls, instance, input_data):
         return input_data
 
     @classmethod
@@ -147,7 +126,7 @@ class BaseTranslateMutation(DeprecatedModelMutation):
         instance = cls.get_node_or_error(info, node_id, only_type=model_type)
         cls.validate_input(input)
 
-        input = cls.pre_update_or_create(instance, input, language_code)
+        input = cls.pre_update_or_create(instance, input)
 
         translation, created = instance.translations.update_or_create(
             language_code=language_code, defaults=input
@@ -162,33 +141,11 @@ class BaseTranslateMutation(DeprecatedModelMutation):
         return cls(**{cls._meta.return_field_name: instance})
 
 
-class BaseTranslateMutationWithSlug(BaseTranslateMutation):
-    class Meta:
-        abstract = True
-
-    @classmethod
-    def pre_update_or_create(cls, instance, input_data, language_code):
-        if input_data.get("slug") is not None:
-            translation_instance = instance.translations.filter(
-                language_code=language_code
-            ).first()
-
-            if translation_instance is None:
-                translation_instance = instance.translations.model()
-
-            validate_slug_already_exists(
-                instance, translation_instance, input_data, language_code
-            )
-
-        return input_data
-
-
 class NameTranslationInput(graphene.InputObjectType):
     name = graphene.String()
 
 
 class SeoTranslationInput(graphene.InputObjectType):
-    slug = graphene.String()
     seo_title = graphene.String()
     seo_description = graphene.String()
 
@@ -213,7 +170,7 @@ class BaseBulkTranslateMutation(BaseMutation):
         abstract = True
 
     @classmethod
-    def __init_subclass_with_meta__(  # type: ignore[override]
+    def __init_subclass_with_meta__(
         cls,
         base_model=None,
         translation_model=None,
@@ -518,7 +475,7 @@ class BaseBulkTranslateMutation(BaseMutation):
             cleaned_inputs_map, index_error_map
         )
 
-        if any(bool(error) for error in index_error_map.values()):
+        if any([bool(error) for error in index_error_map.values()]):
             if error_policy == ErrorPolicyEnum.REJECT_EVERYTHING.value:
                 results = cls.get_results(instances_data_with_errors_list, True)
                 return cls(count=0, results=results)

@@ -3,21 +3,27 @@ from graphene import relay
 
 from ....discount import models
 from ....permission.enums import DiscountPermissions
-from ...channel.dataloaders.by_self import ChannelByIdLoader
-from ...channel.types import Channel
+from ...channel import ChannelQsContext
+from ...channel.dataloaders import ChannelByIdLoader
+from ...channel.types import (
+    Channel,
+    ChannelContext,
+    ChannelContextType,
+    ChannelContextTypeWithMetadata,
+)
 from ...core import ResolveInfo, types
 from ...core.connection import CountableConnection, create_connection_slice
-from ...core.context import (
-    ChannelContext,
-    ChannelQsContext,
-    get_database_connection_name,
+from ...core.context import get_database_connection_name
+from ...core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_318,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
 )
-from ...core.descriptions import ADDED_IN_318, DEPRECATED_IN_3X_INPUT, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ...core.fields import ConnectionField, PermissionsField
 from ...core.scalars import DateTime
 from ...core.types import ModelObjectType, Money, NonNullList
-from ...core.types.context import ChannelContextType
 from ...meta.types import ObjectWithMetadata
 from ...product.types import (
     CategoryCountableConnection,
@@ -30,8 +36,8 @@ from ...translations.types import VoucherTranslation
 from ..dataloaders import (
     CodeByVoucherIDLoader,
     UsedByVoucherIDLoader,
-    VoucherChannelListingByVoucherIdAndChannelSlugLoader,
-    VoucherChannelListingsByVoucherIdLoader,
+    VoucherChannelListingByVoucherIdAndChanneSlugLoader,
+    VoucherChannelListingByVoucherIdLoader,
 )
 from ..enums import DiscountValueTypeEnum, VoucherTypeEnum
 
@@ -81,7 +87,7 @@ class VoucherCodeCountableConnection(CountableConnection):
         node = VoucherCode
 
 
-class Voucher(ChannelContextType[models.Voucher]):
+class Voucher(ChannelContextTypeWithMetadata[models.Voucher]):
     id = graphene.GlobalID(required=True, description="The ID of the voucher.")
     name = graphene.String(description="The name of the voucher.")
     codes = ConnectionField(
@@ -89,7 +95,7 @@ class Voucher(ChannelContextType[models.Voucher]):
         description="List of codes available for this voucher." + ADDED_IN_318,
     )
     code = graphene.String(
-        description="The code of the voucher." + DEPRECATED_IN_3X_INPUT
+        description="The code of the voucher." + DEPRECATED_IN_3X_FIELD
     )
     usage_limit = graphene.Int(description="The number of times a voucher can be used.")
     used = graphene.Int(
@@ -146,7 +152,7 @@ class Voucher(ChannelContextType[models.Voucher]):
     )
     variants = ConnectionField(
         ProductVariantCountableConnection,
-        description="List of product variants this voucher applies to.",
+        description="List of product variants this voucher applies to." + ADDED_IN_31,
         permissions=[
             DiscountPermissions.MANAGE_DISCOUNTS,
         ],
@@ -256,12 +262,12 @@ class Voucher(ChannelContextType[models.Voucher]):
             return None
 
         return (
-            VoucherChannelListingByVoucherIdAndChannelSlugLoader(info.context)
+            VoucherChannelListingByVoucherIdAndChanneSlugLoader(info.context)
             .load((root.node.id, root.channel_slug))
             .then(
-                lambda channel_listing: (
-                    channel_listing.discount_value if channel_listing else None
-                )
+                lambda channel_listing: channel_listing.discount_value
+                if channel_listing
+                else None
             )
         )
 
@@ -271,12 +277,12 @@ class Voucher(ChannelContextType[models.Voucher]):
             return None
 
         return (
-            VoucherChannelListingByVoucherIdAndChannelSlugLoader(info.context)
+            VoucherChannelListingByVoucherIdAndChanneSlugLoader(info.context)
             .load((root.node.id, root.channel_slug))
             .then(
-                lambda channel_listing: (
-                    channel_listing.currency if channel_listing else None
-                )
+                lambda channel_listing: channel_listing.currency
+                if channel_listing
+                else None
             )
         )
 
@@ -286,12 +292,12 @@ class Voucher(ChannelContextType[models.Voucher]):
             return None
 
         return (
-            VoucherChannelListingByVoucherIdAndChannelSlugLoader(info.context)
+            VoucherChannelListingByVoucherIdAndChanneSlugLoader(info.context)
             .load((root.node.id, root.channel_slug))
             .then(
-                lambda channel_listing: (
-                    channel_listing.min_spent if channel_listing else None
-                )
+                lambda channel_listing: channel_listing.min_spent
+                if channel_listing
+                else None
             )
         )
 
@@ -299,7 +305,7 @@ class Voucher(ChannelContextType[models.Voucher]):
     def resolve_channel_listings(
         root: ChannelContext[models.Voucher], info: ResolveInfo
     ):
-        return VoucherChannelListingsByVoucherIdLoader(info.context).load(root.node.id)
+        return VoucherChannelListingByVoucherIdLoader(info.context).load(root.node.id)
 
 
 class VoucherCountableConnection(CountableConnection):

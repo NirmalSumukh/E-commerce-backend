@@ -19,6 +19,7 @@ from ....account.utils import (
     get_out_of_scope_users,
 )
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_314, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.enums import PermissionEnum
 from ....core.types import NonNullList, PermissionGroupError
@@ -43,10 +44,15 @@ class PermissionGroupUpdateInput(PermissionGroupInput):
         required=False,
     )
     remove_channels = NonNullList(
-        graphene.ID, description="List of channels to unassign from this group."
+        graphene.ID,
+        description="List of channels to unassign from this group."
+        + ADDED_IN_314
+        + PREVIEW_FEATURE,
     )
     restricted_access_to_channels = graphene.Boolean(
-        description="Determine if the group has restricted access to channels.",
+        description="Determine if the group has restricted access to channels."
+        + ADDED_IN_314
+        + PREVIEW_FEATURE,
         required=False,
     )
 
@@ -96,9 +102,14 @@ class PermissionGroupUpdate(PermissionGroupCreate):
         cls.call_event(manager.permission_group_updated, instance)
 
     @classmethod
-    def clean_input(cls, info: ResolveInfo, instance, data, **kwargs):
+    def clean_input(
+        cls,
+        info,
+        instance,
+        data,
+    ):
         requestor = info.context.user
-        cls.ensure_requestor_can_manage_group(info, requestor, instance)  # type: ignore[arg-type]
+        cls.ensure_requestor_can_manage_group(info, requestor, instance)
 
         errors: defaultdict[str, list[ValidationError]] = defaultdict(list)
         permission_fields = ("add_permissions", "remove_permissions", "permissions")
@@ -276,7 +287,7 @@ class PermissionGroupUpdate(PermissionGroupCreate):
         errors: dict,
         cleaned_input: dict,
         group: models.Group,
-    ) -> None:
+    ):
         """Check if after removing users from group all permissions will be manageable.
 
         After removing users from group, for each permission, there should be
@@ -292,8 +303,8 @@ class PermissionGroupUpdate(PermissionGroupCreate):
 
         # check if user with manage staff will be added to the group
         if add_users:
-            if any(user.has_perm(manage_staff_permission) for user in add_users):
-                return
+            if any([user.has_perm(manage_staff_permission) for user in add_users]):
+                return True
 
         permissions = get_not_manageable_permissions_after_removing_users_from_group(
             group, remove_users

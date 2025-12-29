@@ -1,11 +1,16 @@
+// @ts-strict-ignore
 import { IMessage } from "@dashboard/components/messages";
 import { DashboardModal } from "@dashboard/components/Modal";
-import { GiftCardBulkCreateInput, useGiftCardBulkCreateMutation } from "@dashboard/graphql";
+import {
+  GiftCardBulkCreateInput,
+  useChannelCurrenciesQuery,
+  useGiftCardBulkCreateMutation,
+} from "@dashboard/graphql";
 import useCurrentDate from "@dashboard/hooks/useCurrentDate";
 import useNotifier from "@dashboard/hooks/useNotifier";
 import { DialogProps } from "@dashboard/types";
 import { getFormErrors } from "@dashboard/utils/errors";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 
 import ContentWithProgress from "../GiftCardCreateDialog/ContentWithProgress";
@@ -24,13 +29,14 @@ import {
 } from "./types";
 import { validateForm } from "./utils";
 
-export const GiftCardBulkCreateDialog = ({ onClose, open }: DialogProps) => {
+const GiftCardBulkCreateDialog: React.FC<DialogProps> = ({ onClose, open }) => {
   const intl = useIntl();
   const notify = useNotifier();
-  const [formErrors, setFormErrors] = useState<GiftCardBulkCreateFormErrors | null>(null);
+  const [formErrors, setFormErrors] = useState<GiftCardBulkCreateFormErrors>(null);
   const [issuedIds, setIssuedIds] = useState<string[] | null>(null);
-  const [openIssueSuccessDialog, setOpenIssueSuccessDialog] = useState(false);
-
+  const [openIssueSuccessDialog, setOpenIssueSuccessDialog] = useState<boolean>(false);
+  const onIssueSuccessDialogClose = () => setOpenIssueSuccessDialog(false);
+  const { loading: loadingChannelCurrencies } = useChannelCurrenciesQuery({});
   const currentDate = useCurrentDate();
 
   const getParsedSubmitInputData = (
@@ -65,8 +71,8 @@ export const GiftCardBulkCreateDialog = ({ onClose, open }: DialogProps) => {
       notify(getGiftCardCreateOnCompletedMessage(errors, intl, giftCardsBulkIssueSuccessMessage));
       setFormErrors(getFormErrors(giftCardBulkCreateErrorKeys, errors));
 
-      if (!errors?.length) {
-        setIssuedIds(data?.giftCardBulkCreate?.giftCards?.map(giftCard => giftCard.id) ?? []);
+      if (!errors.length) {
+        setIssuedIds(data?.giftCardBulkCreate?.giftCards?.map(giftCard => giftCard.id));
         setOpenIssueSuccessDialog(true);
         onClose();
       }
@@ -105,20 +111,24 @@ export const GiftCardBulkCreateDialog = ({ onClose, open }: DialogProps) => {
         <DashboardModal.Content size="sm">
           <DashboardModal.Header>{intl.formatMessage(messages.title)}</DashboardModal.Header>
           <ContentWithProgress>
-            <GiftCardBulkCreateDialogForm
-              opts={bulkCreateGiftCardOpts}
-              onClose={onClose}
-              formErrors={formErrors}
-              onSubmit={handleSubmit}
-            />
+            {!loadingChannelCurrencies && (
+              <GiftCardBulkCreateDialogForm
+                opts={bulkCreateGiftCardOpts}
+                onClose={onClose}
+                formErrors={formErrors}
+                onSubmit={handleSubmit}
+              />
+            )}
           </ContentWithProgress>
         </DashboardModal.Content>
       </DashboardModal>
       <GiftCardBulkCreateSuccessDialog
-        onClose={() => setOpenIssueSuccessDialog(false)}
+        onClose={onIssueSuccessDialogClose}
         open={openIssueSuccessDialog}
         idsToExport={issuedIds}
       />
     </>
   );
 };
+
+export default GiftCardBulkCreateDialog;

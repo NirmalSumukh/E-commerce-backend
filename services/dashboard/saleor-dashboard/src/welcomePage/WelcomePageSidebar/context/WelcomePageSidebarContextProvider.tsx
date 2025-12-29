@@ -1,9 +1,9 @@
 import { ChannelFragment } from "@dashboard/graphql";
-import * as React from "react";
+import React from "react";
 
 import { WelcomePageSidebarContext } from "./welcomePageSidebarContext";
 
-interface WelcomePageSidebarContextProviderProps {
+export interface WelcomePageSidebarContextProviderProps {
   children: React.ReactNode;
   channel: ChannelFragment | undefined;
   setChannel: (channelId: string) => void;

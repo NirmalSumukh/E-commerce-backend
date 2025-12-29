@@ -1,3 +1,5 @@
+from typing import Union
+
 import graphene
 from django.db.models import QuerySet
 from graphene import relay
@@ -9,15 +11,18 @@ from ...product import models as product_models
 from ...shipping import models
 from ...shipping.interface import ShippingMethodData
 from ..account.enums import CountryCodeEnum
-from ..channel.dataloaders.by_self import ChannelByIdLoader
-from ..channel.types import Channel
-from ..core.connection import CountableConnection, create_connection_slice
-from ..core.context import (
+from ..channel import ChannelQsContext
+from ..channel.dataloaders import ChannelByIdLoader
+from ..channel.types import (
+    Channel,
     ChannelContext,
-    ChannelQsContext,
-    get_database_connection_name,
+    ChannelContextType,
+    ChannelContextTypeWithMetadata,
+    ChannelContextTypeWithMetadataForObjectType,
 )
-from ..core.descriptions import DEFAULT_DEPRECATION_REASON, RICH_CONTENT
+from ..core.connection import CountableConnection, create_connection_slice
+from ..core.context import get_database_connection_name
+from ..core.descriptions import ADDED_IN_36, DEPRECATED_IN_3X_FIELD, RICH_CONTENT
 from ..core.doc_category import DOC_CATEGORY_SHIPPING
 from ..core.fields import ConnectionField, JSONString, PermissionsField
 from ..core.tracing import traced_resolver
@@ -30,7 +35,6 @@ from ..core.types import (
     NonNullList,
     Weight,
 )
-from ..core.types.context import ChannelContextType
 from ..meta.types import ObjectWithMetadata
 from ..shipping.resolvers import resolve_price_range, resolve_shipping_translation
 from ..tax.dataloaders import TaxClassByIdLoader
@@ -80,7 +84,8 @@ class ShippingMethodChannelListing(
     def resolve_minimum_order_price(root: models.ShippingMethodChannelListing, info):
         if root.minimum_order_price_amount is None:
             return None
-        return root.minimum_order_price
+        else:
+            return root.minimum_order_price
 
 
 class ShippingMethodPostalCodeRule(
@@ -98,7 +103,7 @@ class ShippingMethodPostalCodeRule(
         model = models.ShippingMethodPostalCodeRule
 
 
-class ShippingMethodType(ChannelContextType):
+class ShippingMethodType(ChannelContextTypeWithMetadataForObjectType):
     """Represents internal shipping method managed within Saleor.
 
     Internal and external (fetched by sync webhooks) shipping methods are later
@@ -235,7 +240,7 @@ class ShippingMethodType(ChannelContextType):
     ):
         from ..product.types import ProductCountableConnection
 
-        qs: QuerySet[product_models.Product] | ChannelQsContext
+        qs: Union[QuerySet[product_models.Product], ChannelQsContext]
 
         if not root.node.excluded_products:
             qs = product_models.Product.objects.none()
@@ -258,7 +263,7 @@ class ShippingMethodType(ChannelContextType):
         )
 
 
-class ShippingZone(ChannelContextType[models.ShippingZone]):
+class ShippingZone(ChannelContextTypeWithMetadata[models.ShippingZone]):
     id = graphene.GlobalID(required=True, description="The ID of shipping zone.")
     name = graphene.String(required=True, description="Shipping zone name.")
     default = graphene.Boolean(
@@ -351,7 +356,7 @@ class ShippingMethod(BaseObjectType):
     )
     type = ShippingMethodTypeEnum(
         description="Type of the shipping method.",
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
     )
     name = graphene.String(required=True, description="Shipping method name.")
     description = JSONString(description="Shipping method description." + RICH_CONTENT)
@@ -364,12 +369,12 @@ class ShippingMethod(BaseObjectType):
     maximum_order_weight = graphene.Field(
         Weight,
         description="Maximum order weight for this shipping method.",
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
     )
     minimum_order_weight = graphene.Field(
         Weight,
         description="Minimum order weight for this shipping method.",
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
     )
     translation = TranslationField(
         ShippingMethodTranslation,
@@ -428,4 +433,6 @@ class ShippingMethodsPerCountry(BaseObjectType):
 
     class Meta:
         doc_category = DOC_CATEGORY_SHIPPING
-        description = "List of shipping methods available for the country."
+        description = (
+            "List of shipping methods available for the country." + ADDED_IN_36
+        )

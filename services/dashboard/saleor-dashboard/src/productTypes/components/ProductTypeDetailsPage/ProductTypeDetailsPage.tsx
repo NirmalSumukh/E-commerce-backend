@@ -2,6 +2,7 @@
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import CardSpacer from "@dashboard/components/CardSpacer";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import ControlledSwitch from "@dashboard/components/ControlledSwitch";
 import Form from "@dashboard/components/Form";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Metadata } from "@dashboard/components/Metadata/Metadata";
@@ -24,8 +25,9 @@ import { productTypeListPath } from "@dashboard/productTypes/urls";
 import { FetchMoreProps, ListActions, ReorderEvent, UserError } from "@dashboard/types";
 import { mapMetadataItemToInput } from "@dashboard/utils/maps";
 import useMetadataChangeTrigger from "@dashboard/utils/metadata/useMetadataChangeTrigger";
-import { Box, Text, Toggle } from "@saleor/macaw-ui-next";
-import { FormattedMessage } from "react-intl";
+import { sprinkles } from "@saleor/macaw-ui-next";
+import React from "react";
+import { useIntl } from "react-intl";
 
 import ProductTypeAttributes from "../ProductTypeAttributes/ProductTypeAttributes";
 import ProductTypeDetails from "../ProductTypeDetails/ProductTypeDetails";
@@ -49,7 +51,7 @@ export interface ProductTypeForm extends MetadataFormData {
   weight: number;
 }
 
-interface ProductTypeDetailsPageProps {
+export interface ProductTypeDetailsPageProps {
   errors: UserError[];
   productType: ProductTypeDetailsQuery["productType"];
   defaultWeightUnit: WeightUnitsEnum;
@@ -70,7 +72,7 @@ interface ProductTypeDetailsPageProps {
   onFetchMoreTaxClasses: FetchMoreProps;
 }
 
-const ProductTypeDetailsPage = ({
+const ProductTypeDetailsPage: React.FC<ProductTypeDetailsPageProps> = ({
   defaultWeightUnit,
   disabled,
   errors,
@@ -89,7 +91,8 @@ const ProductTypeDetailsPage = ({
   setSelectedVariantAttributes,
   selectedVariantAttributes,
   onFetchMoreTaxClasses,
-}: ProductTypeDetailsPageProps) => {
+}) => {
+  const intl = useIntl();
   const navigate = useNavigator();
   const productTypeListBackLink = useBackLinkWithState({
     path: productTypeListPath,
@@ -182,23 +185,18 @@ const ProductTypeDetailsPage = ({
                 {...productAttributeList}
               />
               <CardSpacer />
-
-              <Box marginLeft={6}>
-                <Toggle
-                  pressed={data.hasVariants}
-                  disabled={disabled}
-                  name="hasVariants"
-                  onPressedChange={pressed => onHasVariantsToggle(pressed)}
-                >
-                  <Text>
-                    <FormattedMessage
-                      id="5pHBSU"
-                      defaultMessage="Product type uses Variant Attributes"
-                      description="switch button"
-                    />
-                  </Text>
-                </Toggle>
-              </Box>
+              <ControlledSwitch
+                checked={data.hasVariants}
+                disabled={disabled}
+                label={intl.formatMessage({
+                  id: "5pHBSU",
+                  defaultMessage: "Product type uses Variant Attributes",
+                  description: "switch button",
+                })}
+                name="hasVariants"
+                onChange={event => onHasVariantsToggle(event.target.value)}
+                className={sprinkles({ paddingLeft: 6 })}
+              />
               {data.hasVariants && (
                 <>
                   <CardSpacer />

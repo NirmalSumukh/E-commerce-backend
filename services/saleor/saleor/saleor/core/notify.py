@@ -1,5 +1,5 @@
-from collections.abc import Callable
 from functools import cache
+from typing import Callable
 
 
 class NotifyHandler:
@@ -14,7 +14,7 @@ class NotifyHandler:
     def __init__(self, payload_func):
         self.generate_payload_func = payload_func
 
-    @cache  # noqa: B019
+    @cache
     def payload(self):
         return self.generate_payload_func()
 

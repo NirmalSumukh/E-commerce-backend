@@ -7,11 +7,15 @@ from ...permission.enums import OrderPermissions, ProductPermissions
 from ...warehouse import models
 from ...warehouse.reservations import is_reservation_enabled
 from ..account.dataloaders import AddressByIdLoader
+from ..channel import ChannelContext
 from ..core import ResolveInfo
 from ..core.connection import CountableConnection, create_connection_slice
-from ..core.context import ChannelContext, get_database_connection_name
+from ..core.context import get_database_connection_name
 from ..core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_310,
     ADDED_IN_320,
+    DEPRECATED_IN_3X_FIELD,
     DEPRECATED_IN_3X_INPUT,
 )
 from ..core.doc_category import DOC_CATEGORY_PRODUCTS
@@ -33,7 +37,7 @@ class WarehouseInput(BaseInputObjectType):
     slug = graphene.String(description="Warehouse slug.")
     email = graphene.String(description="The email address of the warehouse.")
     external_reference = graphene.String(
-        description="External ID of the warehouse.", required=False
+        description="External ID of the warehouse." + ADDED_IN_310, required=False
     )
 
     class Meta:
@@ -66,11 +70,13 @@ class WarehouseUpdateInput(WarehouseInput):
         required=False,
     )
     click_and_collect_option = WarehouseClickAndCollectOptionEnum(
-        description="Click and collect options: local, all or disabled.",
+        description=(
+            "Click and collect options: local, all or disabled." + ADDED_IN_31
+        ),
         required=False,
     )
     is_private = graphene.Boolean(
-        description="Visibility of warehouse stocks.",
+        description="Visibility of warehouse stocks." + ADDED_IN_31,
         required=False,
     )
 
@@ -94,10 +100,14 @@ class Warehouse(ModelObjectType[models.Warehouse]):
     company_name = graphene.String(
         required=True,
         description="Warehouse company name.",
-        deprecation_reason="Use `Address.companyName` instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use `Address.companyName` instead."
+        ),
     )
     click_and_collect_option = WarehouseClickAndCollectOptionEnum(
-        description="Click and collect options: local, all or disabled.",
+        description=(
+            "Click and collect options: local, all or disabled." + ADDED_IN_31
+        ),
         required=True,
     )
     shipping_zones = ConnectionField(
@@ -114,7 +124,7 @@ class Warehouse(ModelObjectType[models.Warehouse]):
         ],
     )
     external_reference = graphene.String(
-        description="External ID of this warehouse.", required=False
+        description=f"External ID of this warehouse. {ADDED_IN_310}", required=False
     )
 
     class Meta:

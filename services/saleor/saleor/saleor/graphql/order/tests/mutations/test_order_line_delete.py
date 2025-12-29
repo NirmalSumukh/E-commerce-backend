@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import graphene
 import pytest
@@ -106,7 +106,6 @@ def test_order_line_remove(
     permission_group_manage_orders,
     staff_api_client,
 ):
-    # given
     query = ORDER_LINE_DELETE_MUTATION
     permission_group_manage_orders.user_set.add(staff_api_client.user)
     order = order_with_lines
@@ -116,10 +115,7 @@ def test_order_line_remove(
     line_id = graphene.Node.to_global_id("OrderLine", line.id)
     variables = {"id": line_id}
 
-    # when
     response = staff_api_client.post_graphql(query, variables)
-
-    # then
     content = get_graphql_content(response)
     data = content["data"]["orderLineDelete"]
     assert OrderEvent.objects.count() == 1
@@ -129,9 +125,6 @@ def test_order_line_remove(
     assert_proper_webhook_called_once(
         order, status, draft_order_updated_webhook_mock, order_updated_webhook_mock
     )
-
-    order.refresh_from_db()
-    assert order.lines_count == order.lines.count()
 
 
 @patch("saleor.plugins.manager.PluginsManager.draft_order_updated")
@@ -234,8 +227,6 @@ def test_order_line_remove_by_app(
         draft_order_updated_webhook_mock,
         order_updated_webhook_mock,
     )
-    order.refresh_from_db()
-    assert order.lines_count == order.lines.count()
 
 
 @patch("saleor.plugins.manager.PluginsManager.draft_order_updated")
@@ -340,6 +331,7 @@ def test_order_line_delete_triggers_webhooks(
     permission_group_manage_orders,
     staff_api_client,
     settings,
+    django_capture_on_commit_callbacks,
     status,
     webhook_event,
 ):
@@ -364,7 +356,8 @@ def test_order_line_delete_triggers_webhooks(
     variables = {"id": line_id}
 
     # when
-    response = staff_api_client.post_graphql(query, variables)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = staff_api_client.post_graphql(query, variables)
 
     # then
     content = get_graphql_content(response)
@@ -373,9 +366,11 @@ def test_order_line_delete_triggers_webhooks(
     # confirm that event delivery was generated for each async webhook.
     order_delivery = EventDelivery.objects.get(webhook_id=order_webhook.id)
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={"event_delivery_id": order_delivery.id, "telemetry_context": ANY},
+        kwargs={"event_delivery_id": order_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

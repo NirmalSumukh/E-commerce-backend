@@ -1,5 +1,4 @@
 import { ChannelsAvailabilityDropdown } from "@dashboard/components/ChannelsAvailabilityDropdown";
-import { EmptyImage } from "@dashboard/components/EmptyImage";
 import { GridTable } from "@dashboard/components/GridTable";
 import Link from "@dashboard/components/Link";
 import Drag from "@dashboard/icons/Drag";
@@ -7,8 +6,9 @@ import { productUrl } from "@dashboard/products/urls";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Box, Button, Checkbox, Skeleton, Text, TrashBinIcon } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
+import { EmptyImage } from "./EmptyImage";
 import { Product } from "./types";
 
 interface ItemProps {

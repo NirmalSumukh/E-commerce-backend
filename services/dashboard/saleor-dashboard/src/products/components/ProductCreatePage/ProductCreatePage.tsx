@@ -2,12 +2,13 @@
 import { QueryResult } from "@apollo/client";
 import {
   getReferenceAttributeEntityTypeFromAttribute,
-  handleContainerReferenceAssignment,
+  mergeAttributeValues,
 } from "@dashboard/attributes/utils/data";
 import CannotDefineChannelsAvailabilityCard from "@dashboard/channels/components/CannotDefineChannelsAvailabilityCard/CannotDefineChannelsAvailabilityCard";
 import { ChannelData } from "@dashboard/channels/utils";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import AssignAttributeValueDialog from "@dashboard/components/AssignAttributeValueDialog";
+import { Container } from "@dashboard/components/AssignContainerDialog";
 import { AttributeInput, Attributes } from "@dashboard/components/Attributes";
 import ChannelsAvailabilityCard from "@dashboard/components/ChannelsAvailabilityCard";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
@@ -35,10 +36,9 @@ import { ProductOrganization } from "@dashboard/products/components/ProductOrgan
 import { ProductVariantPrice } from "@dashboard/products/components/ProductVariantPrice";
 import { ProductCreateUrlQueryParams, productListUrl } from "@dashboard/products/urls";
 import { getChoices } from "@dashboard/products/utils/data";
-import { getChoicesWithAncestors } from "@dashboard/products/utils/utils";
-import { Container } from "@dashboard/types";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { Box, Option } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { FetchMoreProps, RelayToFlat } from "../../../types";
@@ -69,8 +69,6 @@ interface ProductCreatePageProps {
   productTypes?: RelayToFlat<SearchProductTypesQuery["search"]>;
   referencePages?: RelayToFlat<SearchPagesQuery["search"]>;
   referenceProducts?: RelayToFlat<SearchProductsQuery["search"]>;
-  referenceCategories?: RelayToFlat<SearchCategoriesQuery["search"]>;
-  referenceCollections?: RelayToFlat<SearchCollectionsQuery["search"]>;
   header: string;
   saveButtonBarState: ConfirmButtonTransitionState;
   weightUnit: string;
@@ -88,22 +86,17 @@ interface ProductCreatePageProps {
   onAssignReferencesClick: (attribute: AttributeInput) => void;
   fetchReferencePages?: (data: string) => void;
   fetchReferenceProducts?: (data: string) => void;
-  fetchReferenceCategories?: (data: string) => void;
-  fetchReferenceCollections?: (data: string) => void;
   fetchMoreReferencePages?: FetchMoreProps;
   fetchMoreReferenceProducts?: FetchMoreProps;
-  fetchMoreReferenceCategories?: FetchMoreProps;
-  fetchMoreReferenceCollections?: FetchMoreProps;
   onAttributeSelectBlur: () => void;
   onCloseDialog: (currentParams?: ProductCreateUrlQueryParams) => void;
   onSelectProductType: (productTypeId: string) => void;
   onSubmit?: (data: ProductCreateData) => any;
   fetchMoreWarehouses: () => void;
   searchWarehousesResult: QueryResult<SearchWarehousesQuery>;
-  searchWarehouses: (query: string) => void;
 }
 
-const ProductCreatePage = ({
+export const ProductCreatePage: React.FC<ProductCreatePageProps> = ({
   allChannelsCount,
   channelsErrors,
   currentChannels,
@@ -122,8 +115,6 @@ const ProductCreatePage = ({
   productTypes: productTypeChoiceList,
   referencePages = [],
   referenceProducts = [],
-  referenceCategories = [],
-  referenceCollections = [],
   saveButtonBarState,
   taxClasses,
   fetchMoreTaxClasses,
@@ -140,10 +131,6 @@ const ProductCreatePage = ({
   fetchMoreReferencePages,
   fetchReferenceProducts,
   fetchMoreReferenceProducts,
-  fetchReferenceCategories,
-  fetchMoreReferenceCategories,
-  fetchReferenceCollections,
-  fetchMoreReferenceCollections,
   fetchAttributeValues,
   fetchMoreAttributeValues,
   onCloseDialog,
@@ -151,7 +138,6 @@ const ProductCreatePage = ({
   onAttributeSelectBlur,
   fetchMoreWarehouses,
   searchWarehousesResult,
-  searchWarehouses,
 }: ProductCreatePageProps) => {
   const intl = useIntl();
   const navigate = useNavigator();
@@ -162,7 +148,7 @@ const ProductCreatePage = ({
   const [selectedCategory, setSelectedCategory] = useStateFromProps(initial?.category || "");
   const [selectedCollections, setSelectedCollections] = useStateFromProps<Option[]>([]);
   const [selectedTaxClass, setSelectedTaxClass] = useStateFromProps(initial?.taxClassId ?? "");
-  const categories = getChoicesWithAncestors(categoryChoiceList);
+  const categories = getChoices(categoryChoiceList);
   const collections = getChoices(collectionChoiceList);
   const productTypes = getChoices(productTypeChoiceList);
   const taxClassChoices =
@@ -176,11 +162,17 @@ const ProductCreatePage = ({
     data: ProductCreateData,
     handlers: ProductCreateHandlers,
   ) => {
-    handleContainerReferenceAssignment(
+    handlers.selectAttributeReference(
       assignReferencesAttributeId,
-      attributeValues,
-      data.attributes,
-      handlers,
+      mergeAttributeValues(
+        assignReferencesAttributeId,
+        attributeValues.map(({ id }) => id),
+        data.attributes,
+      ),
+    );
+    handlers.selectAttributeReferenceMetadata(
+      assignReferencesAttributeId,
+      attributeValues.map(({ id, name }) => ({ value: id, label: name })),
     );
     closeDialog();
   };
@@ -196,8 +188,6 @@ const ProductCreatePage = ({
       productTypes={productTypeChoiceList}
       referencePages={referencePages}
       referenceProducts={referenceProducts}
-      referenceCategories={referenceCategories}
-      referenceCollections={referenceCollections}
       selectedCollections={selectedCollections}
       setSelectedCategory={setSelectedCategory}
       setSelectedCollections={setSelectedCollections}
@@ -209,10 +199,6 @@ const ProductCreatePage = ({
       fetchMoreReferencePages={fetchMoreReferencePages}
       fetchReferenceProducts={fetchReferenceProducts}
       fetchMoreReferenceProducts={fetchMoreReferenceProducts}
-      fetchReferenceCategories={fetchReferenceCategories}
-      fetchMoreReferenceCategories={fetchMoreReferenceCategories}
-      fetchReferenceCollections={fetchReferenceCollections}
-      fetchMoreReferenceCollections={fetchMoreReferenceCollections}
       assignReferencesAttributeId={assignReferencesAttributeId}
       loading={loading}
     >
@@ -282,12 +268,11 @@ const ProductCreatePage = ({
                     warehouses={mapEdgesToItems(searchWarehousesResult?.data?.search) ?? []}
                     fetchMoreWarehouses={fetchMoreWarehouses}
                     hasMoreWarehouses={searchWarehousesResult?.data?.search?.pageInfo?.hasNextPage}
+                    disabled={loading}
                     hasVariants={false}
                     onFormDataChange={change}
                     errors={errors}
                     stocks={data.stocks}
-                    loading={loading}
-                    searchWarehouses={searchWarehouses}
                     onChange={handlers.changeStock}
                     onWarehouseStockAdd={handlers.addStock}
                     onWarehouseStockDelete={handlers.deleteStock}
@@ -389,8 +374,6 @@ const ProductCreatePage = ({
                 confirmButtonState={"default"}
                 products={referenceProducts}
                 pages={referencePages}
-                collections={referenceCollections}
-                categories={referenceCategories}
                 attribute={data.attributes.find(({ id }) => id === assignReferencesAttributeId)}
                 hasMore={handlers.fetchMoreReferences?.hasMore}
                 open={canOpenAssignReferencesAttributeDialog}
@@ -409,6 +392,5 @@ const ProductCreatePage = ({
     </ProductCreateForm>
   );
 };
-
 ProductCreatePage.displayName = "ProductCreatePage";
 export default ProductCreatePage;

@@ -1,7 +1,7 @@
-import datetime
 import json
 import logging
-from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 
 import requests
 from authlib.jose import JWTClaims, jwt
@@ -60,7 +60,7 @@ CSRF_FIELD = "csrf_token"
 logger = logging.getLogger(__name__)
 
 
-def fetch_jwks(jwks_url) -> dict | None:
+def fetch_jwks(jwks_url) -> Optional[dict]:
     """Fetch JSON Web Key Sets from a provider.
 
     Fetched keys will be stored in the cache to the reduced amount of possible
@@ -72,20 +72,17 @@ def fetch_jwks(jwks_url) -> dict | None:
         response = HTTPClient.send_request("GET", jwks_url, allow_redirects=False)
         response.raise_for_status()
         jwks = response.json()
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         logger.exception("Unable to fetch jwks from %s", jwks_url)
-        raise AuthenticationError(
-            "Unable to finalize the authentication process."
-        ) from e
-    except json.JSONDecodeError as e:
+        raise AuthenticationError("Unable to finalize the authentication process.")
+    except json.JSONDecodeError:
         content = response.content if response else "Unable to find the response"
         logger.exception(
-            "Unable to decode the response from auth service with jwks. Response: %s",
+            "Unable to decode the response from auth service with jwks. "
+            "Response: %s",
             content,
         )
-        raise AuthenticationError(
-            "Unable to finalize the authentication process."
-        ) from e
+        raise AuthenticationError("Unable to finalize the authentication process.")
     keys = jwks.get("keys", [])
     if not keys:
         logger.warning("List of JWKS keys is empty")
@@ -101,8 +98,8 @@ def get_jwks_keys_from_cache_or_fetch(jwks_url: str) -> dict:
 
 
 def get_user_info_from_cache_or_fetch(
-    user_info_url: str, access_token: str, exp_time: int | None
-) -> dict | None:
+    user_info_url: str, access_token: str, exp_time: Optional[int]
+) -> Optional[dict]:
     user_info_data = cache.get(f"{PLUGIN_ID}.{access_token}", None)
 
     if not user_info_data:
@@ -110,7 +107,7 @@ def get_user_info_from_cache_or_fetch(
         cache_time = USER_INFO_DEFAULT_CACHE_TIME
 
         if exp_time:
-            now_ts = int(datetime.datetime.now(tz=datetime.UTC).timestamp())
+            now_ts = int(datetime.now().timestamp())
             exp_delta = exp_time - now_ts
             cache_time = exp_delta if exp_delta > 0 else cache_time
 
@@ -122,7 +119,7 @@ def get_user_info_from_cache_or_fetch(
     return user_info_data
 
 
-def get_user_info(user_info_url, access_token) -> dict | None:
+def get_user_info(user_info_url, access_token) -> Optional[dict]:
     try:
         response = HTTPClient.send_request(
             "GET",
@@ -330,7 +327,7 @@ def create_jwt_token(
     id_payload: CodeIDToken,
     user: User,
     access_token: str,
-    permissions: list[str] | None,
+    permissions: Optional[list[str]],
     owner: str,
 ) -> str:
     additional_payload = {
@@ -380,30 +377,29 @@ def get_parsed_id_token(token_data, jwks_url) -> CodeIDToken:
         decoded_token = get_decoded_token(id_token, jwks_url, CodeIDToken)
         decoded_token.validate()
         return decoded_token
-    except DecodeError as e:
+    except DecodeError:
         logger.warning("Unable to decode provided token", exc_info=True)
-        raise AuthenticationError("Unable to decode provided token") from e
-    except (JoseError, ValueError) as e:
+        raise AuthenticationError("Unable to decode provided token")
+    except (JoseError, ValueError):
         logger.warning("Token validation failed", exc_info=True)
-        raise AuthenticationError("Token validation failed") from e
+        raise AuthenticationError("Token validation failed")
 
 
 def get_or_create_user_from_payload(
     payload: dict,
     oauth_url: str,
-    last_login: int | None = None,
+    last_login: Optional[int] = None,
 ) -> tuple[User, bool, bool]:
     oidc_metadata_key = f"oidc:{oauth_url}"
     user_email = payload.get("email")
     if not user_email:
         raise AuthenticationError("Missing user's email.")
 
-    sub: str | None = payload.get("sub")
+    sub = payload.get("sub")
     get_kwargs = {"private_metadata__contains": {oidc_metadata_key: sub}}
     if not sub:
         get_kwargs = {"email": user_email}
         logger.warning("Missing sub section in OIDC payload")
-        raise AuthenticationError("Missing subject identifier.")
 
     defaults_create = {
         "is_active": True,
@@ -414,7 +410,7 @@ def get_or_create_user_from_payload(
         "private_metadata": {oidc_metadata_key: sub},
         "password": make_password(None),
     }
-    cache_key = oidc_metadata_key + ":" + sub
+    cache_key = oidc_metadata_key + ":" + str(sub)
     user_id = cache.get(cache_key)
     if user_id:
         get_kwargs = {"id": user_id}
@@ -448,7 +444,7 @@ def get_or_create_user_from_payload(
         user_email=user_email,
         user_first_name=defaults_create["first_name"],
         user_last_name=defaults_create["last_name"],
-        sub=sub,
+        sub=sub,  # type: ignore
         last_login=last_login,
     )
 
@@ -469,7 +465,7 @@ def _update_user_details(
     user_first_name: str,
     user_last_name: str,
     sub: str,
-    last_login: int | None,
+    last_login: Optional[int],
 ) -> bool:
     user_sub = user.get_value_from_private_metadata(oidc_key)
     fields_to_save = set()
@@ -490,7 +486,7 @@ def _update_user_details(
 
     if last_login:
         if not user.last_login or user.last_login.timestamp() < last_login:
-            login_time = datetime.datetime.fromtimestamp(last_login, tz=datetime.UTC)
+            login_time = timezone.make_aware(datetime.fromtimestamp(last_login))
             user.last_login = login_time
             fields_to_save.add("last_login")
     else:
@@ -562,7 +558,7 @@ def create_tokens_from_oauth_payload(
     token_data: dict,
     user: User,
     claims: CodeIDToken,
-    permissions: list[str] | None,
+    permissions: Optional[list[str]],
     owner: str,
 ):
     refresh_token = token_data.get("refresh_token")
@@ -593,7 +589,7 @@ def validate_refresh_token(refresh_token, data):
 
     try:
         refresh_payload = jwt_decode(refresh_token, verify_expiration=True)
-    except PyJWTError as e:
+    except PyJWTError:
         raise ValidationError(
             {
                 "refreshToken": ValidationError(
@@ -601,7 +597,7 @@ def validate_refresh_token(refresh_token, data):
                     code=PluginErrorCode.INVALID.value,
                 )
             }
-        ) from e
+        )
 
     if not data.get("refreshToken"):
         if not refresh_payload.get(CSRF_FIELD):
@@ -645,7 +641,7 @@ def get_incorrect_or_missing_urls(urls: dict) -> list[str]:
     return incorrect_urls
 
 
-def get_incorrect_fields(plugin_configuration: "PluginConfiguration") -> list[str]:
+def get_incorrect_fields(plugin_configuration: "PluginConfiguration"):
     """Return missing or incorrect configuration fields for OpenIDConnectPlugin."""
     configuration = plugin_configuration.configuration
     configuration = {item["name"]: item["value"] for item in configuration}
@@ -662,6 +658,7 @@ def get_incorrect_fields(plugin_configuration: "PluginConfiguration") -> list[st
                     "oauth_token_url": configuration["oauth_token_url"],
                 }
             )
+
         elif configuration["user_info_url"]:
             urls_to_validate.update(
                 {
@@ -685,7 +682,6 @@ def get_incorrect_fields(plugin_configuration: "PluginConfiguration") -> list[st
         if not configuration["client_secret"]:
             incorrect_fields.append("client_secret")
         return incorrect_fields
-    return []
 
 
 def get_saleor_permissions_qs_from_scope(scope: str) -> QuerySet[Permission]:
@@ -700,9 +696,9 @@ def get_saleor_permissions_from_list(permissions: list) -> QuerySet[Permission]:
     if not saleor_permissions_str:
         return Permission.objects.none()
 
-    permission_codenames = [
-        perm.replace("saleor:", "") for perm in saleor_permissions_str
-    ]
+    permission_codenames = list(
+        map(lambda perm: perm.replace("saleor:", ""), saleor_permissions_str)
+    )
     permissions = get_permissions_from_codenames(permission_codenames)
     return permissions
 

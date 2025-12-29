@@ -6,6 +6,7 @@ import { RichTextEditorLoading } from "@dashboard/components/RichTextEditor/Rich
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { OutputData } from "@editorjs/editorjs";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import TranslationFieldsSave from "./TranslationFieldsSave";
@@ -21,7 +22,7 @@ interface TranslationFieldsRichProps {
   onSubmit: (data: OutputData) => SubmitPromise;
 }
 
-const TranslationFieldsRich = ({
+const TranslationFieldsRich: React.FC<TranslationFieldsRichProps> = ({
   disabled,
   edit,
   initial,
@@ -29,7 +30,7 @@ const TranslationFieldsRich = ({
   resetKey,
   onDiscard,
   onSubmit,
-}: TranslationFieldsRichProps) => {
+}) => {
   const intl = useIntl();
   const { isReadyForMount, handleSubmit, defaultValue, handleChange, editorRef } =
     useRichTextSubmit(initial, onSubmit, disabled);

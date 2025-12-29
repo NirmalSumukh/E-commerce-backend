@@ -7,7 +7,7 @@ import {
 import { getFieldError, getProductErrorMessage } from "@dashboard/utils/errors";
 import getPageErrorMessage from "@dashboard/utils/errors/page";
 import { Accordion, Box, Input, Text, Textarea } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { DashboardCard } from "../Card";
@@ -39,7 +39,7 @@ interface SeoFormProps {
   onClick?: () => any;
 }
 
-export const SeoForm = (props: SeoFormProps) => {
+export const SeoForm: React.FC<SeoFormProps> = props => {
   const {
     description,
     descriptionPlaceholder,

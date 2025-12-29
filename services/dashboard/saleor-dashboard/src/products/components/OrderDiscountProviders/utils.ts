@@ -15,7 +15,7 @@ export const useDiscountDialog = () => {
 export const getManualOrderDiscount = (order: OrderDetailsFragment) =>
   order ? getOrderDiscount(order, OrderDiscountType.MANUAL) : null;
 
-const getOrderDiscount = (
+export const getOrderDiscount = (
   order: OrderDetailsFragment,
   discountType: OrderDiscountType,
 ): OrderDetailsQuery["order"]["discounts"][0] =>

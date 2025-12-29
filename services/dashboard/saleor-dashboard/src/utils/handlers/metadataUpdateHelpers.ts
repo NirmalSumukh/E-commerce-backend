@@ -2,7 +2,7 @@ import { MetadataInput } from "@saleor/sdk/dist/apollo/types";
 import isEqual from "lodash/isEqual";
 import sortBy from "lodash/sortBy";
 
-interface GenericMetadataInput extends MetadataInput {
+export interface GenericMetadataInput extends MetadataInput {
   __typename?: string;
 }
 

@@ -14,13 +14,14 @@ import useStateFromProps from "@dashboard/hooks/useStateFromProps";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { PluginDetailsPageFormData, PluginsDetailsPage } from "./components/PluginsDetailsPage";
 import { PluginSecretFieldDialog } from "./components/PluginSecretFieldDialog";
 import { getConfigByChannelId, isPluginGlobal, isSecretField } from "./utils";
 
-interface PluginsDetailsProps {
+export interface PluginsDetailsProps {
   id: string;
   params: PluginUrlQueryParams;
 }
@@ -41,7 +42,7 @@ export function getConfigurationInput(
     }));
 }
 
-export const EditPluginExtension = ({ id, params }: PluginsDetailsProps) => {
+export const EditPluginExtension: React.FC<PluginsDetailsProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -49,7 +50,6 @@ export const EditPluginExtension = ({ id, params }: PluginsDetailsProps) => {
     displayLoader: true,
     variables: { id },
   });
-
   const plugin = pluginData?.plugin;
   const initialSelectedChannelValue =
     plugin && !isPluginGlobal(plugin.globalConfiguration)
@@ -75,8 +75,6 @@ export const EditPluginExtension = ({ id, params }: PluginsDetailsProps) => {
       }
     },
   });
-  const isSubmitting = pluginUpdateOpts.loading;
-
   const formErrors = pluginUpdateOpts.data?.pluginUpdate.errors || [];
   const handleFieldUpdate = (value: string) =>
     pluginUpdate({
@@ -114,7 +112,7 @@ export const EditPluginExtension = ({ id, params }: PluginsDetailsProps) => {
     <>
       <WindowTitle title={plugin?.name} />
       <PluginsDetailsPage
-        disabled={loading || isSubmitting}
+        disabled={loading}
         errors={formErrors}
         saveButtonBarState={!params.action ? pluginUpdateOpts.status : "default"}
         plugin={plugin}

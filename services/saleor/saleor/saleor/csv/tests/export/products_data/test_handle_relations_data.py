@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from unittest.mock import patch
 
 from django.utils import timezone
@@ -84,11 +84,7 @@ def test_get_products_relations_data_attribute_ids(
     file_attribute,
     product_type_page_reference_attribute,
     product_type_product_reference_attribute,
-    product_type_collection_reference_attribute,
-    product_type_category_reference_attribute,
     page,
-    collection,
-    category,
 ):
     # given
     product = product_list[0]
@@ -96,8 +92,6 @@ def test_get_products_relations_data_attribute_ids(
         file_attribute,
         product_type_page_reference_attribute,
         product_type_product_reference_attribute,
-        product_type_collection_reference_attribute,
-        product_type_category_reference_attribute,
     )
     associate_attribute_values_to_instance(
         product,
@@ -120,22 +114,6 @@ def test_get_products_relations_data_attribute_ids(
     associate_attribute_values_to_instance(
         product,
         {product_type_product_reference_attribute.id: [product_ref_value]},
-    )
-    collection_ref_value = AttributeValue.objects.create(
-        attribute=product_type_collection_reference_attribute,
-        reference_collection=collection,
-    )
-    associate_attribute_values_to_instance(
-        product,
-        {product_type_collection_reference_attribute.id: [collection_ref_value]},
-    )
-    category_ref_value = AttributeValue.objects.create(
-        attribute=product_type_category_reference_attribute,
-        reference_category=category,
-    )
-    associate_attribute_values_to_instance(
-        product,
-        {product_type_category_reference_attribute.id: [category_ref_value]},
     )
 
     qs = Product.objects.all()
@@ -229,7 +207,7 @@ def test_prepare_products_relations_data(
     )
     images = ", ".join(
         [
-            "https://example.com/media/" + image.image.name
+            "http://mirumee.com/media/" + image.image.name
             for image in product_with_image.media.all()
         ]
     )
@@ -329,7 +307,7 @@ def test_prepare_products_relations_data_only_channel_ids(
 def test_prepare_products_relations_data_sets_published_dates(
     collection_list, channel_PLN, channel_USD, product_available_in_many_channels
 ):
-    # givenq
+    # given
     collection_list[0].products.add(product_available_in_many_channels)
     collection_list[1].products.add(product_available_in_many_channels)
     qs = Product.objects.all()
@@ -632,7 +610,7 @@ def test_prepare_variants_relations_data(
         pk = variant.pk
         images = ", ".join(
             [
-                "https://example.com/media/" + image.image.name
+                "http://mirumee.com/media/" + image.image.name
                 for image in variant.media.all()
             ]
         )
@@ -676,7 +654,7 @@ def test_prepare_variants_relations_data_only_fields(
     pk = variant.pk
     images = ", ".join(
         [
-            "https://example.com/media/" + image.image.name
+            "http://mirumee.com/media/" + image.image.name
             for image in variant.media.all()
         ]
     )
@@ -823,13 +801,13 @@ def test_add_image_uris_to_data(product):
     result = add_image_uris_to_data(product.pk, image_path, field, input_data)
 
     # then
-    assert result[pk][field] == {"https://example.com/media/" + image_path}
+    assert result[pk][field] == {"http://mirumee.com/media/" + image_path}
 
 
 def test_add_image_uris_to_data_update_images(product):
     # given
     pk = product.pk
-    old_path = "https://example.com/media/test/image0.jpg"
+    old_path = "http://mirumee.com/media/test/image0.jpg"
     image_path = "test/path/image.jpg"
     input_data = {pk: {"product_media": {old_path}}}
     field = "product_media"
@@ -838,7 +816,7 @@ def test_add_image_uris_to_data_update_images(product):
     result = add_image_uris_to_data(product.pk, image_path, field, input_data)
 
     # then
-    assert result[pk][field] == {"https://example.com/media/" + image_path, old_path}
+    assert result[pk][field] == {"http://mirumee.com/media/" + image_path, old_path}
 
 
 def test_add_image_uris_to_data_no_image_path(product):
@@ -1009,7 +987,7 @@ def test_add_file_attribute_info_to_data(product):
 
     # then
     expected_header = f"{slug} (product attribute)"
-    assert result[pk][expected_header] == {"https://example.com/media/" + test_url}
+    assert result[pk][expected_header] == {"http://mirumee.com/media/" + test_url}
 
 
 def test_add_rich_text_attribute_info_to_data(product):
@@ -1144,7 +1122,7 @@ def test_add_reference_info_to_data_update_attribute_data(product, page):
 def test_add_date_time_attribute_info_to_data(product, date_time_attribute):
     # given
     pk = product.pk
-    date_time = datetime.datetime(2021, 7, 15, 2, 3, tzinfo=datetime.UTC)
+    date_time = datetime(2021, 7, 15, 2, 3)
     attribute_data = AttributeData(
         slug=date_time_attribute.slug,
         value_slug=None,
@@ -1175,7 +1153,7 @@ def test_add_date_time_attribute_info_to_data(product, date_time_attribute):
 def test_add_date_attribute_info_to_data(product, date_attribute):
     # given
     pk = product.pk
-    date = datetime.datetime(2021, 8, 10, 5, 3, tzinfo=datetime.UTC)
+    date = datetime(2021, 8, 10, 5, 3)
     attribute_data = AttributeData(
         slug=date_attribute.slug,
         value_slug=None,
@@ -1454,7 +1432,7 @@ def test_add_swatch_attribute_value_info_to_data(product, numeric_attribute):
 
     # then
     expected_header = f"{numeric_attribute.slug} (product attribute)"
-    assert result[pk][expected_header] == {"https://example.com/media/" + test_url}
+    assert result[pk][expected_header] == {"http://mirumee.com/media/" + test_url}
 
 
 def test_add_warehouse_info_to_data(product):

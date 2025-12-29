@@ -26,9 +26,7 @@ def test_get_variant_selection_attributes(
     ]
 
     # for now, instead of skipping test
-    attrs = zip(
-        attrs, (False, True, True, False, True, False, False, False), strict=False
-    )
+    attrs = zip(attrs, (False, True, True, False, True, False, False, False))
 
     # when
     result = [attr for attr, *_ in get_variant_selection_attributes(attrs)]

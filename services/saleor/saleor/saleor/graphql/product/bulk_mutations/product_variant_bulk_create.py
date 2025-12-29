@@ -20,15 +20,21 @@ from ...attribute.types import (
     AttributeValueDescriptions,
     AttributeValueSelectableTypeInput,
 )
-from ...attribute.utils.attribute_assignment import AttributeAssignmentMixin
-from ...core.context import ChannelContext
-from ...core.descriptions import ADDED_IN_322, DEPRECATED_IN_3X_INPUT
+from ...attribute.utils import AttributeAssignmentMixin
+from ...channel import ChannelContext
+from ...core.descriptions import (
+    ADDED_IN_311,
+    ADDED_IN_312,
+    ADDED_IN_314,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.enums import ErrorPolicyEnum
 from ...core.fields import JSONString
 from ...core.mutations import (
     BaseMutation,
-    DeprecatedModelMutation,
+    ModelMutation,
     validation_error_to_error_type,
 )
 from ...core.scalars import Date, DateTime
@@ -41,7 +47,6 @@ from ...core.types import (
 )
 from ...core.utils import get_duplicated_values
 from ...core.validators import validate_price_precision
-from ...meta.inputs import MetadataInput
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...shop.utils import get_track_inventory_by_default
 from ..mutations.channels import ProductVariantChannelListingAddInput
@@ -121,7 +126,7 @@ class ProductVariantBulkResult(BaseObjectType):
 class BulkAttributeValueInput(BaseInputObjectType):
     id = graphene.ID(description="ID of the selected attribute.", required=False)
     external_reference = graphene.String(
-        description="External ID of this attribute.", required=False
+        description="External ID of this attribute." + ADDED_IN_314, required=False
     )
     values = NonNullList(
         graphene.String,
@@ -129,52 +134,51 @@ class BulkAttributeValueInput(BaseInputObjectType):
         description=(
             "The value or slug of an attribute to resolve. "
             "If the passed value is non-existent, it will be created."
-            + DEPRECATED_IN_3X_INPUT
+            + DEPRECATED_IN_3X_FIELD
         ),
     )
     dropdown = AttributeValueSelectableTypeInput(
         required=False,
-        description="Attribute value ID.",
+        description="Attribute value ID." + ADDED_IN_312,
     )
     swatch = AttributeValueSelectableTypeInput(
         required=False,
-        description="Attribute value ID.",
+        description="Attribute value ID." + ADDED_IN_312,
     )
     multiselect = NonNullList(
         AttributeValueSelectableTypeInput,
         required=False,
-        description="List of attribute value IDs.",
+        description="List of attribute value IDs." + ADDED_IN_312,
     )
     numeric = graphene.String(
         required=False,
-        description="Numeric value of an attribute.",
+        description="Numeric value of an attribute." + ADDED_IN_312,
     )
     file = graphene.String(
         required=False,
-        description="URL of the file attribute. Every time, a new value is created.",
+        description=(
+            "URL of the file attribute. Every time, a new value is created."
+            + ADDED_IN_312
+        ),
     )
     content_type = graphene.String(
         required=False,
-        description="File content type.",
-    )
-    reference = graphene.ID(
-        description=(
-            "ID of the referenced entity for single reference attribute." + ADDED_IN_322
-        ),
-        required=False,
+        description="File content type." + ADDED_IN_312,
     )
     references = NonNullList(
         graphene.ID,
-        description="List of entity IDs that will be used as references.",
+        description=(
+            "List of entity IDs that will be used as references." + ADDED_IN_312
+        ),
         required=False,
     )
     rich_text = JSONString(
         required=False,
-        description="Text content in JSON format.",
+        description="Text content in JSON format." + ADDED_IN_312,
     )
     plain_text = graphene.String(
         required=False,
-        description="Plain text content.",
+        description="Plain text content." + ADDED_IN_312,
     )
     boolean = graphene.Boolean(
         required=False,
@@ -183,9 +187,11 @@ class BulkAttributeValueInput(BaseInputObjectType):
             "If the passed value is non-existent, it will be created."
         ),
     )
-    date = Date(required=False, description=AttributeValueDescriptions.DATE)
+    date = Date(
+        required=False, description=AttributeValueDescriptions.DATE + ADDED_IN_312
+    )
     date_time = DateTime(
-        required=False, description=AttributeValueDescriptions.DATE_TIME
+        required=False, description=AttributeValueDescriptions.DATE_TIME + ADDED_IN_312
     )
 
     class Meta:
@@ -224,14 +230,14 @@ class ProductVariantBulkCreate(BaseMutation):
         ProductVariant,
         required=True,
         default_value=[],
-        description="List of the created variants." + DEPRECATED_IN_3X_INPUT,
+        description="List of the created variants." + DEPRECATED_IN_3X_FIELD,
     )
 
     results = NonNullList(
         ProductVariantBulkResult,
         required=True,
         default_value=[],
-        description="List of the created variants.",
+        description="List of the created variants." + ADDED_IN_311,
     )
 
     class Arguments:
@@ -250,6 +256,8 @@ class ProductVariantBulkCreate(BaseMutation):
             description=(
                 "Policies of error handling. DEFAULT: "
                 + ErrorPolicyEnum.REJECT_EVERYTHING.name
+                + ADDED_IN_311
+                + PREVIEW_FEATURE
             ),
         )
 
@@ -367,7 +375,6 @@ class ProductVariantBulkCreate(BaseMutation):
         cls,
         price,
         cost_price,
-        prior_price,
         currency_code,
         channel_id,
         variant_index,
@@ -390,17 +397,6 @@ class ProductVariantBulkCreate(BaseMutation):
         clean_price(
             cost_price,
             "cost_price",
-            currency_code,
-            channel_id,
-            variant_index,
-            listing_index,
-            errors,
-            index_error_map,
-            path_prefix,
-        )
-        clean_price(
-            prior_price,
-            "prior_price",
             currency_code,
             channel_id,
             variant_index,
@@ -488,13 +484,11 @@ class ProductVariantBulkCreate(BaseMutation):
             ]
             price = channel_listing.get("price")
             cost_price = channel_listing.get("cost_price")
-            prior_price = channel_listing.get("prior_price")
             currency_code = channel_listing["channel"].currency_code
 
             cls.clean_prices(
                 price,
                 cost_price,
-                prior_price,
                 currency_code,
                 channel_id,
                 variant_index,
@@ -611,24 +605,13 @@ class ProductVariantBulkCreate(BaseMutation):
                 )
                 continue
             try:
-                metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-                private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-                    "private_metadata", None
-                )
-
-                metadata_collection = cls.create_metadata_from_graphql_input(
-                    metadata_list, error_field_name="metadata"
-                )
-                private_metadata_collection = cls.create_metadata_from_graphql_input(
-                    private_metadata_list,
-                    error_field_name="private_metadata",
-                )
-
+                metadata_list = cleaned_input.pop("metadata", None)
+                private_metadata_list = cleaned_input.pop("private_metadata", None)
                 instance = models.ProductVariant()
                 cleaned_input["product"] = product
                 instance = cls.construct_instance(instance, cleaned_input)
                 cls.validate_and_update_metadata(
-                    instance, metadata_collection, private_metadata_collection
+                    instance, metadata_list, private_metadata_list
                 )
                 cls.clean_instance(info, instance)
                 instances_data_and_errors_list.append(
@@ -671,7 +654,8 @@ class ProductVariantBulkCreate(BaseMutation):
         quantity_limit = cleaned_input.get("quantity_limit_per_customer")
         if quantity_limit is not None and quantity_limit < 1:
             message = (
-                "Product variant can't have quantity_limit_per_customer lower than 1."
+                "Product variant can't have "
+                "quantity_limit_per_customer lower than 1."
             )
             code = ProductVariantBulkErrorCode.INVALID.value
             index_error_map[index].append(
@@ -721,7 +705,7 @@ class ProductVariantBulkCreate(BaseMutation):
         index,
         errors,
     ):
-        cleaned_input = DeprecatedModelMutation.clean_input(
+        cleaned_input = ModelMutation.clean_input(
             info, None, variant_data, input_cls=ProductVariantBulkCreateInput
         )
 
@@ -842,7 +826,6 @@ class ProductVariantBulkCreate(BaseMutation):
                 # value will be calculated asynchronously in the celery task
                 discounted_price_amount=listing_data["price"],
                 cost_price_amount=listing_data.get("cost_price"),
-                prior_price_amount=listing_data.get("prior_price"),
                 currency=listing_data["channel"].currency_code,
                 preorder_quantity_threshold=listing_data.get("preorder_threshold"),
             )
@@ -860,7 +843,9 @@ class ProductVariantBulkCreate(BaseMutation):
                 attribute_data[0].type == AttributeType.PRODUCT_TYPE
                 and attribute_data[0].variant_selection
             ):
-                attributes_display.append(", ".join(list(attribute_data[1].values)))
+                attributes_display.append(
+                    ", ".join([value for value in attribute_data[1].values])
+                )
 
         name = " / ".join(sorted(attributes_display))
         if not name:
@@ -932,7 +917,7 @@ class ProductVariantBulkCreate(BaseMutation):
 
     @classmethod
     def post_save_actions(cls, info, instances, product):
-        variant_ids = {instance.node.id for instance in instances}
+        variant_ids = set([instance.node.id for instance in instances])
         channel_ids = set(
             models.ProductVariantChannelListing.objects.filter(
                 variant_id__in=variant_ids

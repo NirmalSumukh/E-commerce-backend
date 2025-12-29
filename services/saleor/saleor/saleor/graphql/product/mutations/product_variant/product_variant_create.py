@@ -1,6 +1,10 @@
+from collections import defaultdict
+
 import graphene
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 
+from .....attribute import AttributeInputType
 from .....attribute import models as attribute_models
 from .....core.tracing import traced_atomic_transaction
 from .....discount.utils.promotion import mark_active_catalogue_promotion_rules_as_dirty
@@ -9,18 +13,16 @@ from .....product import models
 from .....product.error_codes import ProductErrorCode
 from .....product.utils.variants import generate_and_set_variant_name
 from ....attribute.types import AttributeValueInput
-from ....attribute.utils.attribute_assignment import (
-    AttributeAssignmentMixin,
-)
-from ....attribute.utils.shared import AttrValuesInput
+from ....attribute.utils import AttributeAssignmentMixin, AttrValuesInput
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
+from ....core.descriptions import ADDED_IN_31, ADDED_IN_38, ADDED_IN_310
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.scalars import DateTime, WeightScalar
 from ....core.types import BaseInputObjectType, NonNullList, ProductError
 from ....core.utils import get_duplicated_values
-from ....meta.inputs import MetadataInput, MetadataInputDescription
+from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ....shop.utils import get_track_inventory_by_default
 from ....warehouse.types import Warehouse
@@ -31,7 +33,6 @@ from ...utils import (
     get_used_variants_attribute_values,
 )
 from ..product.product_create import StockInput
-from . import product_variant_cleaner as cleaner
 
 T_INPUT_MAP = list[tuple[attribute_models.Attribute, AttrValuesInput]]
 
@@ -63,29 +64,32 @@ class ProductVariantInput(BaseInputObjectType):
     )
     weight = WeightScalar(description="Weight of the Product Variant.", required=False)
     preorder = PreorderSettingsInput(
-        description="Determines if variant is in preorder."
+        description=("Determines if variant is in preorder." + ADDED_IN_31)
     )
     quantity_limit_per_customer = graphene.Int(
         required=False,
         description=(
             "Determines maximum quantity of `ProductVariant`,"
-            "that can be bought in a single checkout."
+            "that can be bought in a single checkout." + ADDED_IN_31
         ),
     )
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the product variant metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description=(
+            "Fields required to update the product variant metadata." + ADDED_IN_38
+        ),
         required=False,
     )
     private_metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the product variant private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description=(
+            "Fields required to update the product variant private metadata."
+            + ADDED_IN_38
+        ),
         required=False,
     )
     external_reference = graphene.String(
-        description="External ID of this product variant.",
+        description="External ID of this product variant." + ADDED_IN_310,
         required=False,
     )
 
@@ -114,7 +118,7 @@ class ProductVariantCreateInput(ProductVariantInput):
         doc_category = DOC_CATEGORY_PRODUCTS
 
 
-class ProductVariantCreate(DeprecatedModelMutation):
+class ProductVariantCreate(ModelMutation):
     class Arguments:
         input = ProductVariantCreateInput(
             required=True, description="Fields required to create a product variant."
@@ -132,6 +136,38 @@ class ProductVariantCreate(DeprecatedModelMutation):
         support_private_meta_field = True
 
     @classmethod
+    def clean_attributes(
+        cls, attributes: dict, product_type: models.ProductType
+    ) -> T_INPUT_MAP:
+        attributes_qs = product_type.variant_attributes.all()
+        attributes = AttributeAssignmentMixin.clean_input(attributes, attributes_qs)
+        return attributes
+
+    @classmethod
+    def validate_duplicated_attribute_values(
+        cls, attributes_data, used_attribute_values, instance=None
+    ):
+        attribute_values = defaultdict(list)
+        for attr, attr_data in attributes_data:
+            if attr.input_type == AttributeInputType.FILE:
+                values = (
+                    [slugify(attr_data.file_url.split("/")[-1])]
+                    if attr_data.file_url
+                    else []
+                )
+            else:
+                values = attr_data.values
+            attribute_values[attr_data.global_id].extend(values)
+        if attribute_values in used_attribute_values:
+            raise ValidationError(
+                "Duplicated attribute values for product variant.",
+                code=ProductErrorCode.DUPLICATED_INPUT_ITEM.value,
+                params={"attributes": attribute_values.keys()},
+            )
+        else:
+            used_attribute_values.append(attribute_values)
+
+    @classmethod
     def clean_input(
         cls,
         info: ResolveInfo,
@@ -141,22 +177,57 @@ class ProductVariantCreate(DeprecatedModelMutation):
     ):
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
 
-        cleaner.clean_weight(cleaned_input)
-        cleaner.clean_quantity_limit(cleaned_input)
-        if stocks := cleaned_input.get("stocks"):
+        weight = cleaned_input.get("weight")
+        if weight and weight.value < 0:
+            raise ValidationError(
+                {
+                    "weight": ValidationError(
+                        "Product variant can't have negative weight.",
+                        code=ProductErrorCode.INVALID.value,
+                    )
+                }
+            )
+
+        quantity_limit_per_customer = cleaned_input.get("quantity_limit_per_customer")
+        if quantity_limit_per_customer is not None and quantity_limit_per_customer < 1:
+            raise ValidationError(
+                {
+                    "quantity_limit_per_customer": ValidationError(
+                        (
+                            "Product variant can't have "
+                            "quantity_limit_per_customer lower than 1."
+                        ),
+                        code=ProductErrorCode.INVALID.value,
+                    )
+                }
+            )
+
+        stocks = cleaned_input.get("stocks")
+        if stocks:
             cls.check_for_duplicates_in_stocks(stocks)
-        cls.clean_attributes(cleaned_input, instance)
-        if "sku" in cleaned_input:
-            cleaned_input["sku"] = clean_variant_sku(cleaned_input.get("sku"))
-        cleaner.clean_preorder_settings(cleaned_input)
 
-        return cleaned_input
-
-    @classmethod
-    def clean_attributes(cls, cleaned_input: dict, instance: models.ProductVariant):
-        product = cls.get_product(cleaned_input)
-        product_type = product.product_type
-        used_attribute_values = get_used_variants_attribute_values(product)
+        if instance.pk:
+            # If the variant is getting updated,
+            # simply retrieve the associated product type
+            product_type = instance.product.product_type
+            used_attribute_values = get_used_variants_attribute_values(instance.product)
+        else:
+            # If the variant is getting created, no product type is associated yet,
+            # retrieve it from the required "product" input field
+            product = cleaned_input["product"]
+            if not product:
+                raise ValidationError(
+                    {
+                        "product": ValidationError(
+                            "Product cannot be set empty.",
+                            code=ProductErrorCode.INVALID.value,
+                        )
+                    }
+                )
+            product_type = cleaned_input["product"].product_type
+            used_attribute_values = get_used_variants_attribute_values(
+                cleaned_input["product"]
+            )
 
         variant_attributes_ids = {
             graphene.Node.to_global_id("Attribute", attr_id)
@@ -164,7 +235,6 @@ class ProductVariantCreate(DeprecatedModelMutation):
                 product_type.variant_attributes.all().values_list("pk", flat=True)
             )
         }
-
         attributes = cleaned_input.get("attributes")
         attributes_ids = {attr["id"] for attr in attributes or []}
         invalid_attributes = attributes_ids - variant_attributes_ids
@@ -183,22 +253,23 @@ class ProductVariantCreate(DeprecatedModelMutation):
             # the value's PK.
             try:
                 if attributes:
-                    attributes_qs = product_type.variant_attributes.all()
-                    cleaned_attributes: T_INPUT_MAP = (
-                        AttributeAssignmentMixin.clean_input(attributes, attributes_qs)
-                    )
-                    cleaner.validate_duplicated_attribute_values(
-                        cleaned_attributes, used_attribute_values
+                    cleaned_attributes = cls.clean_attributes(attributes, product_type)
+                    cls.validate_duplicated_attribute_values(
+                        cleaned_attributes, used_attribute_values, instance
                     )
                     cleaned_input["attributes"] = cleaned_attributes
-                elif product_type.variant_attributes.filter(value_required=True):
+                # elif not instance.pk and not attributes:
+                elif not instance.pk and (
+                    not attributes
+                    and product_type.variant_attributes.filter(value_required=True)
+                ):
                     # if attributes were not provided on creation
                     raise ValidationError(
                         "All required attributes must take a value.",
                         ProductErrorCode.REQUIRED.value,
                     )
-            except ValidationError as e:
-                raise ValidationError({"attributes": e}) from e
+            except ValidationError as exc:
+                raise ValidationError({"attributes": exc})
         else:
             if attributes:
                 raise ValidationError(
@@ -206,19 +277,18 @@ class ProductVariantCreate(DeprecatedModelMutation):
                     ProductErrorCode.INVALID.value,
                 )
 
-    @classmethod
-    def get_product(cls, cleaned_input: dict) -> models.Product:
-        product = cleaned_input["product"]
-        if not product:
-            raise ValidationError(
-                {
-                    "product": ValidationError(
-                        "Product cannot be set empty.",
-                        code=ProductErrorCode.INVALID.value,
-                    )
-                }
+        if "sku" in cleaned_input:
+            cleaned_input["sku"] = clean_variant_sku(cleaned_input.get("sku"))
+
+        preorder_settings = cleaned_input.get("preorder")
+        if preorder_settings:
+            cleaned_input["is_preorder"] = True
+            cleaned_input["preorder_global_threshold"] = preorder_settings.get(
+                "global_threshold"
             )
-        return product
+            cleaned_input["preorder_end_date"] = preorder_settings.get("end_date")
+
+        return cleaned_input
 
     @classmethod
     def check_for_duplicates_in_stocks(cls, stocks_data):
@@ -246,7 +316,7 @@ class ProductVariantCreate(DeprecatedModelMutation):
             )
 
     @classmethod
-    def save(cls, info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
+    def save(cls, info: ResolveInfo, instance, cleaned_input):
         new_variant = instance.pk is None
         cls.set_track_inventory(info, instance, cleaned_input)
         with traced_atomic_transaction():

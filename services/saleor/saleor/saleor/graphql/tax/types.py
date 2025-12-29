@@ -1,11 +1,11 @@
 import graphene
 
 from ...tax import models
-from ..channel.dataloaders.by_self import ChannelByIdLoader
+from ..channel.dataloaders import ChannelByIdLoader
 from ..channel.types import Channel
 from ..core import ResolveInfo
 from ..core.connection import CountableConnection
-from ..core.descriptions import ADDED_IN_319, ADDED_IN_321
+from ..core.descriptions import ADDED_IN_39, ADDED_IN_319
 from ..core.doc_category import DOC_CATEGORY_TAXES
 from ..core.types import BaseObjectType, CountryDisplay, ModelObjectType, NonNullList
 from ..meta.types import ObjectWithMetadata
@@ -61,16 +61,9 @@ class TaxConfiguration(ModelObjectType[models.TaxConfiguration]):
         ),
         required=False,
     )
-    use_weighted_tax_for_shipping = graphene.Boolean(
-        description=(
-            "Determines whether to use weighted tax for shipping. When set to true, "
-            "the tax rate for shipping will be calculated based on the weighted average "
-            "of tax rates from the order or checkout lines." + ADDED_IN_321
-        ),
-    )
 
     class Meta:
-        description = "Channel-specific tax configuration."
+        description = "Channel-specific tax configuration." + ADDED_IN_39
         interfaces = [graphene.relay.Node, ObjectWithMetadata]
         model = models.TaxConfiguration
 
@@ -83,12 +76,6 @@ class TaxConfiguration(ModelObjectType[models.TaxConfiguration]):
         return TaxConfigurationPerCountryByTaxConfigurationIDLoader(info.context).load(
             root.pk
         )
-
-    @staticmethod
-    def resolve_use_weighted_tax_for_shipping(
-        root: models.TaxConfiguration, info: ResolveInfo
-    ):
-        return root.use_weighted_tax_for_shipping
 
 
 class TaxConfigurationCountableConnection(CountableConnection):
@@ -130,28 +117,18 @@ class TaxConfigurationPerCountry(ModelObjectType[models.TaxConfigurationPerCount
         ),
         required=False,
     )
-    use_weighted_tax_for_shipping = graphene.Boolean(
-        description=(
-            "Determines whether to use weighted tax for shipping. When set to true, "
-            "the tax rate for shipping will be calculated based on the weighted average "
-            "of tax rates from the order or checkout lines." + ADDED_IN_321
-        ),
-    )
 
     class Meta:
-        description = "Country-specific exceptions of a channel's tax configuration."
+        description = (
+            "Country-specific exceptions of a channel's tax configuration."
+            + ADDED_IN_39
+        )
         interface = [graphene.relay.Node]
         model = models.TaxConfigurationPerCountry
 
     @staticmethod
     def resolve_country(root: models.TaxConfigurationPerCountry, _info: ResolveInfo):
         return CountryDisplay(code=root.country.code, country=root.country.name)
-
-    @staticmethod
-    def resolve_use_weighted_tax_for_shipping(
-        root: models.TaxConfiguration, info: ResolveInfo
-    ):
-        return root.use_weighted_tax_for_shipping
 
 
 class TaxClass(ModelObjectType[models.TaxClass]):
@@ -166,7 +143,7 @@ class TaxClass(ModelObjectType[models.TaxClass]):
         description = (
             "Tax class is a named object used to define tax rates per country. Tax "
             "class can be assigned to product types, products and shipping methods to "
-            "define their tax rates."
+            "define their tax rates." + ADDED_IN_39
         )
         interfaces = [graphene.relay.Node, ObjectWithMetadata]
         model = models.TaxClass
@@ -197,7 +174,7 @@ class TaxClassCountryRate(ModelObjectType[models.TaxClassCountryRate]):
         description = (
             "Tax rate for a country. When tax class is null, it represents the default "
             "tax rate for that country; otherwise it's a country tax rate specific to "
-            "the given tax class."
+            "the given tax class." + ADDED_IN_39
         )
         model = models.TaxClassCountryRate
 
@@ -225,7 +202,7 @@ class TaxCountryConfiguration(BaseObjectType):
     )
 
     class Meta:
-        description = "Tax class rates grouped by country."
+        description = "Tax class rates grouped by country." + ADDED_IN_39
         doc_category = DOC_CATEGORY_TAXES
 
     @staticmethod

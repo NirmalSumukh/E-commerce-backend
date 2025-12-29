@@ -1,3 +1,5 @@
+from typing import Optional
+
 import graphene
 
 from ..core.enums import OrderDirection
@@ -11,13 +13,15 @@ def sort_active_key(plugin: Plugin, sort_reverse: bool):
         name = plugin.name
     else:
         active = False
-        if any(configuration.active for configuration in plugin.channel_configurations):
+        if any(
+            [configuration.active for configuration in plugin.channel_configurations]
+        ):
             active = True
         name = plugin.name
     return not active if sort_reverse else active, name
 
 
-def sort_plugins(plugins: list["Plugin"], sort_by: dict | None) -> list["Plugin"]:
+def sort_plugins(plugins: list["Plugin"], sort_by: Optional[dict]) -> list["Plugin"]:
     sort_reverse = False
     direction = sort_by.get("direction", OrderDirection.ASC) if sort_by else None
     if direction == OrderDirection.DESC:

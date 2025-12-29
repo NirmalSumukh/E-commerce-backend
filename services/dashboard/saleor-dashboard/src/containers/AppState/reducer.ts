@@ -1,7 +1,7 @@
 // @ts-strict-ignore
 import IAppState, { AppError } from "./state";
 
-type AppStateReducerActionType = "displayError" | "displayLoader";
+export type AppStateReducerActionType = "displayError" | "displayLoader";
 
 export interface AppStateReducerAction {
   payload: Partial<{

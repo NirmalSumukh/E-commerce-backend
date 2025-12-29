@@ -1,8 +1,9 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface WarehouseDeleteDialogProps {
+export interface WarehouseDeleteDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   onConfirm: () => void;
@@ -10,13 +11,13 @@ interface WarehouseDeleteDialogProps {
   name: string;
 }
 
-const WarehouseDeleteDialog = ({
+const WarehouseDeleteDialog: React.FC<WarehouseDeleteDialogProps> = ({
   name,
   confirmButtonState,
   onClose,
   onConfirm,
   open,
-}: WarehouseDeleteDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

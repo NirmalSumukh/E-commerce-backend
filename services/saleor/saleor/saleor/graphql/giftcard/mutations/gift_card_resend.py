@@ -9,6 +9,7 @@ from ....permission.enums import GiftcardPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_31
 from ...core.doc_category import DOC_CATEGORY_GIFT_CARDS
 from ...core.mutations import BaseMutation
 from ...core.types import BaseInputObjectType, GiftCardError
@@ -41,7 +42,7 @@ class GiftCardResend(BaseMutation):
         )
 
     class Meta:
-        description = "Resend a gift card."
+        description = "Resend a gift card." + ADDED_IN_31
         doc_category = DOC_CATEGORY_GIFT_CARDS
         permissions = (GiftcardPermissions.MANAGE_GIFT_CARD,)
         error_type_class = GiftCardError
@@ -57,7 +58,7 @@ class GiftCardResend(BaseMutation):
         if email := data.get("email"):
             try:
                 validate_email(email)
-            except ValidationError as e:
+            except ValidationError:
                 raise ValidationError(
                     {
                         "email": ValidationError(
@@ -65,7 +66,7 @@ class GiftCardResend(BaseMutation):
                             code=GiftCardErrorCode.INVALID.value,
                         )
                     }
-                ) from e
+                )
 
         return data
 

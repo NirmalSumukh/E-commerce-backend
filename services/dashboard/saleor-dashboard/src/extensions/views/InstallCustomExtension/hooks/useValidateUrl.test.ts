@@ -2,14 +2,20 @@ import { renderHook } from "@testing-library/react-hooks";
 
 import { useValidateUrl } from "./useValidateUrl";
 
+jest.mock("react-intl", () => ({
+  useIntl: () => ({
+    formatMessage: (message: { id: string; defaultMessage: string }) => message.defaultMessage,
+  }),
+  defineMessages: (messages: Record<string, { id: string; defaultMessage: string }>) => messages,
+}));
+
 describe("useValidateUrl", () => {
   it("should return true for valid URLs", () => {
     // Arrange
     const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
 
     // Act
-    const isValid = validate("http://example.com");
+    const isValid = result.current("https://example.com");
 
     // Assert
     expect(isValid).toBe(true);
@@ -18,72 +24,48 @@ describe("useValidateUrl", () => {
   it("should return error message for invalid URLs", () => {
     // Arrange
     const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
 
     // Act
-    const error = validate("invalid-url");
+    const error = result.current("not-a-url");
 
     // Assert
-    expect(error).toBe(
-      "A URL field within the extension's manifest has an invalid format. {docsLink} ({errorCode})",
-    );
+    expect(error).toBe("URL has invalid format");
   });
 
   it("should return error message for non-string values", () => {
     // Arrange
     const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
 
     // Act
-    const error = validate(123);
+    const error = result.current(123);
 
     // Assert
-    expect(error).toBe(
-      "A URL field within the extension's manifest has an invalid format. {docsLink} ({errorCode})",
-    );
+    expect(error).toBe("URL has invalid format");
   });
 
   it("should return error message for empty string", () => {
     // Arrange
     const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
 
     // Act
-    const error = validate("");
+    const error = result.current("");
 
     // Assert
-    expect(error).toBe(
-      "A URL field within the extension's manifest has an invalid format. {docsLink} ({errorCode})",
-    );
+    expect(error).toBe("URL has invalid format");
   });
 
   it("should return true for URLs with different protocols", () => {
     // Arrange
     const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
 
     // Act
-    const isFtpValid = validate("ftp://example.com");
-    const isHttpsValid = validate("https://example.com");
+    const isValidHttp = result.current("http://example.com");
+    const isValidHttps = result.current("https://example.com");
+    const isValidFtp = result.current("ftp://example.com");
 
     // Assert
-    expect(isFtpValid).toBe(true);
-    expect(isHttpsValid).toBe(true);
-  });
-
-  it("should return true for URLs with ports and paths", () => {
-    // Arrange
-    const { result } = renderHook(() => useValidateUrl());
-    const validate = result.current;
-
-    // Act
-    const isUrlWithPortValid = validate("http://example.com:8080");
-    const isUrlWithPathValid = validate("http://example.com/path/to/resource");
-    const isUrlWithPortAndPathValid = validate("http://example.com:8080/path/to/resource");
-
-    // Assert
-    expect(isUrlWithPortValid).toBe(true);
-    expect(isUrlWithPathValid).toBe(true);
-    expect(isUrlWithPortAndPathValid).toBe(true);
+    expect(isValidHttp).toBe(true);
+    expect(isValidHttps).toBe(true);
+    expect(isValidFtp).toBe(true);
   });
 });

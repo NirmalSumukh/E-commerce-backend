@@ -1,11 +1,14 @@
 import { Box, BoxProps } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 interface DetailPageLayoutRightSidebarProps extends BoxProps {
   children: React.ReactNode;
 }
 
-export const RightSidebar = ({ children, ...props }: DetailPageLayoutRightSidebarProps) => (
+export const RightSidebar: React.FC<DetailPageLayoutRightSidebarProps> = ({
+  children,
+  ...props
+}) => (
   <Box
     borderLeftStyle="solid"
     borderColor="default1"

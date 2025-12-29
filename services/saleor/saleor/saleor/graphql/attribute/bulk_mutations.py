@@ -1,14 +1,9 @@
 import graphene
-from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 
 from ...attribute import models
-from ...attribute.lock_objects import attribute_value_qs_select_for_update
 from ...permission.enums import PageTypePermissions
 from ...product import models as product_models
-from ...product.utils.search_helpers import (
-    mark_products_search_vector_as_dirty_in_batches,
-)
 from ...webhook.event_types import WebhookEventAsyncType
 from ...webhook.utils import get_webhooks_for_event
 from ..core import ResolveInfo
@@ -49,7 +44,9 @@ class AttributeBulkDelete(ModelBulkDeleteMutation):
         _, attribute_pks = resolve_global_ids_to_primary_keys(ids, "Attribute")
         product_ids = cls.get_product_ids_to_update(attribute_pks)
         response = super().perform_mutation(root, info, ids=ids)
-        mark_products_search_vector_as_dirty_in_batches(product_ids)
+        product_models.Product.objects.filter(id__in=product_ids).update(
+            search_index_dirty=True
+        )
         return response
 
     @classmethod
@@ -121,18 +118,16 @@ class AttributeValueBulkDelete(ModelBulkDeleteMutation):
         _, attribute_pks = resolve_global_ids_to_primary_keys(ids, "AttributeValue")
         product_ids = cls.get_product_ids_to_update(attribute_pks)
         response = super().perform_mutation(root, info, ids=ids)
-        mark_products_search_vector_as_dirty_in_batches(product_ids)
+        product_models.Product.objects.filter(id__in=product_ids).update(
+            search_index_dirty=True
+        )
         return response
 
     @classmethod
     def bulk_action(cls, info: ResolveInfo, queryset, /):
         attributes = {value.attribute for value in queryset}
-        with transaction.atomic():
-            locked_qs = attribute_value_qs_select_for_update()
-            locked_qs = locked_qs.filter(pk__in=queryset.values_list("pk", flat=True))
-            values = list(locked_qs)
-            queryset.delete()
-
+        values = list(queryset)
+        queryset.delete()
         manager = get_plugin_manager_promise(info.context).get()
         webhooks = get_webhooks_for_event(WebhookEventAsyncType.ATTRIBUTE_VALUE_DELETED)
         for value in values:

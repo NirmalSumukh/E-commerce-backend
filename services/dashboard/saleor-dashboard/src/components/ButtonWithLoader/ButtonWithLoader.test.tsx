@@ -1,6 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
 
 import { ButtonWithLoader } from "./ButtonWithLoader";
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
 
 describe("ButtonWithLoader", () => {
   it("should render a button with confirm label", () => {

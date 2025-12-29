@@ -1,9 +1,10 @@
 import { messages } from "@dashboard/extensions/messages";
 import { ExtensionData } from "@dashboard/extensions/types";
 import { Box, useTheme } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
-import { AppActions } from "../components/AppActions/AppActions";
+import { AppActions } from "../components/AppActions";
 import { PluginActions } from "../components/PluginActions";
 
 const saleor = "Saleor Commerce";

@@ -7,6 +7,7 @@ from ...permission.enums import GiftcardPermissions
 from ..core import ResolveInfo
 from ..core.connection import create_connection_slice, filter_connection_queryset
 from ..core.context import get_database_connection_name
+from ..core.descriptions import ADDED_IN_31, ADDED_IN_315, PREVIEW_FEATURE
 from ..core.doc_category import DOC_CATEGORY_GIFT_CARDS
 from ..core.fields import FilterConnectionField, PermissionsField
 from ..core.types import NonNullList
@@ -46,11 +47,15 @@ class GiftCardQueries(graphene.ObjectType):
     )
     gift_cards = FilterConnectionField(
         GiftCardCountableConnection,
-        sort_by=GiftCardSortingInput(description="Sort gift cards."),
-        filter=GiftCardFilterInput(description="Filtering options for gift cards."),
+        sort_by=GiftCardSortingInput(description="Sort gift cards." + ADDED_IN_31),
+        filter=GiftCardFilterInput(
+            description=("Filtering options for gift cards." + ADDED_IN_31)
+        ),
         search=graphene.String(
             description="Search gift cards by email and name of user, "
             "who created or used the gift card, and by code."
+            + ADDED_IN_315
+            + PREVIEW_FEATURE
         ),
         description="List of gift cards.",
         permissions=[
@@ -60,7 +65,7 @@ class GiftCardQueries(graphene.ObjectType):
     )
     gift_card_currencies = PermissionsField(
         NonNullList(graphene.String),
-        description="List of gift card currencies.",
+        description="List of gift card currencies." + ADDED_IN_31,
         required=True,
         permissions=[
             GiftcardPermissions.MANAGE_GIFT_CARD,
@@ -72,7 +77,7 @@ class GiftCardQueries(graphene.ObjectType):
         filter=GiftCardTagFilterInput(
             description="Filtering options for gift card tags."
         ),
-        description="List of gift card tags.",
+        description="List of gift card tags." + ADDED_IN_31,
         permissions=[
             GiftcardPermissions.MANAGE_GIFT_CARD,
         ],

@@ -1,6 +1,7 @@
 """Checkout-related utility functions."""
 
 from collections.abc import Iterable
+from typing import Optional
 
 from django.conf import settings
 from django.db.models import Exists, Q
@@ -83,7 +84,7 @@ def update_checkout_payment_statuses(
     checkout: Checkout,
     checkout_total_gross: Money,
     checkout_has_lines: bool,
-    checkout_transactions: Iterable["TransactionItem"] | None = None,
+    checkout_transactions: Optional[Iterable["TransactionItem"]] = None,
     save: bool = True,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
 ):

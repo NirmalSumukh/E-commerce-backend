@@ -1,9 +1,6 @@
-from ...account.utils.fragments import ADDRESS_FRAGMENT
-from ...utils import get_graphql_content
-from .fragments import ORDER_LINE_FRAGMENT
+from saleor.graphql.tests.utils import get_graphql_content
 
-ORDER_QUERY = (
-    """
+ORDER_QUERY = """
 query OrderDetails($id: ID!) {
   order(id: $id) {
     availableShippingMethods {
@@ -20,8 +17,8 @@ query OrderDetails($id: ID!) {
       token
     }
     events {
-      type
-    }
+        type
+      }
     channel {
       id
       name
@@ -42,57 +39,27 @@ query OrderDetails($id: ID!) {
       id
     }
     shippingAddress {
-      ...Address
-    }
-    billingAddress {
-      ...Address
+      country {
+        code
+      }
+      countryArea
+      firstName
+      cityArea
+      city
+      phone
+      postalCode
+      streetAddress1
+      streetAddress2
     }
     statusDisplay
     status
     transactions {
       id
     }
-    metadata {
-      key
-      value
-    }
-    privateMetadata {
-      key
-      value
-    }
-    lines {
-      ...OrderLine
-    }
-    subtotal{
-      gross {
-          amount
-      }
-      net {
-          amount
-      }
-    }
-    total{
-      gross {
-          amount
-      }
-      net {
-          amount
-      }
-    }
-    undiscountedTotal{
-      gross {
-          amount
-      }
-      net {
-          amount
-      }
-    }
   }
 }
+
 """
-    + ADDRESS_FRAGMENT
-    + ORDER_LINE_FRAGMENT
-)
 
 
 def order_query(

@@ -11,8 +11,7 @@ import {
 import { IconButtonProps, makeStyles, SettingsIcon } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
-import * as React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { IconButton } from "../IconButton";
@@ -31,12 +30,12 @@ export interface CardMenuItem {
   Icon?: React.ReactElement;
 }
 
-interface CardMenuProps {
+export interface CardMenuProps {
   className?: string;
   disabled?: boolean;
   menuItems: CardMenuItem[];
   outlined?: boolean;
-  Icon?: React.ElementType<any>;
+  Icon?: React.ElementType<{}>;
   IconButtonProps?: IconButtonProps;
   autoFocusItem?: boolean;
   showMenuIcon?: boolean;
@@ -73,7 +72,7 @@ const useStyles = makeStyles(
 /**
  * @deprecated use [`TopNav.Menu`](https://github.com/saleor/saleor-dashboard/blob/main/src/components/AppLayout/TopNav/Menu.tsx) instead
  */
-const CardMenu = (props: CardMenuProps) => {
+const CardMenu: React.FC<CardMenuProps> = props => {
   const {
     className,
     disabled,
@@ -147,7 +146,7 @@ const CardMenu = (props: CardMenuProps) => {
         state={open ? "active" : "default"}
         {...IconButtonProps}
       >
-        <Icon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+        <Icon />
       </IconButton>
       <Popper
         placement="bottom-end"

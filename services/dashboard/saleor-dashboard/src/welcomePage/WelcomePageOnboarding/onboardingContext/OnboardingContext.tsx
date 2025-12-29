@@ -3,7 +3,7 @@ import {
   handleStateChangeAfterStepCompleted,
   handleStateChangeAfterToggle,
 } from "@dashboard/welcomePage/WelcomePageOnboarding/onboardingContext/utils";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 
 import { useNewUserCheck } from "../hooks/useNewUserCheck";
 import {
@@ -20,11 +20,11 @@ import {
 import { useExpandedOnboardingId } from "./useExpandedOnboardingId";
 import { useOnboardingStorage } from "./useOnboardingStorage";
 
-const OnboardingContext = createContext<OnboardingContextType | null>(null);
+const OnboardingContext = React.createContext<OnboardingContextType | null>(null);
 
 export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
   const analytics = useAnalytics();
-  const [onboardingState, setOnboardingState] = useState<OnboardingState>({
+  const [onboardingState, setOnboardingState] = React.useState<OnboardingState>({
     onboardingExpanded: true,
     stepsCompleted: [],
     stepsExpanded: {} as OnboardingState["stepsExpanded"],
@@ -34,7 +34,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
 
   const storageService = useOnboardingStorage();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (loaded.current || isUserLoading) return;
 
     const onboardingStateFromUserMetadata = storageService.getOnboardingState();
@@ -49,25 +49,18 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
     loaded.current = true;
   }, [isNewUser, isUserLoading, loaded, storageService]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (loaded.current) {
       storageService.saveOnboardingState(onboardingState);
     }
   }, [onboardingState]);
 
-  // Calculate the valid completed steps based on feature flag
-  const validCompletedSteps = onboardingState.stepsCompleted;
-
-  const validCompletedStepsCount = validCompletedSteps.length;
-
   // For old users, onboarding is always completed, for new one we need to calculate it
-  const isOnboardingCompleted = isNewUser ? validCompletedStepsCount >= TOTAL_STEPS_COUNT : true;
+  const isOnboardingCompleted = isNewUser
+    ? onboardingState.stepsCompleted.length === TOTAL_STEPS_COUNT
+    : true;
 
-  const extendedStepId = useExpandedOnboardingId(
-    onboardingState,
-    loaded.current,
-    initialOnboardingSteps,
-  );
+  const extendedStepId = useExpandedOnboardingId(onboardingState, loaded.current);
 
   const markOnboardingStepAsCompleted = (id: OnboardingStepsIDs) => {
     if (onboardingState.stepsCompleted.includes(id)) return;
@@ -120,8 +113,6 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
         markAllAsCompleted,
         toggleExpandedOnboardingStep,
         toggleOnboarding,
-        validCompletedStepsCount,
-        visibleSteps: initialOnboardingSteps,
       }}
     >
       {children}
@@ -130,7 +121,7 @@ export const OnboardingProvider = ({ children }: OnboardingProviderProps) => {
 };
 
 export const useOnboarding = () => {
-  const context = useContext(OnboardingContext);
+  const context = React.useContext(OnboardingContext);
 
   if (context === null) {
     throw new Error("useOnboarding must be used within a OnboardingProvider");

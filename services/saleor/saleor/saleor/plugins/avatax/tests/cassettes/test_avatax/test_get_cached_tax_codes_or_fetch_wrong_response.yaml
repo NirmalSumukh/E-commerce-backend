@@ -11,7 +11,7 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - Saleor/3.21
+      - Saleor/3.20
     method: GET
     uri: https://sandbox-rest.avatax.com/api/v2/definitions/taxcodes
   response:
@@ -25,7 +25,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Wed, 04 Sep 2024 09:14:20 GMT
+      - Wed, 04 Sep 2024 07:01:16 GMT
       Referrer-Policy:
       - same-origin
       Strict-Transport-Security:

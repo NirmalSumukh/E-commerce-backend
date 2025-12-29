@@ -7,7 +7,7 @@ import {
   PaginationRowNumberSelectLabels,
 } from "@saleor/macaw-ui";
 import { Box, Button, ChevronLeftIcon, ChevronRightIcon } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ListSettings } from "../../types";
@@ -34,7 +34,7 @@ export interface PaginationProps
 
 const choices = [10, 20, 30, 50, 100];
 
-export const TablePagination = ({
+export const TablePagination: React.FC<PaginationProps> = ({
   component,
   colSpan,
   settings,
@@ -47,7 +47,7 @@ export const TablePagination = ({
   labels,
   onNextPage,
   onPreviousPage,
-}: PaginationProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const Wrapper = component || TableCell;
@@ -94,3 +94,4 @@ export const TablePagination = ({
 };
 
 TablePagination.displayName = "TablePagination";
+export default TablePagination;

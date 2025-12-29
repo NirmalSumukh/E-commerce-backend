@@ -10,6 +10,7 @@ import {
 } from "@dashboard/graphql";
 import { orderUrl } from "@dashboard/orders/urls";
 import { Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { DataLine } from "./components/DataLine";
@@ -20,7 +21,7 @@ import { TransactionCard } from "./components/TransactionCard";
 import { refundPageMessages } from "./messages";
 import { useStyles } from "./styles";
 
-interface OrderSendRefundPageProps {
+export interface OrderSendRefundPageProps {
   order: OrderDetailsFragment;
   loading: boolean;
   onAddManualRefund: (args: CreateManualTransactionRefundMutationVariables) => void;
@@ -28,13 +29,13 @@ interface OrderSendRefundPageProps {
   addManualRefundError: string | undefined;
 }
 
-const OrderSendRefundPage = ({
+const OrderSendRefundPage: React.FC<OrderSendRefundPageProps> = ({
   order,
   loading,
   onAddManualRefund,
   addManualRefundState,
   addManualRefundError,
-}: OrderSendRefundPageProps) => {
+}) => {
   const classes = useStyles();
   const currency = order?.totalBalance?.currency || "";
   const transactions = order?.transactions ?? [];

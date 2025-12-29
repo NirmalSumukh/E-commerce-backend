@@ -1,9 +1,8 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { LanguageCodeEnum, VoucherTranslationFragment } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import { TranslationsEntitiesPageProps } from "@dashboard/translations/types";
@@ -12,19 +11,20 @@ import {
   languageEntityUrl,
   TranslatableEntities,
 } from "@dashboard/translations/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsVouchersPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsVouchersPageProps extends TranslationsEntitiesPageProps {
   data: VoucherTranslationFragment;
 }
 
-const fieldNames = {
+export const fieldNames = {
   name: "name",
 };
 
-const TranslationsVouchersPage = ({
+const TranslationsVouchersPage: React.FC<TranslationsVouchersPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -35,9 +35,8 @@ const TranslationsVouchersPage = ({
   onDiscard,
   onEdit,
   onSubmit,
-}: TranslationsVouchersPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -57,12 +56,12 @@ const TranslationsVouchersPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang => {
-            navigate(languageEntityUrl(lang, TranslatableEntities.vouchers, translationId));
-          }}
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.vouchers, translationId)
+          }
         />
       </TopNav>
       <DetailPageLayout.Content>

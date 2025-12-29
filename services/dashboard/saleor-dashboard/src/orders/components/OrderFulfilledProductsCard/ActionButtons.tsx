@@ -5,6 +5,7 @@ import { buttonMessages, commonMessages } from "@dashboard/intl";
 import { orderPaymentRefundUrl } from "@dashboard/orders/urls";
 import { CardActions } from "@material-ui/core";
 import { Button, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { actionButtonsMessages } from "./messages";
@@ -26,7 +27,7 @@ const statusesToShow = [
   FulfillmentStatus.RETURNED,
   FulfillmentStatus.WAITING_FOR_APPROVAL,
 ];
-const ActionButtons = ({
+const ActionButtons: React.FC<AcionButtonsProps> = ({
   orderId,
   status,
   trackingNumber,
@@ -35,7 +36,7 @@ const ActionButtons = ({
   hasTransactions,
   onTrackingCodeAdd,
   onApprove,
-}: AcionButtonsProps) => {
+}) => {
   const classes = useStyles();
   const navigate = useNavigator();
   const hasTrackingNumber = !!trackingNumber;

@@ -10,14 +10,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="page",
             index=django.contrib.postgres.indexes.GinIndex(
                 fields=["title", "slug"], name="page_page_title_964714_gin"
             ),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="pagetype",
             index=django.contrib.postgres.indexes.GinIndex(

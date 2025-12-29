@@ -20,7 +20,7 @@ from .const import (
     TERMINAL_ID,
     USE_SANDBOX,
 )
-from .utils import np_atobarai_otel_trace
+from .utils import np_atobarai_opentracing_trace
 
 GATEWAY_NAME = "NP後払い"
 
@@ -156,9 +156,10 @@ class NPAtobaraiGatewayPlugin(BasePlugin):
 
     @classmethod
     def validate_authentication(cls, plugin_configuration: "PluginConfiguration"):
-        configuration = plugin_configuration.configuration
-        conf = {data["name"]: data["value"] for data in configuration}
-        with np_atobarai_otel_trace("np-atobarai.utilities.ping"):
+        conf = {
+            data["name"]: data["value"] for data in plugin_configuration.configuration
+        }
+        with np_atobarai_opentracing_trace("np-atobarai.utilities.ping"):
             response = health_check(get_api_config(conf))
 
         if not response:

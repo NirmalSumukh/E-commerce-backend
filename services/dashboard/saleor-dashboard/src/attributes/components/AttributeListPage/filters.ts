@@ -1,4 +1,4 @@
-import { IFilter } from "@dashboard/components/Filter/types";
+import { IFilter } from "@dashboard/components/Filter";
 import { commonMessages } from "@dashboard/intl";
 import { FilterOpts } from "@dashboard/types";
 import { createBooleanField } from "@dashboard/utils/filters/fields";

@@ -9,10 +9,7 @@ from prices import Money
 from .....checkout import calculations
 from .....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
 from .....checkout.models import Checkout
-from .....checkout.utils import (
-    add_variants_to_checkout,
-    assign_external_shipping_to_checkout,
-)
+from .....checkout.utils import add_variants_to_checkout, set_external_shipping
 from .....discount import RewardValueType
 from .....discount.models import CheckoutLineDiscount, PromotionRule
 from .....plugins.manager import get_plugins_manager
@@ -571,8 +568,7 @@ def test_create_checkout_with_order_promotion(
     }
 
     # when
-    user_api_client.ensure_access_token()
-    with django_assert_num_queries(92):
+    with django_assert_num_queries(93):
         response = user_api_client.post_graphql(MUTATION_CHECKOUT_CREATE, variables)
 
     # then
@@ -827,7 +823,6 @@ def test_update_checkout_lines_with_reservations(
         reservation_length=5,
     )
 
-    user_api_client.ensure_access_token()
     with django_assert_num_queries(108):
         variant_id = graphene.Node.to_global_id("ProductVariant", variants[0].pk)
         variables = {
@@ -997,9 +992,7 @@ def test_add_checkout_lines_with_external_shipping(
     )
 
     checkout_with_single_item.shipping_address = address
-    assign_external_shipping_to_checkout(
-        checkout_with_single_item, external_shipping_method
-    )
+    set_external_shipping(checkout_with_single_item, external_shipping_method)
     checkout_with_single_item.save()
     checkout_with_single_item.metadata_storage.save()
 
@@ -1101,9 +1094,8 @@ def test_add_checkout_lines_with_reservations(
         variant_id = graphene.Node.to_global_id("ProductVariant", variant.id)
         new_lines.append({"quantity": 2, "variantId": variant_id})
 
-    user_api_client.ensure_access_token()
     # Adding multiple lines to checkout has same query count as adding one
-    with django_assert_num_queries(105):
+    with django_assert_num_queries(106):
         variables = {
             "id": Node.to_global_id("Checkout", checkout.pk),
             "lines": [new_lines[0]],
@@ -1116,7 +1108,7 @@ def test_add_checkout_lines_with_reservations(
 
     checkout.lines.exclude(id=line.id).delete()
 
-    with django_assert_num_queries(105):
+    with django_assert_num_queries(106):
         variables = {
             "id": Node.to_global_id("Checkout", checkout.pk),
             "lines": new_lines,
@@ -1166,8 +1158,7 @@ def test_add_checkout_lines_catalogue_discount_applies(
     }
 
     # when
-    user_api_client.ensure_access_token()
-    with django_assert_num_queries(96):
+    with django_assert_num_queries(98):
         response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
 
     # then
@@ -1252,8 +1243,7 @@ def test_add_checkout_lines_multiple_catalogue_discount_applies(
     }
 
     # when
-    user_api_client.ensure_access_token()
-    with django_assert_num_queries(96):
+    with django_assert_num_queries(98):
         response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
 
     # then
@@ -1288,8 +1278,7 @@ def test_add_checkout_lines_order_discount_applies(
     }
 
     # when
-    user_api_client.ensure_access_token()
-    with django_assert_num_queries(102):
+    with django_assert_num_queries(107):
         response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
 
     # then
@@ -1323,8 +1312,7 @@ def test_add_checkout_lines_gift_discount_applies(
     }
 
     # when
-    user_api_client.ensure_access_token()
-    with django_assert_num_queries(129):
+    with django_assert_num_queries(140):
         response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_ADD, variables)
 
     # then
@@ -1450,7 +1438,7 @@ def test_checkout_payment_charge(
     lines, _ = fetch_checkout_lines(checkout_with_billing_address)
     checkout_info = fetch_checkout_info(checkout_with_billing_address, lines, manager)
     manager = get_plugins_manager(allow_replica=False)
-    total = calculations.calculate_checkout_total(
+    total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -1821,34 +1809,3 @@ def test_checkout_gift_cards(
 
     # then
     assert response.status_code == 200
-
-
-@pytest.mark.django_db
-@pytest.mark.count_queries(autouse=False)
-def test_checkout_customer_note_update(
-    api_client, checkout_with_variants, count_queries
-):
-    query = (
-        FRAGMENT_CHECKOUT
-        + """
-            mutation UpdateCheckoutCustomerNote(
-              $id: ID!, $customerNote: String!
-            ) {
-              checkoutCustomerNoteUpdate(id: $id, customerNote: $customerNote) {
-                checkout {
-                  ...Checkout
-                }
-                errors {
-                  field
-                  message
-                }
-              }
-            }
-        """
-    )
-    variables = {
-        "id": to_global_id_or_none(checkout_with_variants),
-        "customerNote": "New note text",
-    }
-    response = get_graphql_content(api_client.post_graphql(query, variables))
-    assert not response["data"]["checkoutCustomerNoteUpdate"]["errors"]

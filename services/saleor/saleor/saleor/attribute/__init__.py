@@ -5,7 +5,6 @@ class AttributeInputType:
     MULTISELECT = "multiselect"
     FILE = "file"
     REFERENCE = "reference"
-    SINGLE_REFERENCE = "single-reference"
     NUMERIC = "numeric"
     RICH_TEXT = "rich-text"
     PLAIN_TEXT = "plain-text"
@@ -19,7 +18,6 @@ class AttributeInputType:
         (MULTISELECT, "Multi Select"),
         (FILE, "File"),
         (REFERENCE, "Reference"),
-        (SINGLE_REFERENCE, "Single Reference"),
         (NUMERIC, "Numeric"),
         (RICH_TEXT, "Rich Text"),
         (PLAIN_TEXT, "Plain Text"),
@@ -111,13 +109,9 @@ class AttributeEntityType:
     PAGE = "Page"
     PRODUCT = "Product"
     PRODUCT_VARIANT = "ProductVariant"
-    CATEGORY = "Category"
-    COLLECTION = "Collection"
 
     CHOICES = [
         (PAGE, "Page"),
         (PRODUCT, "Product"),
         (PRODUCT_VARIANT, "Product Variant"),
-        (CATEGORY, "Category"),
-        (COLLECTION, "Collection"),
     ]

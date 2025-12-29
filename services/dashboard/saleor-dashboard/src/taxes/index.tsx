@@ -1,6 +1,7 @@
 import { Route } from "@dashboard/components/Router";
 import { sectionNames } from "@dashboard/intl";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -15,17 +16,17 @@ import TaxChannelsListComponent from "./views/TaxChannelsList";
 import TaxClassesListComponent from "./views/TaxClassesList";
 import TaxCountriesListComponent from "./views/TaxCountriesList";
 
-const TaxChannelsList = ({ match, location }: RouteComponentProps<{ id: string }>) => {
+const TaxChannelsList: React.FC<RouteComponentProps<{ id: string }>> = ({ match, location }) => {
   const qs: TaxesUrlQueryParams = parseQs(location.search.substring(1));
 
   return <TaxChannelsListComponent id={decodeURIComponent(match.params.id)} params={qs} />;
 };
-const TaxCountriesList = ({ match }: RouteComponentProps<{ id: string }>) => {
+const TaxCountriesList: React.FC<RouteComponentProps<{ id: string }>> = ({ match }) => {
   const qs: TaxesUrlQueryParams = parseQs(location.search.substring(1));
 
   return <TaxCountriesListComponent id={decodeURIComponent(match.params.id)} params={qs} />;
 };
-const TaxClassesList = ({ match }: RouteComponentProps<{ id: string }>) => (
+const TaxClassesList: React.FC<RouteComponentProps<{ id: string }>> = ({ match }) => (
   <TaxClassesListComponent id={decodeURIComponent(match.params.id)} />
 );
 const Component = () => {

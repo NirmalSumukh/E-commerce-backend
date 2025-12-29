@@ -1,6 +1,6 @@
 import { useModalContext } from "@dashboard/components/Modal/context";
 import { Box } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 import { Close } from "./Close";
 import { Title, TitleProps } from "./Title";

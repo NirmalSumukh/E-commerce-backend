@@ -1,5 +1,6 @@
 from unittest.mock import ANY, call, patch
 
+import before_after
 import graphene
 import pytest
 from django.test import override_settings
@@ -13,7 +14,7 @@ from .....order.actions import call_order_events, order_fulfilled
 from .....order.error_codes import OrderErrorCode
 from .....order.models import Fulfillment, FulfillmentLine
 from .....product.models import ProductVariant
-from .....tests import race_condition
+from .....tests.utils import flush_post_commit_hooks
 from .....warehouse.models import Allocation, Stock
 from .....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from ....tests.utils import assert_no_permission, get_graphql_content
@@ -189,13 +190,11 @@ def test_order_fulfill_no_channel_access(
     assert_no_permission(response)
 
 
-@pytest.mark.parametrize("input_tracking_number", [None, "", "test_tracking_number"])
 @pytest.mark.parametrize("fulfillment_auto_approve", [True, False])
 @patch("saleor.graphql.order.mutations.order_fulfill.create_fulfillments")
 def test_order_fulfill_with_tracking_number(
     mock_create_fulfillments,
     fulfillment_auto_approve,
-    input_tracking_number,
     staff_api_client,
     staff_user,
     order_with_lines,
@@ -227,7 +226,7 @@ def test_order_fulfill_with_tracking_number(
                     "stocks": [{"quantity": 2, "warehouse": warehouse_id}],
                 },
             ],
-            "trackingNumber": input_tracking_number,
+            "trackingNumber": "test_tracking_number",
         },
     }
     response = staff_api_client.post_graphql(query, variables)
@@ -241,7 +240,6 @@ def test_order_fulfill_with_tracking_number(
             {"order_line": order_line2, "quantity": 2},
         ]
     }
-    expected_tracking_number = input_tracking_number or ""
     mock_create_fulfillments.assert_called_once_with(
         staff_user,
         None,
@@ -252,7 +250,7 @@ def test_order_fulfill_with_tracking_number(
         notify_customer=True,
         allow_stock_to_be_exceeded=False,
         auto_approved=fulfillment_auto_approve,
-        tracking_number=expected_tracking_number,
+        tracking_number="test_tracking_number",
     )
 
 
@@ -664,7 +662,6 @@ def test_order_fulfill_with_gift_cards(
     permission_group_manage_orders,
     warehouse,
 ):
-    # given
     query = ORDER_FULFILL_MUTATION
     order_id = graphene.Node.to_global_id("Order", order.id)
     permission_group_manage_orders.user_set.add(staff_api_client.user)
@@ -691,14 +688,10 @@ def test_order_fulfill_with_gift_cards(
             ],
         },
     }
-
-    # when
     response = staff_api_client.post_graphql(query, variables)
-
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["orderFulfill"]
-
-    # then
     assert not data["errors"]
     gift_cards = GiftCard.objects.all()
     assert gift_cards.count() == 2
@@ -831,7 +824,7 @@ def test_order_fulfill_with_gift_cards_by_app(
     assert not data["errors"]
     assert GiftCard.objects.count() == quantity
 
-    mock_send_notification.assert_not_called()
+    mock_send_notification.assert_not_called
 
 
 @patch("saleor.giftcard.utils.send_gift_card_notification")
@@ -892,7 +885,7 @@ def test_order_fulfill_with_gift_cards_multiple_warehouses(
     assert not data["errors"]
     assert GiftCard.objects.count() == quantity_1 + quantity_2
 
-    mock_send_notification.assert_not_called()
+    mock_send_notification.assert_not_called
 
 
 @patch("saleor.graphql.order.mutations.order_fulfill.create_fulfillments")
@@ -1547,6 +1540,7 @@ def test_order_fulfill_tracking_number_updated_event_triggered(
     }
     # when
     staff_api_client.post_graphql(query, variables)
+    flush_post_commit_hooks()
 
     # then
     assert mocked_webhooks.call_count == 2
@@ -1620,7 +1614,12 @@ def test_order_fulfill_triggers_webhooks(
         },
     }
     # when
-    response = staff_api_client.post_graphql(query, variables)
+    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+        response = staff_api_client.post_graphql(query, variables)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        for callback in callbacks:
+            callback()
 
     # then
     assert not get_graphql_content(response)["data"]["orderFulfill"]["errors"]
@@ -1650,9 +1649,11 @@ def test_order_fulfill_triggers_webhooks(
     mocked_send_webhook_request_async.assert_has_calls(
         [
             call(
-                kwargs={"event_delivery_id": delivery.id, "telemetry_context": ANY},
+                kwargs={"event_delivery_id": delivery.id},
                 queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-                MessageGroupId="example.com:saleor.app.additional",
+                bind=True,
+                retry_backoff=10,
+                retry_kwargs={"max_retries": 5},
             )
             for delivery in order_deliveries
         ],
@@ -1692,9 +1693,7 @@ def test_order_fulfill_fulfilled_order_race_condition(
         order_line.save()
 
     # when
-    with race_condition.RunBefore(
-        "saleor.order.actions.create_fulfillments", fulfill_line
-    ):
+    with before_after.before("saleor.order.actions.create_fulfillments", fulfill_line):
         response = staff_api_client.post_graphql(query, variables)
     content = get_graphql_content(response)
 

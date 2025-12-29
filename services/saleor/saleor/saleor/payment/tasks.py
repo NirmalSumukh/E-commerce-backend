@@ -1,8 +1,9 @@
-import datetime
 import logging
 import uuid
+from datetime import datetime, timedelta
 
 import graphene
+import pytz
 from django.conf import settings
 from django.db import transaction
 from django.db.models import DateTimeField, Exists, ExpressionWrapper, OuterRef, Q
@@ -11,7 +12,6 @@ from ..celeryconf import app
 from ..channel.models import Channel
 from ..checkout import CheckoutAuthorizeStatus
 from ..checkout.models import Checkout
-from ..core.db.connection import allow_writer
 from ..payment.models import TransactionEvent, TransactionItem
 from ..plugins.manager import get_plugins_manager
 from . import PaymentError, TransactionAction, TransactionEventType
@@ -27,7 +27,7 @@ def transactions_to_release_funds():
     predefined TTL. It then fetches related transactions that are authorized or charged,
     ready for fund release.
     """
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.now(pytz.UTC)
     channels = (
         Channel.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
         .annotate(
@@ -62,7 +62,7 @@ def transactions_to_release_funds():
         settings.DATABASE_CONNECTION_REPLICA_NAME
     ).filter(
         Exists(channels),
-        created_at__gt=now - datetime.timedelta(days=365),
+        created_at__gt=now - timedelta(days=365),
         automatically_refundable=True,
         authorize_status__in=[
             CheckoutAuthorizeStatus.PARTIAL,
@@ -85,7 +85,6 @@ def transactions_to_release_funds():
 
 
 @app.task
-@allow_writer()
 def transaction_release_funds_for_checkout_task():
     TRANSACTION_BATCH_SIZE = int(settings.TRANSACTION_BATCH_FOR_RELEASING_FUNDS)
 
@@ -161,7 +160,7 @@ def transaction_release_funds_for_checkout_task():
 
             manager = get_plugins_manager(allow_replica=True)
             for transaction_item, event in transactions_with_cancel_request_events:
-                channel = checkout_id_to_channel[transaction_item.checkout_id]  # type: ignore[index]
+                channel = checkout_id_to_channel[transaction_item.checkout_id]
                 logger.info(
                     "Releasing funds for transaction %s - canceling",
                     transaction_item.token,
@@ -189,7 +188,7 @@ def transaction_release_funds_for_checkout_task():
                         str(e),
                     )
             for transaction_item, event in transactions_with_charge_request_events:
-                channel = checkout_id_to_channel[transaction_item.checkout_id]  # type: ignore[index]
+                channel = checkout_id_to_channel[transaction_item.checkout_id]
                 logger.info(
                     "Releasing funds for transaction %s - refunding",
                     transaction_item.token,

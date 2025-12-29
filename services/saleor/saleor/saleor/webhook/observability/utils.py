@@ -1,12 +1,12 @@
-import datetime
 import functools
 import logging
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from functools import partial
 from time import monotonic
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional
 
 from asgiref.local import Local
 from django.conf import settings
@@ -21,7 +21,7 @@ from ..utils import get_webhooks_for_event
 from .buffers import get_buffer
 from .exceptions import TruncationError
 from .payloads import generate_api_call_payload, generate_event_delivery_attempt_payload
-from .tracing import otel_trace
+from .tracing import opentracing_trace
 
 if TYPE_CHECKING:
     from celery.exceptions import Retry
@@ -42,7 +42,7 @@ class WebhookData:
     id: int
     saleor_domain: str
     target_url: str
-    secret_key: str | None = None
+    secret_key: Optional[str] = None
 
 
 def get_buffer_name() -> str:
@@ -57,7 +57,7 @@ def get_webhooks_clear_mem_cache():
 
 
 def get_webhooks(timeout=CACHE_TIMEOUT) -> list[WebhookData]:
-    with otel_trace("get_observability_webhooks", "webhooks"):
+    with opentracing_trace("get_observability_webhooks", "webhooks"):
         buffer_name = get_buffer_name()
         if cached := _webhooks_mem_cache.get(buffer_name, None):
             webhooks_data, check_time = cached
@@ -82,10 +82,10 @@ def get_webhooks(timeout=CACHE_TIMEOUT) -> list[WebhookData]:
         return webhooks_data
 
 
-def task_next_retry_date(retry_error: "Retry") -> datetime.datetime | None:
-    if isinstance(retry_error.when, int | float):
-        return timezone.now() + datetime.timedelta(seconds=retry_error.when)
-    if isinstance(retry_error.when, datetime.datetime):
+def task_next_retry_date(retry_error: "Retry") -> Optional[datetime]:
+    if isinstance(retry_error.when, (int, float)):
+        return timezone.now() + timedelta(seconds=retry_error.when)
+    if isinstance(retry_error.when, datetime):
         return retry_error.when
     return None
 
@@ -93,40 +93,40 @@ def task_next_retry_date(retry_error: "Retry") -> datetime.datetime | None:
 def put_event(generate_payload: Callable[[], bytes]):
     try:
         payload = generate_payload()
-        with otel_trace("put_event", "buffer"):
+        with opentracing_trace("put_event", "buffer"):
             if get_buffer(get_buffer_name()).put_event(payload):
                 logger.warning("Observability buffer full, event dropped.")
     except TruncationError as err:
-        logger.warning("Observability event dropped. %s", err, extra=err.extra)
+        logger.warning("Observability event dropped. %s", str(err), extra=err.extra)
     except Exception:
-        logger.exception("Observability event dropped.")
+        logger.error("Observability event dropped.", exc_info=True)
 
 
 def pop_events_with_remaining_size() -> tuple[list[bytes], int]:
-    with otel_trace("pop_events", "buffer"):
+    with opentracing_trace("pop_events", "buffer"):
         try:
             buffer = get_buffer(get_buffer_name())
             events, remaining = buffer.pop_events_get_size()
             batch_count = buffer.in_batches(remaining)
         except Exception:
-            logger.exception("Could not pop observability events batch.")
+            logger.error("Could not pop observability events batch.", exc_info=True)
             events, batch_count = [], 0
     return events, batch_count
 
 
 @dataclass
 class GraphQLOperationResponse:
-    name: str | None = None
-    query: GraphQLDocument | None = None
-    variables: dict | None = None
-    result: dict | None = None
+    name: Optional[str] = None
+    query: Optional[GraphQLDocument] = None
+    variables: Optional[dict] = None
+    result: Optional[dict] = None
     result_invalid: bool = False
 
 
 class ApiCall:
     def __init__(self, request: "HttpRequest"):
         self.gql_operations: list[GraphQLOperationResponse] = []
-        self.response: HttpResponse | None = None
+        self.response: Optional[HttpResponse] = None
         self._reported = False
         self.request = request
 
@@ -140,7 +140,7 @@ class ApiCall:
             logger.error("HttpResponse not provided, observability event dropped.")
             return
         self._reported = True
-        with otel_trace("report_api_call", "reporter"):
+        with opentracing_trace("report_api_call", "reporter"):
             if get_webhooks():
                 put_event(
                     partial(
@@ -154,7 +154,7 @@ class ApiCall:
 
 
 @contextmanager
-def report_api_call(request: "HttpRequest") -> Generator[ApiCall]:
+def report_api_call(request: "HttpRequest") -> Generator[ApiCall, None, None]:
     root = False
     if not hasattr(_context, "api_call"):
         _context.api_call, root = ApiCall(request), True
@@ -165,7 +165,7 @@ def report_api_call(request: "HttpRequest") -> Generator[ApiCall]:
 
 
 @contextmanager
-def report_gql_operation() -> Generator[GraphQLOperationResponse]:
+def report_gql_operation() -> Generator[GraphQLOperationResponse, None, None]:
     root = False
     if not hasattr(_context, "gql_operation"):
         _context.gql_operation, root = GraphQLOperationResponse(), True
@@ -188,7 +188,7 @@ def report_view(method):
 
 
 def report_event_delivery_attempt(
-    attempt: "EventDeliveryAttempt", next_retry: datetime.datetime | None = None
+    attempt: "EventDeliveryAttempt", next_retry: Optional["datetime"] = None
 ):
     if not settings.OBSERVABILITY_ACTIVE:
         return
@@ -196,7 +196,7 @@ def report_event_delivery_attempt(
         logger.error(
             "Observability event dropped. %r not assigned to delivery.", attempt
         )
-    with otel_trace("report_event_delivery_attempt", "reporter"):
+    with opentracing_trace("report_event_delivery_attempt", "reporter"):
         if get_webhooks():
             put_event(
                 partial(

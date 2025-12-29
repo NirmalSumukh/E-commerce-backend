@@ -1,7 +1,7 @@
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
-from typing import Any, cast
+from typing import Any, Optional, Union, cast
 
 import graphene
 from django.conf import settings
@@ -23,12 +23,14 @@ from ...product.models import (
 from ..checkout.filters import CheckoutDiscountedObjectWhere
 from ..core.connection import where_filter_qs
 from ..order.filters import OrderDiscountedObjectWhere
-from ..product.filters.category import CategoryWhere
-from ..product.filters.collection import CollectionWhere
-from ..product.filters.product import ProductWhere
-from ..product.filters.product_variant import ProductVariantWhere
+from ..product.filters import (
+    CategoryWhere,
+    CollectionWhere,
+    ProductVariantWhere,
+    ProductWhere,
+)
 
-PREDICATE_OPERATOR_DATA_T = list[dict[str, list | dict | str | bool]]
+PREDICATE_OPERATOR_DATA_T = list[dict[str, Union[list, dict, str, bool]]]
 
 
 class PredicateObjectType(Enum):
@@ -89,7 +91,7 @@ def get_variants_for_promotion(
 
 
 def _handle_product_predicate(
-    predicate_data: dict[str, dict | list], variant_qs: QuerySet[ProductVariant]
+    predicate_data: dict[str, Union[dict, list]], variant_qs: QuerySet[ProductVariant]
 ) -> ProductVariantQueryset:
     product_qs = where_filter_qs(
         Product.objects.filter(Exists(variant_qs.filter(product_id=OuterRef("id")))),
@@ -104,7 +106,7 @@ def _handle_product_predicate(
 
 
 def _handle_variant_predicate(
-    predicate_data: dict[str, dict | list], variant_qs: QuerySet[ProductVariant]
+    predicate_data: dict[str, Union[dict, list]], variant_qs: QuerySet[ProductVariant]
 ) -> ProductVariantQueryset:
     return where_filter_qs(
         ProductVariant.objects.filter(id__in=variant_qs.values("id")),
@@ -116,7 +118,7 @@ def _handle_variant_predicate(
 
 
 def _handle_collection_predicate(
-    predicate_data: dict[str, dict | list], variant_qs: QuerySet[ProductVariant]
+    predicate_data: dict[str, Union[dict, list]], variant_qs: QuerySet[ProductVariant]
 ) -> ProductVariantQueryset:
     collection_products = CollectionProduct.objects.filter(
         product_id__in=variant_qs.values("product_id")
@@ -139,7 +141,7 @@ def _handle_collection_predicate(
 
 
 def _handle_category_predicate(
-    predicate_data: dict[str, dict | list], variant_qs
+    predicate_data: dict[str, Union[dict, list]], variant_qs
 ) -> ProductVariantQueryset:
     products = Product.objects.filter(id__in=variant_qs.values("product_id"))
     category_qs = where_filter_qs(
@@ -167,7 +169,7 @@ PREDICATE_TO_HANDLE_METHOD = {
 
 def get_variants_for_catalogue_predicate(
     predicate,
-    queryset: ProductVariantQueryset | None = None,
+    queryset: Optional[ProductVariantQueryset] = None,
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
 ):
     if not predicate:
@@ -181,9 +183,9 @@ def filter_qs_by_predicate(
     predicate: dict,
     base_qs: QuerySet,
     predicate_type: PredicateObjectType,
-    currency: str | None = None,
+    currency: Optional[str] = None,
     *,
-    result_qs: QuerySet | None = None,
+    result_qs: Optional[QuerySet] = None,
 ) -> QuerySet:
     """Filter QuerySet by predicate conditions.
 
@@ -202,8 +204,10 @@ def filter_qs_by_predicate(
     if result_qs is None:
         result_qs = base_qs
 
-    and_data: list[dict] | None = predicate.pop("AND", None)
-    or_data: list[dict] | None = predicate.pop("OR", None)
+    result_qs = cast(QuerySet, result_qs)
+
+    and_data: Optional[list[dict]] = predicate.pop("AND", None)
+    or_data: Optional[list[dict]] = predicate.pop("OR", None)
 
     if and_data:
         result_qs = _handle_and_data(
@@ -226,7 +230,7 @@ def _handle_and_data(
     base_qs: QuerySet,
     data: PREDICATE_OPERATOR_DATA_T,
     predicate_type: PredicateObjectType,
-    currency: str | None = None,
+    currency: Optional[str] = None,
 ) -> QuerySet:
     for predicate_data in data:
         if contains_filter_operator(predicate_data):
@@ -250,7 +254,7 @@ def _handle_or_data(
     base_qs: QuerySet,
     data: PREDICATE_OPERATOR_DATA_T,
     predicate_type: PredicateObjectType,
-    currency: str | None = None,
+    currency: Optional[str] = None,
 ) -> QuerySet:
     qs = result_qs.model.objects.none()
     for predicate_data in data:
@@ -266,40 +270,39 @@ def _handle_or_data(
     return result_qs
 
 
-def contains_filter_operator(input: dict[str, dict | str | list | bool]) -> bool:
-    return any(operator in input for operator in ["AND", "OR", "NOT"])
+def contains_filter_operator(input: dict[str, Union[dict, str, list, bool]]) -> bool:
+    return any([operator in input for operator in ["AND", "OR", "NOT"]])
 
 
 def _handle_predicate(
     result_qs: QuerySet,
     base_qs: QuerySet,
-    predicate_data: dict[str, dict | str | list | bool],
+    predicate_data: dict[str, Union[dict, str, list, bool]],
     operator: Operators,
     predicate_type: PredicateObjectType,
-    currency: str | None = None,
+    currency: Optional[str] = None,
 ):
     if predicate_type == PredicateObjectType.CATALOGUE:
         return _handle_catalogue_predicate(result_qs, base_qs, predicate_data, operator)
-    if predicate_type == PredicateObjectType.CHECKOUT:
+    elif predicate_type == PredicateObjectType.CHECKOUT:
         return _handle_checkout_predicate(
             result_qs, base_qs, predicate_data, operator, currency
         )
-    if predicate_type == PredicateObjectType.ORDER:
+    elif predicate_type == PredicateObjectType.ORDER:
         return _handle_order_predicate(
             result_qs, base_qs, predicate_data, operator, currency
         )
-    return None
 
 
 def _handle_catalogue_predicate(
     result_qs: QuerySet,
     base_qs: QuerySet,
-    predicate_data: dict[str, dict | str | list | bool],
+    predicate_data: dict[str, Union[dict, str, list, bool]],
     operator,
 ) -> QuerySet[ProductVariant]:
     for field, handle_method in PREDICATE_TO_HANDLE_METHOD.items():
         if field_data := predicate_data.get(field):
-            field_data = cast(dict[str, dict | list], field_data)
+            field_data = cast(dict[str, Union[dict, list]], field_data)
             if operator == Operators.AND:
                 result_qs &= handle_method(field_data, base_qs)
             else:
@@ -310,9 +313,9 @@ def _handle_catalogue_predicate(
 def _handle_checkout_predicate(
     result_qs: QuerySet,
     base_qs: QuerySet,
-    predicate_data: dict[str, dict | str | list | bool],
+    predicate_data: dict[str, Union[dict, str, list, bool]],
     operator,
-    currency: str | None = None,
+    currency: Optional[str] = None,
 ):
     predicate_data = _predicate_to_snake_case(predicate_data)
     if predicate := predicate_data.get("discounted_object_predicate"):
@@ -333,9 +336,9 @@ def _handle_checkout_predicate(
 def _handle_order_predicate(
     result_qs: QuerySet,
     base_qs: QuerySet,
-    predicate_data: dict[str, dict | str | list | bool],
+    predicate_data: dict[str, Union[dict, str, list, bool]],
     operator,
-    currency: str | None = None,
+    currency: Optional[str] = None,
 ):
     predicate_data = _predicate_to_snake_case(predicate_data)
     if predicate := predicate_data.get("discounted_object_predicate"):
@@ -373,7 +376,7 @@ def _predicate_to_snake_case(obj: Any) -> Any:
 
 def convert_migrated_sale_predicate_to_model_ids(
     catalogue_predicate,
-) -> dict[str, list[int]] | None:
+) -> Optional[dict[str, list[int]]]:
     """Convert global ids from catalogue predicate of Promotion created from old sale.
 
     All migrated sales have related PromotionRule with "OR" catalogue predicate. This
@@ -401,7 +404,7 @@ def convert_migrated_sale_predicate_to_model_ids(
     return None
 
 
-CatalogueInfo = defaultdict[str, set[int | str]]
+CatalogueInfo = defaultdict[str, set[Union[int, str]]]
 PREDICATE_TO_CATALOGUE_INFO_MAP = {
     "collectionPredicate": "collections",
     "categoryPredicate": "categories",

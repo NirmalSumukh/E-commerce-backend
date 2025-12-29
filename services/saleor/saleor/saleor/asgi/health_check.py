@@ -12,8 +12,9 @@ def health_check(application: ASGI3Application, health_url: str) -> ASGI3Applica
     async def health_check_wrapper(
         scope: Scope, receive: ASGIReceiveCallable, send: ASGISendCallable
     ) -> None:
-        if scope.get("type") != "http" or scope.get("path") != health_url:
-            return await application(scope, receive, send)
+        if scope.get("type") == "http" and scope.get("path") != health_url:
+            await application(scope, receive, send)
+            return
         await send(
             HTTPResponseStartEvent(
                 type="http.response.start",
@@ -25,6 +26,5 @@ def health_check(application: ASGI3Application, health_url: str) -> ASGI3Applica
         await send(
             HTTPResponseBodyEvent(type="http.response.body", body=b"", more_body=False)
         )
-        return None
 
     return health_check_wrapper

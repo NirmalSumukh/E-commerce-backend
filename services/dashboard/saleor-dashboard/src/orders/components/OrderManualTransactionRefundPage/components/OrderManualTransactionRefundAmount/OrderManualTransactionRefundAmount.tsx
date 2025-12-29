@@ -1,4 +1,5 @@
 import { Box, Input, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -15,7 +16,7 @@ export const OrderManualTransactionRefundAmount = ({
   const { control } = useFormContext<ManualRefundForm>();
 
   return (
-    <Box>
+    <Box backgroundColor="default2" borderRadius={3} padding={4}>
       <Controller
         name="amount"
         control={control}

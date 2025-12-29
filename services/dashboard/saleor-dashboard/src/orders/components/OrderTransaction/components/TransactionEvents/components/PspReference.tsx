@@ -1,9 +1,10 @@
 // @ts-strict-ignore
 import OverflowTooltip from "@dashboard/components/OverflowTooltip";
-import { useClipboard } from "@dashboard/hooks/useClipboard";
+import useClipboard from "@dashboard/hooks/useClipboard";
 import { commonMessages } from "@dashboard/intl";
 import { CheckIcon, CopyIcon, IconButton, makeStyles } from "@saleor/macaw-ui";
 import clsx from "clsx";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { PspReferenceLink } from "./PspReferenceLink";
@@ -48,12 +49,12 @@ const useStyles = makeStyles(
   },
 );
 
-interface PspReferenceProps {
+export interface PspReferenceProps {
   reference: string;
   url?: string;
 }
 
-export const PspReference = ({ reference, url }: PspReferenceProps) => {
+export const PspReference: React.FC<PspReferenceProps> = ({ reference, url }) => {
   const intl = useIntl();
   const [copied, copy] = useClipboard();
   const classes = useStyles();
@@ -75,11 +76,7 @@ export const PspReference = ({ reference, url }: PspReferenceProps) => {
             copy(reference);
           }}
         >
-          {copied ? (
-            <CheckIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-          ) : (
-            <CopyIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-          )}
+          {copied ? <CheckIcon /> : <CopyIcon />}
         </IconButton>
       )}
     </div>

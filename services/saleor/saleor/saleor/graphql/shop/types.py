@@ -1,3 +1,5 @@
+from typing import Optional
+
 import graphene
 from django.conf import settings
 from django_countries import countries
@@ -17,9 +19,12 @@ from ..app.types import App
 from ..core import ResolveInfo
 from ..core.context import get_database_connection_name
 from ..core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_35,
+    ADDED_IN_314,
+    ADDED_IN_315,
     ADDED_IN_319,
-    ADDED_IN_322,
-    DEFAULT_DEPRECATION_REASON,
+    DEPRECATED_IN_3X_FIELD,
     DEPRECATED_IN_3X_INPUT,
 )
 from ..core.doc_category import (
@@ -41,7 +46,6 @@ from ..core.types import (
 )
 from ..core.utils import str_to_enum
 from ..meta.types import ObjectWithMetadata
-from ..page.types import PageType
 from ..payment.types import PaymentGateway
 from ..plugins.dataloaders import plugin_manager_promise_callback
 from ..shipping.types import ShippingMethod
@@ -81,21 +85,6 @@ class OrderSettings(ModelObjectType[site_models.SiteSettings]):
         model = site_models.SiteSettings
 
 
-class RefundSettings(ModelObjectType[site_models.SiteSettings]):
-    reason_reference_type = graphene.Field(
-        PageType, description="Model type used for refund reasons."
-    )
-
-    class Meta:
-        description = "Refund related settings from site settings." + ADDED_IN_322
-        doc_category = DOC_CATEGORY_ORDERS
-        model = site_models.SiteSettings
-
-    @staticmethod
-    def resolve_reason_reference_type(root, info):
-        return root.refund_reason_reference_type
-
-
 class GiftCardSettings(ModelObjectType[site_models.SiteSettings]):
     expiry_type = GiftCardSettingsExpiryTypeEnum(
         description="The gift card expiry type settings.", required=True
@@ -109,11 +98,9 @@ class GiftCardSettings(ModelObjectType[site_models.SiteSettings]):
         doc_category = DOC_CATEGORY_GIFT_CARDS
         model = site_models.SiteSettings
 
-    @staticmethod
     def resolve_expiry_type(root, info):
         return root.gift_card_expiry_type
 
-    @staticmethod
     def resolve_expiry_period(root, info):
         if root.gift_card_expiry_period_type is None:
             return None
@@ -203,7 +190,9 @@ class Shop(graphene.ObjectType):
     )
     channel_currencies = PermissionsField(
         NonNullList(graphene.String),
-        description="List of all currencies supported by shop's channels.",
+        description=(
+            "List of all currencies supported by shop's channels." + ADDED_IN_31
+        ),
         required=True,
         permissions=[
             AuthorizationFilters.AUTHENTICATED_STAFF_USER,
@@ -255,16 +244,17 @@ class Shop(graphene.ObjectType):
     )
     header_text = graphene.String(description="Header text.")
     fulfillment_auto_approve = graphene.Boolean(
-        description="Automatically approve all new fulfillments.",
+        description="Automatically approve all new fulfillments." + ADDED_IN_31,
         required=True,
     )
     fulfillment_allow_unpaid = graphene.Boolean(
-        description="Allow to approve fulfillments which are unpaid.",
+        description="Allow to approve fulfillments which are unpaid." + ADDED_IN_31,
         required=True,
     )
     track_inventory_by_default = graphene.Boolean(
         description=(
-            "This field is used as a default value for `ProductVariant.trackInventory`."
+            "This field is used as a default value for "
+            "`ProductVariant.trackInventory`."
         )
     )
     default_weight_unit = WeightUnitsEnum(description="Default weight unit.")
@@ -279,6 +269,7 @@ class Shop(graphene.ObjectType):
         description=(
             "Default number of minutes stock will be reserved for "
             "anonymous checkout or null when stock reservation is disabled."
+            + ADDED_IN_31
         ),
         permissions=[SitePermissions.MANAGE_SETTINGS],
     )
@@ -287,6 +278,7 @@ class Shop(graphene.ObjectType):
         description=(
             "Default number of minutes stock will be reserved for "
             "authenticated checkout or null when stock reservation is disabled."
+            + ADDED_IN_31
         ),
         permissions=[SitePermissions.MANAGE_SETTINGS],
     )
@@ -294,7 +286,7 @@ class Shop(graphene.ObjectType):
         graphene.Int,
         description=(
             "Default number of maximum line quantity in single checkout "
-            "(per single checkout line)."
+            "(per single checkout line)." + ADDED_IN_31
         ),
         permissions=[SitePermissions.MANAGE_SETTINGS],
     )
@@ -323,14 +315,16 @@ class Shop(graphene.ObjectType):
     )
     enable_account_confirmation_by_email = PermissionsField(
         graphene.Boolean,
-        description="Determines if account confirmation by email is enabled.",
+        description=(
+            "Determines if account confirmation by email is enabled." + ADDED_IN_314
+        ),
         permissions=[SitePermissions.MANAGE_SETTINGS],
     )
     allow_login_without_confirmation = PermissionsField(
         graphene.Boolean,
         description=(
             "Determines if user can login without confirmation when "
-            "`enableAccountConfirmation` is enabled."
+            "`enableAccountConfirmation` is enabled." + ADDED_IN_315
         ),
         permissions=[SitePermissions.MANAGE_SETTINGS],
     )
@@ -338,7 +332,7 @@ class Shop(graphene.ObjectType):
         LimitInfo,
         required=True,
         description="Resource limitations and current usage if any set for a shop",
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=(f"{DEPRECATED_IN_3X_FIELD}"),
         permissions=[AuthorizationFilters.AUTHENTICATED_STAFF_USER],
     )
     version = PermissionsField(
@@ -351,7 +345,7 @@ class Shop(graphene.ObjectType):
         ],
     )
     schema_version = graphene.String(
-        description="Minor Saleor API version.",
+        description="Minor Saleor API version." + ADDED_IN_35,
         required=True,
     )
     available_tax_apps = PermissionsField(
@@ -372,19 +366,28 @@ class Shop(graphene.ObjectType):
     # deprecated
     include_taxes_in_prices = graphene.Boolean(
         description="Include taxes in prices.",
-        deprecation_reason="Use `Channel.taxConfiguration.pricesEnteredWithTax` to determine whether prices are entered with tax.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use "
+            "`Channel.taxConfiguration.pricesEnteredWithTax` to determine whether "
+            "prices are entered with tax."
+        ),
         required=True,
     )
     display_gross_prices = graphene.Boolean(
         description="Display prices with tax in store.",
-        deprecation_reason="Use `Channel.taxConfiguration` to determine whether to display gross or net prices.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use `Channel.taxConfiguration` to determine "
+            "whether to display gross or net prices."
+        ),
         required=True,
     )
     charge_taxes_on_shipping = graphene.Boolean(
         description="Charge taxes on shipping.",
-        deprecation_reason="Use `ShippingMethodType.taxClass` to determine "
-        "whether taxes are calculated for shipping methods; if a tax class is set, "
-        "the taxes will be calculated, otherwise no tax rate will be applied.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use `ShippingMethodType.taxClass` to determine "
+            "whether taxes are calculated for shipping methods; if a tax class is set, "
+            "the taxes will be calculated, otherwise no tax rate will be applied."
+        ),
         required=True,
     )
 
@@ -414,7 +417,7 @@ class Shop(graphene.ObjectType):
     @traced_resolver
     @plugin_manager_promise_callback
     def resolve_available_payment_gateways(
-        _, _info, manager, currency: str | None = None, channel: str | None = None
+        _, _info, manager, currency: Optional[str] = None, channel: Optional[str] = None
     ):
         return manager.list_payment_gateways(currency=currency, channel_slug=channel)
 

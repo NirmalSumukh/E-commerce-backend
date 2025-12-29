@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.core.exceptions import ValidationError
 
 from ....channel.models import Channel
@@ -16,9 +18,9 @@ def clean_redirect_url(redirect_url: str, cleaned_input: dict):
 
     try:
         validate_storefront_url(redirect_url)
-    except ValidationError as e:
-        e.code = OrderErrorCode.INVALID.value
-        raise ValidationError({"redirect_url": e}) from e
+    except ValidationError as error:
+        error.code = OrderErrorCode.INVALID.value
+        raise ValidationError({"redirect_url": error})
 
     cleaned_input["redirect_url"] = redirect_url
 
@@ -43,7 +45,7 @@ def clean_voucher_and_voucher_code(channel: "Channel", cleaned_input: dict):
         clean_voucher_code(voucher_code, channel, cleaned_input)
 
 
-def clean_voucher(voucher: Voucher | None, channel: Channel, cleaned_input: dict):
+def clean_voucher(voucher: Optional[Voucher], channel: Channel, cleaned_input: dict):
     # We need to clean voucher_code as well
     if voucher is None:
         cleaned_input["voucher_code"] = None
@@ -65,7 +67,7 @@ def clean_voucher(voucher: Voucher | None, channel: Channel, cleaned_input: dict
         # Validate voucher when it's included in voucher usage calculation
         try:
             code_instance = get_active_voucher_code(voucher, channel.slug)
-        except ValidationError as e:
+        except ValidationError:
             raise ValidationError(
                 {
                     "voucher": ValidationError(
@@ -73,7 +75,7 @@ def clean_voucher(voucher: Voucher | None, channel: Channel, cleaned_input: dict
                         code=OrderErrorCode.INVALID_VOUCHER.value,
                     )
                 }
-            ) from e
+            )
     else:
         clean_voucher_listing(voucher, channel, "voucher")
     if not code_instance:
@@ -83,7 +85,9 @@ def clean_voucher(voucher: Voucher | None, channel: Channel, cleaned_input: dict
         cleaned_input["voucher_code_instance"] = code_instance
 
 
-def clean_voucher_code(voucher_code: str | None, channel: Channel, cleaned_input: dict):
+def clean_voucher_code(
+    voucher_code: Optional[str], channel: Channel, cleaned_input: dict
+):
     # We need to clean voucher instance as well
     if voucher_code is None:
         cleaned_input["voucher"] = None
@@ -92,7 +96,7 @@ def clean_voucher_code(voucher_code: str | None, channel: Channel, cleaned_input
         # Validate voucher when it's included in voucher usage calculation
         try:
             code_instance = get_voucher_code_instance(voucher_code, channel.slug)
-        except ValidationError as e:
+        except ValidationError:
             raise ValidationError(
                 {
                     "voucher_code": ValidationError(
@@ -100,7 +104,7 @@ def clean_voucher_code(voucher_code: str | None, channel: Channel, cleaned_input
                         code=OrderErrorCode.INVALID_VOUCHER_CODE.value,
                     )
                 }
-            ) from e
+            )
         voucher = code_instance.voucher
     else:
         code_instance = VoucherCode.objects.filter(code=voucher_code).first()

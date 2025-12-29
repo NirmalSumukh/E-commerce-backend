@@ -1,7 +1,12 @@
 import sys
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypedDict
+from typing import (
+    TYPE_CHECKING,
+    Optional,
+    TypedDict,
+    Union,
+)
 from uuid import UUID
 
 from django.contrib.sites.models import Site
@@ -24,7 +29,7 @@ from ...warehouse.models import (
     Warehouse,
 )
 from ...warehouse.reservations import is_reservation_enabled
-from ..channel.dataloaders.by_self import ChannelBySlugLoader
+from ..channel.dataloaders import ChannelBySlugLoader
 from ..core.dataloaders import DataLoader
 from ..shipping.dataloaders import (
     ShippingZonesByChannelIdLoader,
@@ -43,7 +48,7 @@ else:
     StockWithAvailableQuantity = Stock
 
 
-CountryCode = str | None
+CountryCode = Optional[str]
 VariantIdCountryCodeChannelSlug = tuple[int, CountryCode, str]
 
 
@@ -93,8 +98,8 @@ class AvailableQuantityByProductVariantIdCountryCodeAndChannelSlugLoader(
 
     def batch_load_quantities_by_country(
         self,
-        country_code: CountryCode | None,
-        channel_slug: str | None,
+        country_code: Optional[CountryCode],
+        channel_slug: Optional[str],
         variant_ids: Iterable[int],
         site: Site,
     ) -> Iterable[tuple[int, int]]:
@@ -275,7 +280,7 @@ class AvailableQuantityByProductVariantIdCountryCodeAndChannelSlugLoader(
         """
         cc_warehouses_in_bulk = cc_warehouses.in_bulk()
         warehouse_ids_by_shipping_zone_by_variant: defaultdict[
-            int, defaultdict[int | UUID, list[UUID]]
+            int, defaultdict[Union[int, UUID], list[UUID]]
         ] = defaultdict(lambda: defaultdict(list))
         variants_with_global_cc_warehouses = []
         available_quantity_by_warehouse_id_and_variant_id: defaultdict[
@@ -403,25 +408,23 @@ class StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(
                     shipping_zones_by_channel_map = {
                         channel.slug: set(shipping_zones)
                         for shipping_zones, channel in zip(
-                            shipping_zones_by_channel, channels, strict=False
+                            shipping_zones_by_channel, channels
                         )
                     }
                     shipping_zones_by_country_map = {
                         country_code: set(shipping_zones)
                         for shipping_zones, country_code in zip(
-                            shipping_zones_by_country, country_codes, strict=False
+                            shipping_zones_by_country, country_codes
                         )
                     }
                     warehouses_by_channel_map = {
                         channel.slug: set(warehouses)
-                        for warehouses, channel in zip(
-                            warehouses_by_channel, channels, strict=False
-                        )
+                        for warehouses, channel in zip(warehouses_by_channel, channels)
                     }
                     warehouses_by_zone_map = {
                         shipping_zone_id: set(warehouses)
                         for warehouses, shipping_zone_id in zip(
-                            warehouses_by_zone, shipping_zone_ids, strict=False
+                            warehouses_by_zone, shipping_zone_ids
                         )
                     }
 
@@ -436,7 +439,7 @@ class StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(
                         )
                     )
 
-                    variant_ids = list({key[0] for key in keys})
+                    variant_ids = list(set(key[0] for key in keys))
                     warehouse_ids = {
                         warehouse_id
                         for warehouse_ids in warehouse_ids_by_country_and_channel_map.values()  # noqa: E501
@@ -498,7 +501,7 @@ class StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(
                 self.context
             ).load_many(channel_ids)
 
-            country_codes = list({key[1] for key in keys if key[1]})
+            country_codes = list(set(key[1] for key in keys if key[1]))
             shipping_zones_by_country = ShippingZonesByCountryLoader(
                 self.context
             ).load_many(country_codes)
@@ -507,7 +510,7 @@ class StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(
                 [shipping_zones_by_channel, shipping_zones_by_country]
             ).then(with_shipping_zones)
 
-        channel_slugs = list({key[2] for key in keys if key[2]})
+        channel_slugs = list(set(key[2] for key in keys if key[2]))
         return (
             ChannelBySlugLoader(self.context)
             .load_many(channel_slugs)
@@ -526,7 +529,7 @@ class StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(
         for (
             country_code,
             channel_slug,
-        ), _variant_ids in variant_ids_by_country_and_channel_map.items():
+        ), variant_ids in variant_ids_by_country_and_channel_map.items():
             warehouses = set()
             warehouses_in_country = set()
             # get warehouses from shipping zones in specific country
@@ -654,7 +657,7 @@ class PreorderQuantityReservedByVariantChannelListingIdLoader(DataLoader[int, in
 class WarehouseByIdLoader(DataLoader):
     context_key = "warehouse_by_id"
 
-    def batch_load(self, keys: Iterable[UUID]) -> list[Warehouse | None]:
+    def batch_load(self, keys: Iterable[UUID]) -> list[Optional[Warehouse]]:
         warehouses = (
             Warehouse.objects.all().using(self.database_connection_name).in_bulk(keys)
         )

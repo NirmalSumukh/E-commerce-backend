@@ -5,8 +5,8 @@ from .....core.tracing import traced_atomic_transaction
 from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import ProductErrorCode
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
 from ....core.inputs import ReorderInput
 from ....core.mutations import BaseMutation
@@ -49,7 +49,7 @@ class ProductVariantReorder(BaseMutation):
 
         try:
             product = models.Product.objects.get(pk=pk)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             raise ValidationError(
                 {
                     "product_id": ValidationError(
@@ -57,7 +57,7 @@ class ProductVariantReorder(BaseMutation):
                         code=ProductErrorCode.NOT_FOUND.value,
                     )
                 }
-            ) from e
+            )
 
         variants_m2m = product.variants.all()
         operations = {}
@@ -69,7 +69,7 @@ class ProductVariantReorder(BaseMutation):
 
             try:
                 m2m_info = variants_m2m.get(id=int(variant_pk))
-            except ObjectDoesNotExist as e:
+            except ObjectDoesNotExist:
                 raise ValidationError(
                     {
                         "moves": ValidationError(
@@ -77,7 +77,7 @@ class ProductVariantReorder(BaseMutation):
                             code=ProductErrorCode.NOT_FOUND.value,
                         )
                     }
-                ) from e
+                )
             operations[m2m_info.pk] = move_info.sort_order
         manager = get_plugin_manager_promise(info.context).get()
         with traced_atomic_transaction():

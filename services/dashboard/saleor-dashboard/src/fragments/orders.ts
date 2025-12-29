@@ -214,7 +214,6 @@ export const fulfillmentFragment = gql`
   fragment Fulfillment on Fulfillment {
     ...Metadata
     id
-    created
     lines {
       id
       quantity
@@ -527,10 +526,6 @@ export const transactionBaseEvent = gql`
     type
     message
     createdAt
-    reasonReference {
-      id
-      title
-    }
   }
 `;
 
@@ -636,25 +631,19 @@ export const fragmentOrderGiftcard = gql`
       orderId
       date
       balance {
-        ...OrderGiftCardEventBalance
+        initialBalance {
+          ...Money
+        }
+        currentBalance {
+          ...Money
+        }
+        oldInitialBalance {
+          ...Money
+        }
+        oldCurrentBalance {
+          ...Money
+        }
       }
-    }
-  }
-`;
-
-export const fragmentOrderGiftCardEventBalance = gql`
-  fragment OrderGiftCardEventBalance on GiftCardEventBalance {
-    initialBalance {
-      ...Money
-    }
-    currentBalance {
-      ...Money
-    }
-    oldInitialBalance {
-      ...Money
-    }
-    oldCurrentBalance {
-      ...Money
     }
   }
 `;
@@ -673,10 +662,6 @@ export const fragmentOrderGrantedRefunds = gql`
       id
     }
     reason
-    reasonReference {
-      id
-      title
-    }
     user {
       ...UserBaseAvatar
     }
@@ -717,10 +702,6 @@ export const orderDetailsGrantedRefund = gql`
   fragment OrderDetailsGrantedRefund on OrderGrantedRefund {
     id
     reason
-    reasonReference {
-      id
-      title
-    }
     amount {
       ...Money
     }

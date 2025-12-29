@@ -1,9 +1,12 @@
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 
 /**
  * @deprecated use `Divider` component from `@saleor/macaw-ui-next`
  */
-export const Hr = ({ className }: { className?: string }) => (
+export const Hr: React.FC<{
+  className?: string;
+}> = ({ className }) => (
   <Box
     as="hr"
     className={className}

@@ -19,6 +19,7 @@ import { createOrderMetadataIdSchema } from "@dashboard/orders/components/OrderD
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
 import createMetadataUpdateHandler from "@dashboard/utils/handlers/metadataUpdateHandler";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import OrderOperations from "../../containers/OrderOperations";
@@ -34,7 +35,7 @@ interface OrderDetailsProps {
   params: OrderUrlQueryParams;
 }
 
-const OrderDetails = ({ id, params }: OrderDetailsProps) => {
+export const OrderDetails: React.FC<OrderDetailsProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const { queue } = useBackgroundTask();
   const intl = useIntl();

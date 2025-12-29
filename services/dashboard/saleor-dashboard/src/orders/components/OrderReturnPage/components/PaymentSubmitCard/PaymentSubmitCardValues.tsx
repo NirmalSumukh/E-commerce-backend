@@ -5,6 +5,7 @@ import { makeStyles } from "@saleor/macaw-ui";
 import { Skeleton } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
 import reduce from "lodash/reduce";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 const useStyles = makeStyles(
@@ -82,7 +83,7 @@ const messages = defineMessages({
   },
 });
 
-export const PaymentSubmitCardValues = (props: PaymentSubmitCardValuesProps) => {
+export const PaymentSubmitCardValues: React.FC<PaymentSubmitCardValuesProps> = props => {
   const intl = useIntl();
   const classes = useStyles({});
   const orderedKeys: Array<keyof PaymentSubmitCardValuesProps> = [
@@ -130,3 +131,4 @@ export const PaymentSubmitCardValues = (props: PaymentSubmitCardValuesProps) => 
 };
 
 PaymentSubmitCardValues.displayName = "PaymentSubmitCardValues";
+export default PaymentSubmitCardValues;

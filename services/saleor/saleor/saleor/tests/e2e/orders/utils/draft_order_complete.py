@@ -1,8 +1,6 @@
-from ...account.utils.fragments import ADDRESS_FRAGMENT
-from ...utils import get_graphql_content
+from saleor.graphql.tests.utils import get_graphql_content
 
-DRAFT_ORDER_COMPLETE_MUTATION = (
-    """
+DRAFT_ORDER_COMPLETE_MUTATION = """
 mutation DraftOrderComplete($id: ID!) {
   draftOrderComplete(id: $id) {
     errors {
@@ -12,17 +10,6 @@ mutation DraftOrderComplete($id: ID!) {
     }
     order {
       id
-      user {
-        id
-        email
-      }
-      userEmail
-      billingAddress {
-        ...Address
-      }
-      shippingAddress {
-        ...Address
-      }
       undiscountedTotal {
         ...BaseTaxedMoney
       }
@@ -65,7 +52,6 @@ mutation DraftOrderComplete($id: ID!) {
         }
       }
       lines {
-        id
         productVariantId
         quantity
         unitDiscount {
@@ -105,8 +91,6 @@ fragment BaseTaxedMoney on TaxedMoney {
   currency
 }
 """
-    + ADDRESS_FRAGMENT
-)
 
 
 def raw_draft_order_complete(api_client, id):

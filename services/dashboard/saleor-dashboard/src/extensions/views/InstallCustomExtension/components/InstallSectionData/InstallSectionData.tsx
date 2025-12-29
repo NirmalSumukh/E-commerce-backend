@@ -1,8 +1,9 @@
 import { Box, Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { Control, useWatch } from "react-hook-form";
 
 import { ExtensionInstallFormData, InstallDetailsManifestData } from "../../types";
-import { InstallExtensionManifestData } from "./InstallExtensionManifestData/InstallExtensionManifestData";
+import { InstallExtensionManifestData } from "../InstallExtensionManifestData";
 
 interface IInstallSectionDataProps {
   isFetchingManifest: boolean;
@@ -24,7 +25,7 @@ export const InstallSectionData = ({
 
   if (isFetchingManifest) {
     return (
-      <Box display="flex" flexDirection="column" alignItems={"flex-start"}>
+      <Box>
         <Box display="flex" flexDirection="column" gap={6}>
           <Skeleton height={5} __width="292px" />
           <Skeleton height={12} __width="292px" />

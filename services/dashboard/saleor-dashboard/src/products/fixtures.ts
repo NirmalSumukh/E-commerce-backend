@@ -28,22 +28,13 @@ export const product: (
       __typename: "SelectedAttribute",
       attribute: {
         __typename: "Attribute" as const,
-        availableInGrid: false,
-        storefrontSearchPosition: 0,
         entityType: null,
         id: "pta18161",
         inputType: AttributeInputTypeEnum.DROPDOWN,
-        type: null,
-        visibleInStorefront: false,
-        filterableInDashboard: false,
-        filterableInStorefront: false,
-        metadata: [],
-        privateMetadata: [],
         name: "Borders",
         slug: "Borders",
         valueRequired: false,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -114,22 +105,13 @@ export const product: (
       __typename: "SelectedAttribute",
       attribute: {
         __typename: "Attribute" as const,
-        availableInGrid: false,
-        storefrontSearchPosition: 0,
         entityType: null,
         id: "pta22785",
         inputType: AttributeInputTypeEnum.MULTISELECT,
-        type: null,
-        visibleInStorefront: false,
-        filterableInDashboard: false,
-        filterableInStorefront: false,
-        metadata: [],
-        privateMetadata: [],
         name: "Legacy",
         slug: "Legacy",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -347,7 +329,6 @@ export const product: (
         slug: "attachment",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -394,7 +375,6 @@ export const product: (
         slug: "color",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -460,7 +440,6 @@ export const product: (
         unit: null,
         slug: "attachment",
         entityType: AttributeEntityTypeEnum.PRODUCT,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -505,7 +484,6 @@ export const product: (
         inputType: AttributeInputTypeEnum.DROPDOWN,
         valueRequired: false,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -3651,7 +3629,6 @@ export const variant = (placeholderImage: string): ProductVariantFragment => ({
         slug: "attachment",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -3903,7 +3880,6 @@ export const variant = (placeholderImage: string): ProductVariantFragment => ({
         slug: "Borders",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -3981,7 +3957,6 @@ export const variant = (placeholderImage: string): ProductVariantFragment => ({
         slug: "Legacy",
         valueRequired: true,
         unit: null,
-        referenceTypes: [],
         choices: {
           __typename: "AttributeValueCountableConnection",
           pageInfo: {
@@ -4306,7 +4281,6 @@ export const variantAttributes: VariantAttributeFragment[] = [
     entityType: null,
     valueRequired: false,
     unit: null,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection",
       pageInfo: {
@@ -4328,7 +4302,6 @@ export const variantAttributes: VariantAttributeFragment[] = [
     entityType: null,
     valueRequired: false,
     unit: null,
-    referenceTypes: [],
     choices: {
       __typename: "AttributeValueCountableConnection",
       pageInfo: {

@@ -26,9 +26,4 @@ export const columnsMessages = defineMessages({
     defaultMessage: "Total",
     description: "order draft total price",
   },
-  channel: {
-    id: "RgdgqJ",
-    defaultMessage: "Channel",
-    description: "order draft channel name",
-  },
 });

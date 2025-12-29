@@ -15,7 +15,7 @@ import { toggle } from "@dashboard/utils/lists";
 import { Button, CircularProgress, FormControlLabel, TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Option, Text } from "@saleor/macaw-ui-next";
-import { PropsWithChildren } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import useProductExportFieldMessages from "./messages";
@@ -102,16 +102,11 @@ const useStyles = makeStyles(
     name: "ProductExportDialogInfo",
   },
 );
-const Option = ({
-  checked,
-  children,
-  name,
-  onChange,
-}: PropsWithChildren<{
+const Option: React.FC<{
   checked: boolean;
   name: string;
   onChange: (event: ChangeEvent) => void;
-}>) => {
+}> = ({ checked, children, name, onChange }) => {
   const classes = useStyles({});
 
   return (
@@ -129,18 +124,14 @@ const Option = ({
     />
   );
 };
-const FieldAccordion = ({
-  data,
-  fields,
-  onChange,
-  onToggleAll,
-  ...props
-}: AccordionProps & {
-  data: ExportProductsInput;
-  fields: ProductFieldEnum[];
-  onChange: (event: ChangeEvent) => void;
-  onToggleAll: (field: ProductFieldEnum[], setTo: boolean) => void;
-}) => {
+const FieldAccordion: React.FC<
+  AccordionProps & {
+    data: ExportProductsInput;
+    fields: ProductFieldEnum[];
+    onChange: (event: ChangeEvent) => void;
+    onToggleAll: (field: ProductFieldEnum[], setTo: boolean) => void;
+  }
+> = ({ data, fields, onChange, onToggleAll, ...props }) => {
   const classes = useStyles({});
   const getFieldLabel = useProductExportFieldMessages();
   const selectedAll = fields.every(field => data.exportInfo.fields.includes(field));
@@ -204,7 +195,7 @@ const FieldAccordion = ({
   );
 };
 
-interface ProductExportDialogInfoProps extends FetchMoreProps {
+export interface ProductExportDialogInfoProps extends FetchMoreProps {
   attributes: Option[];
   channels: ChannelFragment[];
   selectedChannels: ChannelFragment[];
@@ -220,7 +211,7 @@ interface ProductExportDialogInfoProps extends FetchMoreProps {
   onChannelSelect: (option: ChannelFragment) => void;
 }
 
-const ProductExportDialogInfo = ({
+const ProductExportDialogInfo: React.FC<ProductExportDialogInfoProps> = ({
   attributes,
   channels,
   data,
@@ -237,7 +228,7 @@ const ProductExportDialogInfo = ({
   onFetchMore,
   onSelectAllChannels,
   onSelectAllWarehouses,
-}: ProductExportDialogInfoProps) => {
+}) => {
   const classes = useStyles({});
   const intl = useIntl();
   const [query, onQueryChange] = useSearchQuery(onFetch);

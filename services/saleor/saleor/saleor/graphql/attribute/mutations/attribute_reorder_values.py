@@ -7,7 +7,6 @@ from ....core.tracing import traced_atomic_transaction
 from ....permission.enums import ProductTypePermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
 from ...core.doc_category import DOC_CATEGORY_ATTRIBUTES
 from ...core.inputs import ReorderInput
 from ...core.mutations import BaseMutation
@@ -60,7 +59,7 @@ class AttributeReorderValues(BaseMutation):
 
         try:
             attribute = models.Attribute.objects.prefetch_related("values").get(pk=pk)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             raise ValidationError(
                 {
                     "attribute_id": ValidationError(
@@ -68,7 +67,7 @@ class AttributeReorderValues(BaseMutation):
                         code=AttributeErrorCode.NOT_FOUND.value,
                     )
                 }
-            ) from e
+            )
 
         values_m2m = attribute.values.all()
         operations = {}
@@ -81,7 +80,7 @@ class AttributeReorderValues(BaseMutation):
 
             try:
                 m2m_info = values_m2m.get(pk=int(value_pk))
-            except ObjectDoesNotExist as e:
+            except ObjectDoesNotExist:
                 raise ValidationError(
                     {
                         "moves": ValidationError(
@@ -89,7 +88,7 @@ class AttributeReorderValues(BaseMutation):
                             code=AttributeErrorCode.NOT_FOUND.value,
                         )
                     }
-                ) from e
+                )
             operations[m2m_info.pk] = move_info.sort_order
 
         with traced_atomic_transaction():
@@ -101,4 +100,4 @@ class AttributeReorderValues(BaseMutation):
             cls.call_event(manager.attribute_value_updated, value)
         cls.call_event(manager.attribute_updated, attribute)
 
-        return AttributeReorderValues(attribute=ChannelContext(attribute, None))
+        return AttributeReorderValues(attribute=attribute)

@@ -2,11 +2,15 @@ import graphene
 from django.db import transaction
 
 from ....order import error_codes, events
-from ....order.search import update_order_search_vector
 from ....permission.enums import OrderPermissions
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import (
+    ADDED_IN_315,
+    DEPRECATED_IN_3X_INPUT,
+    DEPRECATED_IN_3X_MUTATION,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.types import BaseInputObjectType, Error, OrderError
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -37,7 +41,7 @@ class OrderNoteAdd(OrderNoteCommon):
         )
 
     class Meta:
-        description = "Adds note to the order."
+        description = "Adds note to the order." + ADDED_IN_315 + PREVIEW_FEATURE
         doc_category = DOC_CATEGORY_ORDERS
         permissions = (OrderPermissions.MANAGE_ORDERS,)
         error_type_class = OrderNoteAddError
@@ -59,16 +63,12 @@ class OrderNoteAdd(OrderNoteCommon):
                 message=cleaned_input["message"],
             )
             call_event_by_order_status(order, manager)
-            update_order_search_vector(order)
-        return OrderNoteAdd(
-            order=SyncWebhookControlContext(order),
-            event=SyncWebhookControlContext(event),
-        )
+        return OrderNoteAdd(order=order, event=event)
 
 
 class OrderAddNoteInput(BaseInputObjectType):
     message = graphene.String(
-        description="Note message.",
+        description="Note message." + DEPRECATED_IN_3X_INPUT,
         name="message",
         required=True,
     )
@@ -84,7 +84,7 @@ class OrderAddNote(OrderNoteAdd):
         )
 
     class Meta:
-        description = "Adds note to the order."
+        description = "Adds note to the order." + DEPRECATED_IN_3X_MUTATION
         doc_category = DOC_CATEGORY_ORDERS
         permissions = (OrderPermissions.MANAGE_ORDERS,)
         error_type_class = OrderError

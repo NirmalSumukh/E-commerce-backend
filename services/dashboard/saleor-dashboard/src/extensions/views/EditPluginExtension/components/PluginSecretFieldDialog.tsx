@@ -8,24 +8,25 @@ import { maybe } from "@dashboard/misc";
 import { DialogProps } from "@dashboard/types";
 import { TextField } from "@material-ui/core";
 import { Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface PluginSecretFieldDialogFormData {
+export interface PluginSecretFieldDialogFormData {
   value: string;
 }
-interface PluginSecretFieldDialogProps extends DialogProps {
+export interface PluginSecretFieldDialogProps extends DialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   field: ConfigurationItemFragment;
   onConfirm: (data: PluginSecretFieldDialogFormData) => void;
 }
 
-export const PluginSecretFieldDialog = ({
+export const PluginSecretFieldDialog: React.FC<PluginSecretFieldDialogProps> = ({
   confirmButtonState,
   field,
   onClose,
   onConfirm,
   open,
-}: PluginSecretFieldDialogProps) => {
+}) => {
   const intl = useIntl();
   const initialForm: PluginSecretFieldDialogFormData = {
     value: "",

@@ -1,5 +1,5 @@
 import { Box, Spinner } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import InfiniteScrollComponent, { Props } from "react-infinite-scroll-component";
 
 interface InfiniteScrollProps extends Omit<Props, "loader"> {

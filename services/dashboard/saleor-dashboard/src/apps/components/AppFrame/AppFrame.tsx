@@ -5,12 +5,12 @@ import { useAllFlags } from "@dashboard/featureFlags";
 import { CircularProgress } from "@material-ui/core";
 import { DashboardEventFactory } from "@saleor/app-sdk/app-bridge";
 import clsx from "clsx";
-import { PropsWithChildren, useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 
 import { AppIFrame } from "./AppIFrame";
 import { useStyles } from "./styles";
 import { useAppActions } from "./useAppActions";
-import { useTokenRefresh } from "./useTokenRefresh";
+import useTokenRefresh from "./useTokenRefresh";
 
 interface Props {
   src: string;
@@ -26,8 +26,7 @@ interface Props {
 
 const getOrigin = (url: string) => new URL(url).origin;
 
-/** @deprecated Use component from extensions/ */
-export const AppFrame = ({
+export const AppFrame: React.FC<Props> = ({
   src,
   appToken,
   appId,
@@ -37,8 +36,8 @@ export const AppFrame = ({
   refetch,
   dashboardVersion,
   coreVersion = "",
-}: PropsWithChildren<Props>) => {
-  const frameRef = useRef<HTMLIFrameElement | null>(null);
+}) => {
+  const frameRef = React.useRef<HTMLIFrameElement | null>(null);
   const classes = useStyles();
   const appOrigin = getOrigin(src);
   const flags = useAllFlags();

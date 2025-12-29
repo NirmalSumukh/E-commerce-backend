@@ -1,20 +1,23 @@
 from collections import defaultdict
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional, Union
 
+from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
+from graphene import Mutation
+from graphql import GraphQLError, ResolveInfo
+from graphql.execution import ExecutionResult
 from prices import Money, TaxedMoney
 
 from ...account.models import User
 from ...core.taxes import TaxData, TaxLineData, TaxType
-from ...graphql.core import SaleorContext
 from ...order.interface import OrderTaxedPricesData
 from ...payment.interface import (
     PaymentGatewayData,
     TransactionSessionData,
     TransactionSessionResult,
 )
-from ...shipping.interface import ShippingMethodData
 from ..base_plugin import BasePlugin, ConfigurationTypeField, ExternalAccessTokens
 
 if TYPE_CHECKING:
@@ -34,7 +37,7 @@ def sample_tax_data(obj_with_lines: Union["Order", "Checkout"]) -> TaxData:
         TaxLineData(
             total_net_amount=unit * 3,
             total_gross_amount=unit_gross * 3,
-            tax_rate=Decimal(23),
+            tax_rate=Decimal("23"),
         )
         for _ in obj_with_lines.lines.all()
     ]
@@ -45,7 +48,7 @@ def sample_tax_data(obj_with_lines: Union["Order", "Checkout"]) -> TaxData:
     return TaxData(
         shipping_price_net_amount=shipping,
         shipping_price_gross_amount=shipping_gross,
-        shipping_tax_rate=Decimal(23),
+        shipping_tax_rate=Decimal("23"),
         lines=lines,
     )
 
@@ -91,9 +94,7 @@ class PluginSample(BasePlugin):
         },
     }
 
-    def webhook(
-        self, request: SaleorContext, path: str, previous_value
-    ) -> HttpResponse:
+    def webhook(self, request: WSGIRequest, path: str, previous_value) -> HttpResponse:
         if path == "/webhook/paid":
             return JsonResponse(data={"received": True, "paid": True})
         if path == "/webhook/failed":
@@ -117,13 +118,13 @@ class PluginSample(BasePlugin):
     def calculate_checkout_line_total(
         self,
         checkout_info: "CheckoutInfo",
-        lines: list["CheckoutLineInfo"],
+        lines: Iterable["CheckoutLineInfo"],
         checkout_line_info: "CheckoutLineInfo",
         address: Optional["Address"],
         previous_value: TaxedMoney,
     ):
         # See if delivery method doesn't trigger infinite recursion
-        bool(checkout_info.get_delivery_method_info().delivery_method)
+        bool(checkout_info.delivery_method_info.delivery_method)
 
         price = Money("1.0", currency=checkout_info.checkout.currency)
         return TaxedMoney(price, price)
@@ -145,7 +146,7 @@ class PluginSample(BasePlugin):
     def calculate_checkout_line_unit_price(
         self,
         checkout_info: "CheckoutInfo",
-        lines: list["CheckoutLineInfo"],
+        lines: Iterable["CheckoutLineInfo"],
         checkout_line_info: "CheckoutLineInfo",
         address: Optional["Address"],
         previous_value: TaxedMoney,
@@ -173,38 +174,36 @@ class PluginSample(BasePlugin):
         return [TaxType(code="123", description="abc")]
 
     def external_authentication_url(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> dict:
         return {"authorizeUrl": "http://www.auth.provider.com/authorize/"}
 
     def external_obtain_access_tokens(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> ExternalAccessTokens:
         return ExternalAccessTokens(
             token="token1", refresh_token="refresh2", csrf_token="csrf3"
         )
 
     def external_refresh(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> ExternalAccessTokens:
         return ExternalAccessTokens(
             token="token4", refresh_token="refresh5", csrf_token="csrf6"
         )
 
     def external_verify(
-        self, data: dict, request: SaleorContext, previous_value
-    ) -> tuple[User | None, dict]:
+        self, data: dict, request: WSGIRequest, previous_value
+    ) -> tuple[Optional[User], dict]:
         user = User.objects.get()
         return user, {"some_data": "data"}
 
     def authenticate_user(
-        self, request: SaleorContext, previous_value
+        self, request: WSGIRequest, previous_value
     ) -> Optional["User"]:
         return User.objects.filter().first()
 
-    def external_logout(
-        self, data: dict, request: SaleorContext, previous_value
-    ) -> dict:
+    def external_logout(self, data: dict, request: WSGIRequest, previous_value) -> dict:
         return {"logoutUrl": "http://www.auth.provider.com/logout/"}
 
     def sale_created(
@@ -256,10 +255,19 @@ class PluginSample(BasePlugin):
     def promotion_ended(self, promotion: "Promotion", previous_value: Any):
         return None
 
+    def product_variant_stock_updated(self, stock, previous_value: Any):
+        return None
+
+    def translation_created(self, translation, previous_value: Any):
+        return None
+
+    def translation_updated(self, translation, previous_value: Any):
+        return None
+
     def get_checkout_line_tax_rate(
         self,
         checkout_info: "CheckoutInfo",
-        lines: list["CheckoutLineInfo"],
+        lines: Iterable["CheckoutLineInfo"],
         checkout_line_info: "CheckoutLineInfo",
         address: Optional["Address"],
         previous_value: Decimal,
@@ -279,7 +287,7 @@ class PluginSample(BasePlugin):
     def get_checkout_shipping_tax_rate(
         self,
         checkout_info: "CheckoutInfo",
-        lines: list["CheckoutLineInfo"],
+        lines: Iterable["CheckoutLineInfo"],
         address: Optional["Address"],
         previous_value: Decimal,
     ):
@@ -309,10 +317,20 @@ class PluginSample(BasePlugin):
     def event_delivery_retry(self, delivery: "EventDelivery", previous_value: Any):
         return True
 
+    def perform_mutation(
+        self,
+        mutation_cls: Mutation,
+        root,
+        info: ResolveInfo,
+        data: dict,
+        previous_value: Optional[Union[ExecutionResult, GraphQLError]],
+    ) -> Optional[Union[ExecutionResult, GraphQLError]]:
+        return None
+
     def payment_gateway_initialize_session(
         self,
         amount: Decimal,
-        payment_gateways: list["PaymentGatewayData"] | None,
+        payment_gateways: Optional[list["PaymentGatewayData"]],
         source_object: Union["Order", "Checkout"],
         previous_value: Any,
     ):
@@ -337,9 +355,6 @@ class PluginSample(BasePlugin):
         )
 
     def checkout_fully_paid(self, checkout, previous_value, webhooks):
-        return None
-
-    def checkout_fully_authorized(self, checkout, previous_value, webhooks):
         return None
 
     def order_fully_refunded(self, order, previous_value, webhooks):
@@ -369,24 +384,6 @@ class PluginSample(BasePlugin):
 
     def payment_method_process_tokenization(self, request_data, previous_value):
         return previous_value
-
-    def get_shipping_methods_for_checkout(
-        self, checkout: "Checkout", previous_value: Any
-    ) -> list["ShippingMethodData"]:
-        different_currency = "EUR"
-        assert checkout.currency != different_currency
-        return [
-            ShippingMethodData(
-                id="123",
-                price=Money(Decimal(10), currency=different_currency),
-                name="EUR shipping",
-            ),
-            ShippingMethodData(
-                id="123",
-                price=Money(Decimal(10), currency=checkout.currency),
-                name="Default shipping",
-            ),
-        ]
 
 
 class ChannelPluginSample(PluginSample):
@@ -429,7 +426,7 @@ class PluginInactive(BasePlugin):
     DEFAULT_ACTIVE = False
 
     def external_obtain_access_tokens(
-        self, data: dict, request: SaleorContext, previous_value
+        self, data: dict, request: WSGIRequest, previous_value
     ) -> ExternalAccessTokens:
         return ExternalAccessTokens(
             token="token1", refresh_token="refresh2", csrf_token="csrf3"
@@ -491,7 +488,7 @@ class SampleAuthorizationPlugin(BasePlugin):
     DEFAULT_ACTIVE = True
     CONFIGURATION_PER_CHANNEL = False
 
-    def authenticate_user(self, request, previous_value) -> User | None:
+    def authenticate_user(self, request, previous_value) -> Optional[User]:
         # This function will be mocked in test
         raise NotImplementedError()
 

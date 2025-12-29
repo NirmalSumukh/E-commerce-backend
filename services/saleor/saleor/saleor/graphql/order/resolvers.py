@@ -10,7 +10,7 @@ from ...order.utils import sum_order_totals
 from ..account.utils import get_user_accessible_channels
 from ..app.dataloaders import get_app_promise
 from ..channel.utils import get_default_channel_slug_or_graphql_error
-from ..core.context import SyncWebhookControlContext, get_database_connection_name
+from ..core.context import get_database_connection_name
 from ..core.tracing import traced_resolver
 from ..utils.filters import filter_by_period
 
@@ -96,10 +96,7 @@ def resolve_order(info, id):
     except ValueError:
         lookup = Q(number=id) & Q(use_old_id=True)
     database_connection_name = get_database_connection_name(info.context)
-    order = models.Order.objects.using(database_connection_name).filter(lookup).first()
-    if not order:
-        return None
-    return SyncWebhookControlContext(node=order, allow_sync_webhooks=True)
+    return models.Order.objects.using(database_connection_name).filter(lookup).first()
 
 
 def resolve_homepage_events(info):
@@ -125,13 +122,9 @@ def resolve_homepage_events(info):
 
 def resolve_order_by_token(info, token):
     database_connection_name = get_database_connection_name(info.context)
-
-    order = (
+    return (
         models.Order.objects.using(database_connection_name)
         .exclude(status=OrderStatus.DRAFT)
         .filter(id=token)
         .first()
     )
-    if not order:
-        return None
-    return SyncWebhookControlContext(node=order, allow_sync_webhooks=True)

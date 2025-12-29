@@ -4,9 +4,10 @@ import { OrderDetailsFragment } from "@dashboard/graphql";
 import { transformOrderStatus } from "@dashboard/misc";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, Skeleton, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface TitleProps {
+export interface TitleProps {
   order?: OrderDetailsFragment;
 }
 
@@ -23,7 +24,7 @@ const useStyles = makeStyles(
   }),
   { name: "OrderDetailsTitle" },
 );
-const Title = (props: TitleProps) => {
+const Title: React.FC<TitleProps> = props => {
   const intl = useIntl();
   const classes = useStyles(props);
   const { order } = props;

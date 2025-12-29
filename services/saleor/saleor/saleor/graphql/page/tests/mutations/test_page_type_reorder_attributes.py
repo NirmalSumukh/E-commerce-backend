@@ -85,9 +85,7 @@ def test_reorder_page_type_attributes_by_staff(
         sorted_attributes[0].pk,
     ]
 
-    for attr, expected_pk in zip(
-        page_type_data["attributes"], expected_order, strict=False
-    ):
+    for attr, expected_pk in zip(page_type_data["attributes"], expected_order):
         gql_type, gql_attr_id = graphene.Node.from_global_id(attr["id"])
         assert gql_type == "Attribute"
         assert int(gql_attr_id) == expected_pk
@@ -182,9 +180,7 @@ def test_reorder_page_type_attributes_by_app(
         sorted_attributes[0].pk,
     ]
 
-    for attr, expected_pk in zip(
-        page_type_data["attributes"], expected_order, strict=False
-    ):
+    for attr, expected_pk in zip(page_type_data["attributes"], expected_order):
         gql_type, gql_attr_id = graphene.Node.from_global_id(attr["id"])
         assert gql_type == "Attribute"
         assert int(gql_attr_id) == expected_pk

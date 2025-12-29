@@ -2,7 +2,7 @@ import { CommonError, CommonErrorCode } from "@dashboard/utils/errors/common";
 
 import { TaxClassesPageFormData } from "../types";
 
-const createEmptyRequiredError = (field: string): CommonError<CommonErrorCode> => ({
+export const createEmptyRequiredError = (field: string): CommonError<CommonErrorCode> => ({
   code: CommonErrorCode.REQUIRED,
   field,
   message: null,

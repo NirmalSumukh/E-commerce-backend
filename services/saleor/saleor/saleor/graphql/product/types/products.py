@@ -2,6 +2,7 @@ import sys
 from collections import defaultdict
 from dataclasses import asdict
 from decimal import Decimal
+from typing import Optional
 
 import graphene
 from graphene import relay
@@ -27,7 +28,7 @@ from ....product.utils.variants import get_variant_selection_attributes
 from ....tax.utils import (
     get_display_gross_prices,
     get_tax_calculation_strategy,
-    get_tax_rate_for_country,
+    get_tax_rate_for_tax_class,
 )
 from ....thumbnail.utils import (
     get_image_or_proxy_url,
@@ -37,36 +38,30 @@ from ....thumbnail.utils import (
 from ....warehouse.reservations import is_reservation_enabled
 from ...account import types as account_types
 from ...account.enums import CountryCodeEnum
-from ...attribute.filters import (
-    AttributeFilterInput,
-    AttributeWhereInput,
-    filter_attribute_search,
-)
+from ...attribute.filters import AttributeFilterInput, AttributeWhereInput
 from ...attribute.resolvers import resolve_attributes
 from ...attribute.types import (
-    AssignedAttribute,
     AssignedVariantAttribute,
     Attribute,
     AttributeCountableConnection,
-    ObjectWithAttributes,
     SelectedAttribute,
 )
-from ...channel.dataloaders.by_self import ChannelBySlugLoader
+from ...channel import ChannelContext, ChannelQsContext
+from ...channel.dataloaders import ChannelBySlugLoader
+from ...channel.types import ChannelContextType, ChannelContextTypeWithMetadata
 from ...channel.utils import get_default_channel_slug_or_graphql_error
 from ...core.connection import (
     CountableConnection,
     create_connection_slice,
     filter_connection_queryset,
 )
-from ...core.const import DEFAULT_NESTED_LIST_LIMIT
-from ...core.context import (
-    ChannelContext,
-    ChannelQsContext,
-    get_database_connection_name,
-)
+from ...core.context import get_database_connection_name
 from ...core.descriptions import (
-    ADDED_IN_321,
-    ADDED_IN_322,
+    ADDED_IN_31,
+    ADDED_IN_39,
+    ADDED_IN_310,
+    ADDED_IN_312,
+    DEPRECATED_IN_3X_FIELD,
     DEPRECATED_IN_3X_INPUT,
     RICH_CONTENT,
 )
@@ -79,7 +74,7 @@ from ...core.fields import (
     JSONString,
     PermissionsField,
 )
-from ...core.scalars import Date, DateTime, PositiveInt
+from ...core.scalars import Date, DateTime
 from ...core.tracing import traced_resolver
 from ...core.types import (
     BaseObjectType,
@@ -92,11 +87,8 @@ from ...core.types import (
     ThumbnailField,
     Weight,
 )
-from ...core.types.context import ChannelContextType
 from ...core.utils import from_global_id_or_error
-from ...core.validators import (
-    validate_one_of_args_is_in_query,
-)
+from ...core.validators import validate_one_of_args_is_in_query
 from ...meta.types import ObjectWithMetadata
 from ...order.dataloaders import (
     OrderByIdLoader,
@@ -111,9 +103,10 @@ from ...site.dataloaders import load_site_callback
 from ...tax.dataloaders import (
     ProductChargeTaxesByTaxClassIdLoader,
     TaxClassByIdLoader,
+    TaxClassByProductIdLoader,
+    TaxClassByVariantIdLoader,
     TaxClassCountryRateByTaxClassIDLoader,
     TaxClassDefaultRateByCountryLoader,
-    TaxClassIdByProductIdLoader,
     TaxConfigurationByChannelId,
     TaxConfigurationPerCountryByTaxConfigurationIDLoader,
 )
@@ -145,6 +138,9 @@ from ..dataloaders import (
     ProductTypeByIdLoader,
     ProductVariantByIdLoader,
     ProductVariantsByProductIdLoader,
+    SelectedAttributesAllByProductIdLoader,
+    SelectedAttributesByProductVariantIdLoader,
+    SelectedAttributesVisibleInStorefrontByProductIdLoader,
     ThumbnailByProductMediaIdSizeAndFormatLoader,
     VariantAttributesAllByProductTypeIdLoader,
     VariantAttributesVisibleInStorefrontByProductTypeIdLoader,
@@ -153,19 +149,8 @@ from ..dataloaders import (
     VariantsChannelListingByProductIdAndChannelSlugLoader,
 )
 from ..enums import ProductMediaType, ProductTypeKindEnum, VariantAttributeScope
-from ..filters.product_variant import (
-    ProductVariantFilterInput,
-    ProductVariantWhereInput,
-)
-from ..resolvers import (
-    resolve_product_attribute,
-    resolve_product_attributes,
-    resolve_product_variants,
-    resolve_products,
-    resolve_variant_attribute,
-    resolve_variant_attributes,
-)
-from ..sorters import MediaSortingInput, ProductVariantSortingInput
+from ..resolvers import resolve_product_variants, resolve_products
+from ..sorters import MediaSortingInput
 from .channels import ProductChannelListing, ProductVariantChannelListing
 from .digital_contents import DigitalContent
 
@@ -185,20 +170,12 @@ class BasePricingInfo(BaseObjectType):
     discount = graphene.Field(
         TaxedMoney, description="The discount amount if in sale (null otherwise)."
     )
-    discount_prior = graphene.Field(
-        TaxedMoney,
-        description=(
-            "The discount amount compared to prior price. Null if product "
-            "is not on sale or prior price was not provided in VariantChannelListing"
-            + ADDED_IN_321
-        ),
-    )
 
     # deprecated
     discount_local_currency = graphene.Field(
         TaxedMoney,
         description="The discount amount in the local currency.",
-        deprecation_reason="Always returns `null`.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Always returns `null`.",
     )
 
     class Meta:
@@ -213,20 +190,17 @@ class VariantPricingInfo(BasePricingInfo):
     price_undiscounted = graphene.Field(
         TaxedMoney, description="The price without any discount."
     )
-    price_prior = graphene.Field(
-        TaxedMoney, description="The price prior to discount." + ADDED_IN_321
-    )
 
     # deprecated
     discount_local_currency = graphene.Field(
         TaxedMoney,
         description="The discount amount in the local currency.",
-        deprecation_reason="Always returns `null`.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Always returns `null`.",
     )
     price_local_currency = graphene.Field(
         TaxedMoney,
         description="The discounted price in the local currency.",
-        deprecation_reason="Always returns `null`.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Always returns `null`.",
     )
 
     class Meta:
@@ -236,7 +210,9 @@ class VariantPricingInfo(BasePricingInfo):
 
 class ProductPricingInfo(BasePricingInfo):
     display_gross_prices = graphene.Boolean(
-        description="Determines whether displayed prices should include taxes.",
+        description=(
+            "Determines whether displayed prices should include taxes." + ADDED_IN_39
+        ),
         required=True,
     )
     price_range = graphene.Field(
@@ -247,18 +223,15 @@ class ProductPricingInfo(BasePricingInfo):
         TaxedMoneyRange,
         description="The undiscounted price range of the product variants.",
     )
-    price_range_prior = graphene.Field(
-        TaxedMoneyRange,
-        description="The prior price range of the product variants." + ADDED_IN_321,
-    )
 
     # deprecated
     price_range_local_currency = graphene.Field(
         TaxedMoneyRange,
         description=(
-            "The discounted price range of the product variants in the local currency."
+            "The discounted price range of the product variants "
+            "in the local currency."
         ),
-        deprecation_reason="Always returns `null`.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Always returns `null`.",
     )
 
     class Meta:
@@ -295,7 +268,7 @@ class PreorderData(BaseObjectType):
 
 
 @federated_entity("id channel")
-class ProductVariant(ChannelContextType[models.ProductVariant]):
+class ProductVariant(ChannelContextTypeWithMetadata[models.ProductVariant]):
     id = graphene.GlobalID(required=True, description="The ID of the product variant.")
     name = graphene.String(
         required=True, description="The name of the product variant."
@@ -342,29 +315,6 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
             "only meant for displaying."
         ),
     )
-    assigned_attribute = graphene.Field(
-        AssignedAttribute,
-        slug=graphene.Argument(
-            graphene.String,
-            description="Slug of the attribute",
-            required=True,
-        ),
-        description="Get a single attribute attached to product by attribute slug."
-        + ADDED_IN_322,
-    )
-
-    assigned_attributes = NonNullList(
-        AssignedAttribute,
-        required=True,
-        description="List of attributes assigned to this variant." + ADDED_IN_322,
-        limit=PositiveInt(
-            description=(
-                "Maximum number of attributes to return. "
-                f"Default is {DEFAULT_NESTED_LIST_LIMIT}."
-            ),
-            default_value=DEFAULT_NESTED_LIST_LIMIT,
-        ),
-    )
     attributes = NonNullList(
         SelectedAttribute,
         required=True,
@@ -373,7 +323,6 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
             VariantAttributeScope,
             description="Define scope of returned attributes.",
         ),
-        deprecation_reason="Use the `assignedAttributes` field instead.",
     )
     margin = graphene.Int(description="Gross margin percentage value.")
     quantity_ordered = PermissionsField(
@@ -394,7 +343,7 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
     images = NonNullList(
         lambda: ProductImage,
         description="List of images for the product variant.",
-        deprecation_reason="Use the `media` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use the `media` field instead.",
     )
     media = NonNullList(
         lambda: ProductMedia,
@@ -449,7 +398,7 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
     preorder = graphene.Field(
         PreorderData,
         required=False,
-        description="Preorder data for product variant.",
+        description=("Preorder data for product variant." + ADDED_IN_31),
     )
     created = DateTime(
         required=True,
@@ -460,7 +409,7 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
         description="The date and time when the product variant was last updated.",
     )
     external_reference = graphene.String(
-        description="External ID of this product.",
+        description=f"External ID of this product. {ADDED_IN_310}",
         required=False,
     )
 
@@ -469,7 +418,7 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
         description = (
             "Represents a version of a product such as different size or color."
         )
-        interfaces = [relay.Node, ObjectWithMetadata, ObjectWithAttributes]
+        interfaces = [relay.Node, ObjectWithMetadata]
         model = models.ProductVariant
 
     @staticmethod
@@ -494,7 +443,8 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
             return StocksWithAvailableQuantityByProductVariantIdCountryCodeAndChannelLoader(  # noqa: E501
                 info.context
             ).load((root.node.id, country_code, root.channel_slug))
-        return StocksByProductVariantIdLoader(info.context).load(root.node.id)
+        else:
+            return StocksByProductVariantIdLoader(info.context).load(root.node.id)
 
     @staticmethod
     @load_site_callback
@@ -619,38 +569,39 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
     def resolve_digital_content(root: ChannelContext[models.ProductVariant], _info):
         return getattr(root.node, "digital_content", None)
 
-    @classmethod
-    def resolve_assigned_attribute(
-        cls, root: ChannelContext[models.ProductVariant], info, slug
-    ):
-        return resolve_variant_attribute(root, info, slug)
-
-    @classmethod
+    @staticmethod
     def resolve_attributes(
-        cls,
         root: ChannelContext[models.ProductVariant],
         info,
-        variant_selection: VariantAttributeScope | None = None,
+        variant_selection: Optional[str] = None,
     ):
-        if variant_selection == VariantAttributeScope.VARIANT_SELECTION:
-            selection_bool = True
-        elif variant_selection == VariantAttributeScope.NOT_VARIANT_SELECTION:
-            selection_bool = False
-        else:
-            selection_bool = None
-        return resolve_variant_attributes(
-            root, info, variant_selection=selection_bool, limit=None
-        )
+        def apply_variant_selection_filter(selected_attributes):
+            if not variant_selection or variant_selection == VariantAttributeScope.ALL:
+                return selected_attributes
+            attributes = [
+                (selected_att["attribute"], selected_att["variant_selection"])
+                for selected_att in selected_attributes
+            ]
+            variant_selection_attrs = [
+                attr for attr, _ in get_variant_selection_attributes(attributes)
+            ]
 
-    @classmethod
-    def resolve_assigned_attributes(
-        cls,
-        root: ChannelContext[models.ProductVariant],
-        info,
-        limit: int = DEFAULT_NESTED_LIST_LIMIT,
-    ):
-        return resolve_variant_attributes(
-            root, info, variant_selection=None, limit=limit
+            if variant_selection == VariantAttributeScope.VARIANT_SELECTION:
+                return [
+                    selected_attribute
+                    for selected_attribute in selected_attributes
+                    if selected_attribute["attribute"] in variant_selection_attrs
+                ]
+            return [
+                selected_attribute
+                for selected_attribute in selected_attributes
+                if selected_attribute["attribute"] not in variant_selection_attrs
+            ]
+
+        return (
+            SelectedAttributesByProductVariantIdLoader(info.context)
+            .load(root.node.id)
+            .then(apply_variant_selection_filter)
         )
 
     @staticmethod
@@ -674,16 +625,14 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
             context
         ).load((root.node.id, channel_slug))
         channel = ChannelBySlugLoader(context).load(channel_slug)
-        tax_class_id_loader = TaxClassIdByProductIdLoader(context).load(
-            root.node.product_id
-        )
+        tax_class = TaxClassByVariantIdLoader(context).load(root.node.id)
 
         def load_tax_configuration(data):
             (
                 product_channel_listing,
                 variant_channel_listing,
                 channel,
-                tax_class_id,
+                tax_class,
             ) = data
 
             if not variant_channel_listing or not product_channel_listing:
@@ -712,8 +661,8 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
                             if default_country_rate_obj
                             else Decimal(0)
                         )
-                        tax_rate = get_tax_rate_for_country(
-                            country_rates, default_tax_rate, country_code
+                        tax_rate = get_tax_rate_for_tax_class(
+                            tax_class, country_rates, default_tax_rate, country_code
                         )
 
                         availability = get_variant_availability(
@@ -731,10 +680,10 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
 
                     country_rates = (
                         TaxClassCountryRateByTaxClassIDLoader(context).load(
-                            tax_class_id
+                            tax_class.pk
                         )
-                        if tax_class_id
-                        else Promise.resolve([])
+                        if tax_class
+                        else []
                     )
                     default_rate = TaxClassDefaultRateByCountryLoader(context).load(
                         country_code
@@ -760,7 +709,7 @@ class ProductVariant(ChannelContextType[models.ProductVariant]):
                 product_channel_listing,
                 variant_channel_listing,
                 channel,
-                tax_class_id_loader,
+                tax_class,
             ]
         ).then(load_tax_configuration)
 
@@ -896,7 +845,7 @@ class ProductVariantCountableConnection(CountableConnection):
 
 
 @federated_entity("id channel")
-class Product(ChannelContextType[models.Product]):
+class Product(ChannelContextTypeWithMetadata[models.Product]):
     id = graphene.GlobalID(required=True, description="The ID of the product.")
     seo_title = graphene.String(description="SEO title of the product.")
     seo_description = graphene.String(description="SEO description of the product.")
@@ -916,7 +865,10 @@ class Product(ChannelContextType[models.Product]):
     )
     charge_taxes = graphene.Boolean(
         required=True,
-        deprecation_reason="Use `Channel.taxConfiguration` field to determine whether tax collection is enabled.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use `Channel.taxConfiguration` field to "
+            "determine whether tax collection is enabled."
+        ),
     )
     weight = graphene.Field(Weight, description="Weight of the product.")
     default_variant = graphene.Field(
@@ -931,7 +883,9 @@ class Product(ChannelContextType[models.Product]):
     )
     description_json = JSONString(
         description="Description of the product." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     thumbnail = ThumbnailField(description="Thumbnail of the product.")
     pricing = graphene.Field(
@@ -952,31 +906,8 @@ class Product(ChannelContextType[models.Product]):
     tax_type = graphene.Field(
         TaxType,
         description="A type of tax. Assigned by enabled tax gateway",
-        deprecation_reason="Use `taxClass` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `taxClass` field instead.",
     )
-    assigned_attribute = graphene.Field(
-        AssignedAttribute,
-        slug=graphene.Argument(
-            graphene.String,
-            description="Slug of the attribute",
-            required=True,
-        ),
-        description="Get a single attribute attached to product by attribute slug."
-        + ADDED_IN_322,
-    )
-    assigned_attributes = NonNullList(
-        AssignedAttribute,
-        required=True,
-        description="List of attributes assigned to this product." + ADDED_IN_322,
-        limit=PositiveInt(
-            description=(
-                "Maximum number of attributes to return. "
-                f"Default is {DEFAULT_NESTED_LIST_LIMIT}."
-            ),
-            default_value=DEFAULT_NESTED_LIST_LIMIT,
-        ),
-    )
-
     attribute = graphene.Field(
         SelectedAttribute,
         slug=graphene.Argument(
@@ -984,14 +915,15 @@ class Product(ChannelContextType[models.Product]):
             description="Slug of the attribute",
             required=True,
         ),
-        description="Get a single attribute attached to product by attribute slug.",
-        deprecation_reason="Use the `assignedAttribute` field instead.",
+        description=(
+            f"Get a single attribute attached to product by attribute slug."
+            f"{ADDED_IN_39}"
+        ),
     )
     attributes = NonNullList(
         SelectedAttribute,
         required=True,
         description="List of attributes assigned to this product.",
-        deprecation_reason="Use the `assignedAttributes` field instead.",
     )
     channel_listings = PermissionsField(
         NonNullList(ProductChannelListing),
@@ -1007,14 +939,16 @@ class Product(ChannelContextType[models.Product]):
         lambda: ProductImage,
         id=graphene.Argument(graphene.ID, description="ID of a product image."),
         description="Get a single product image by ID.",
-        deprecation_reason="Use the `mediaById` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `mediaById` field instead."
+        ),
     )
     variant = graphene.Field(
         ProductVariant,
         id=graphene.Argument(graphene.ID, description="ID of the variant."),
         sku=graphene.Argument(graphene.String, description="SKU of the variant."),
-        description="Get a single variant by SKU or ID.",
-        deprecation_reason="Use top-level `variant` query.",
+        description=f"Get a single variant by SKU or ID. {ADDED_IN_39}",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use top-level `variant` query.",
     )
     variants = NonNullList(
         ProductVariant,
@@ -1023,35 +957,18 @@ class Product(ChannelContextType[models.Product]):
             "include the unpublished items: "
             f"{', '.join([p.name for p in ALL_PRODUCTS_PERMISSIONS])}."
         ),
-        deprecation_reason="Use `productVariants` field instead.",
-    )
-    product_variants = FilterConnectionField(
-        ProductVariantCountableConnection,
-        filter=ProductVariantFilterInput(
-            description=(
-                f"Filtering options for product variant. {DEPRECATED_IN_3X_INPUT} "
-                "Use `where` filter instead."
-            )
-        ),
-        where=ProductVariantWhereInput(
-            description="Where filtering options for product variants."
-        ),
-        sort_by=ProductVariantSortingInput(description="Sort products variants."),
-        description=(
-            "List of variants for the product. Requires the following permissions to "
-            "include the unpublished items: "
-            f"{', '.join([p.name for p in ALL_PRODUCTS_PERMISSIONS])}." + ADDED_IN_321
-        ),
     )
     media = NonNullList(
         lambda: ProductMedia,
-        sort_by=graphene.Argument(MediaSortingInput, description="Sort media."),
+        sort_by=graphene.Argument(
+            MediaSortingInput, description=f"Sort media. {ADDED_IN_39}"
+        ),
         description="List of media for the product.",
     )
     images = NonNullList(
         lambda: ProductImage,
         description="List of images for the product.",
-        deprecation_reason="Use the `media` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use the `media` field instead.",
     )
     collections = NonNullList(
         "saleor.graphql.product.types.collections.Collection",
@@ -1068,7 +985,11 @@ class Product(ChannelContextType[models.Product]):
     )
     available_for_purchase = Date(
         description="Date when product is available for purchase.",
-        deprecation_reason="Use the `availableForPurchaseAt` field to fetch the available for purchase date.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} "
+            "Use the `availableForPurchaseAt` field to fetch "
+            "the available for purchase date."
+        ),
     )
     available_for_purchase_at = DateTime(
         description="Date when product is available for purchase."
@@ -1094,14 +1015,14 @@ class Product(ChannelContextType[models.Product]):
         ],
     )
     external_reference = graphene.String(
-        description="External ID of this product.",
+        description=f"External ID of this product. {ADDED_IN_310}",
         required=False,
     )
 
     class Meta:
         default_resolver = ChannelContextType.resolver_with_context
         description = "Represents an individual item for sale in the storefront."
-        interfaces = [relay.Node, ObjectWithMetadata, ObjectWithAttributes]
+        interfaces = [relay.Node, ObjectWithMetadata]
         model = models.Product
 
     @staticmethod
@@ -1142,7 +1063,6 @@ class Product(ChannelContextType[models.Product]):
 
     @staticmethod
     def resolve_tax_type(root: ChannelContext[models.Product], info):
-        @allow_writer_in_context(info.context)
         def with_tax_class(data):
             tax_class, manager = data
             tax_data = manager.get_tax_code_from_object_meta(
@@ -1163,7 +1083,7 @@ class Product(ChannelContextType[models.Product]):
         info,
         *,
         size: int = 256,
-        format: str | None = None,
+        format: Optional[str] = None,
     ):
         format = get_thumbnail_format(format)
         size = get_thumbnail_size(size)
@@ -1217,14 +1137,14 @@ class Product(ChannelContextType[models.Product]):
                 (root.node.id, channel_slug)
             )
         )
-        tax_class_id_loader = TaxClassIdByProductIdLoader(context).load(root.node.id)
+        tax_class = TaxClassByProductIdLoader(context).load(root.node.id)
 
         def load_tax_configuration(data):
             (
                 channel,
                 product_channel_listing,
                 variants_channel_listing,
-                tax_class_id,
+                tax_class,
             ) = data
 
             if not variants_channel_listing:
@@ -1256,8 +1176,8 @@ class Product(ChannelContextType[models.Product]):
                             if default_country_rate_obj
                             else Decimal(0)
                         )
-                        tax_rate = get_tax_rate_for_country(
-                            country_rates, default_tax_rate, country_code
+                        tax_rate = get_tax_rate_for_tax_class(
+                            tax_class, country_rates, default_tax_rate, country_code
                         )
 
                         availability = get_product_availability(
@@ -1274,10 +1194,10 @@ class Product(ChannelContextType[models.Product]):
 
                     country_rates = (
                         TaxClassCountryRateByTaxClassIDLoader(context).load(
-                            tax_class_id
+                            tax_class.pk
                         )
-                        if tax_class_id
-                        else Promise.resolve([])
+                        if tax_class
+                        else []
                     )
                     default_rate = TaxClassDefaultRateByCountryLoader(context).load(
                         country_code
@@ -1303,7 +1223,7 @@ class Product(ChannelContextType[models.Product]):
                 channel,
                 product_channel_listing,
                 variants_channel_listing,
-                tax_class_id_loader,
+                tax_class,
             ]
         ).then(load_tax_configuration)
 
@@ -1365,28 +1285,49 @@ class Product(ChannelContextType[models.Product]):
             .then(check_is_available_for_purchase)
         )
 
-    @classmethod
-    def resolve_assigned_attribute(
-        cls, root: ChannelContext[models.Product], info, slug
-    ):
-        return resolve_product_attribute(root, info, slug)
+    @staticmethod
+    def resolve_attribute(root: ChannelContext[models.Product], info, slug):
+        def get_selected_attribute_by_slug(
+            attributes: list[SelectedAttribute],
+        ) -> Optional[SelectedAttribute]:
+            return next(
+                (atr for atr in attributes if atr["attribute"].slug == slug),
+                None,
+            )
 
-    @classmethod
-    def resolve_attribute(cls, root: ChannelContext[models.Product], info, slug):
-        return resolve_product_attribute(root, info, slug)
+        requestor = get_user_or_app_from_context(info.context)
+        if (
+            requestor
+            and requestor.is_active
+            and requestor.has_perm(ProductPermissions.MANAGE_PRODUCTS)
+        ):
+            return (
+                SelectedAttributesAllByProductIdLoader(info.context)
+                .load(root.node.id)
+                .then(get_selected_attribute_by_slug)
+            )
+        else:
+            return (
+                SelectedAttributesVisibleInStorefrontByProductIdLoader(info.context)
+                .load(root.node.id)
+                .then(get_selected_attribute_by_slug)
+            )
 
-    @classmethod
-    def resolve_assigned_attributes(
-        cls,
-        root: ChannelContext[models.Product],
-        info,
-        limit: int = DEFAULT_NESTED_LIST_LIMIT,
-    ):
-        return resolve_product_attributes(root, info, limit=limit)
-
-    @classmethod
-    def resolve_attributes(cls, root: ChannelContext[models.Product], info):
-        return resolve_product_attributes(root, info, limit=None)
+    @staticmethod
+    def resolve_attributes(root: ChannelContext[models.Product], info):
+        requestor = get_user_or_app_from_context(info.context)
+        if (
+            requestor
+            and requestor.is_active
+            and requestor.has_perm(ProductPermissions.MANAGE_PRODUCTS)
+        ):
+            return SelectedAttributesAllByProductIdLoader(info.context).load(
+                root.node.id
+            )
+        else:
+            return SelectedAttributesVisibleInStorefrontByProductIdLoader(
+                info.context
+            ).load(root.node.id)
 
     @staticmethod
     def resolve_media_by_id(root: ChannelContext[models.Product], info, *, id):
@@ -1447,7 +1388,7 @@ class Product(ChannelContextType[models.Product]):
 
         def get_product_variant(
             product_variants,
-        ) -> ProductVariant | None:
+        ) -> Optional[ProductVariant]:
             if id:
                 id_type, variant_id = graphene.Node.from_global_id(id)
                 if id_type != "ProductVariant":
@@ -1499,35 +1440,6 @@ class Product(ChannelContextType[models.Product]):
             ]
 
         return variants.then(map_channel_context)
-
-    @staticmethod
-    def resolve_product_variants(root: ChannelContext[models.Product], info, **kwargs):
-        requestor = get_user_or_app_from_context(info.context)
-
-        def _resolve_product_variants(channel_obj):
-            limited_channel_access = False if channel_slug is None else True
-            qs = resolve_product_variants(
-                info,
-                channel=channel_obj,
-                product_id=root.node.pk,
-                limited_channel_access=limited_channel_access,
-                requestor=requestor,
-            )
-            kwargs["channel"] = qs.channel_slug
-            qs = filter_connection_queryset(
-                qs, kwargs, allow_replica=info.context.allow_replica
-            )
-            return create_connection_slice(
-                qs, info, kwargs, ProductVariantCountableConnection
-            )
-
-        if channel_slug := root.channel_slug:
-            return (
-                ChannelBySlugLoader(info.context)
-                .load(channel_slug)
-                .then(_resolve_product_variants)
-            )
-        return _resolve_product_variants(None)
 
     @staticmethod
     def resolve_channel_listings(root: ChannelContext[models.Product], info):
@@ -1748,12 +1660,15 @@ class ProductType(ModelObjectType[models.ProductType]):
             description="Slug of a channel for which the data should be returned."
         ),
         description="List of products of this type.",
-        deprecation_reason="Use the top-level `products` query with the `productTypes` filter.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} "
+            "Use the top-level `products` query with the `productTypes` filter."
+        ),
     )
     tax_type = graphene.Field(
         TaxType,
         description="A type of tax. Assigned by enabled tax gateway",
-        deprecation_reason="Use `taxClass` field instead.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use `taxClass` field instead.",
     )
     tax_class = PermissionsField(
         TaxClass,
@@ -1774,12 +1689,15 @@ class ProductType(ModelObjectType[models.ProductType]):
             VariantAttributeScope,
             description="Define scope of returned attributes.",
         ),
-        deprecation_reason="Use `assignedVariantAttributes` instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use `assignedVariantAttributes` instead."
+        ),
     )
     assigned_variant_attributes = NonNullList(
         AssignedVariantAttribute,
         description=(
             "Variant attributes of that product type with attached variant selection."
+            + ADDED_IN_31
         ),
         variant_selection=graphene.Argument(
             VariantAttributeScope,
@@ -1791,16 +1709,8 @@ class ProductType(ModelObjectType[models.ProductType]):
     )
     available_attributes = FilterConnectionField(
         AttributeCountableConnection,
-        filter=AttributeFilterInput(
-            description=(
-                "Filtering options for attributes of this product type. "
-                f"{DEPRECATED_IN_3X_INPUT} Use `where` filter instead."
-            )
-        ),
-        where=AttributeWhereInput(
-            description="Where filtering options for attributes of this product type."
-        ),
-        search=graphene.String(description="Search attributes."),
+        filter=AttributeFilterInput(),
+        where=AttributeWhereInput(),
         description="List of attributes which can be assigned to this product type.",
         permissions=[ProductPermissions.MANAGE_PRODUCTS],
     )
@@ -1815,7 +1725,6 @@ class ProductType(ModelObjectType[models.ProductType]):
 
     @staticmethod
     def resolve_tax_type(root: models.ProductType, info):
-        @allow_writer_in_context(info.context)
         def with_tax_class(data):
             tax_class, manager = data
             tax_data = manager.get_tax_code_from_object_meta(
@@ -1833,7 +1742,7 @@ class ProductType(ModelObjectType[models.ProductType]):
     @staticmethod
     def resolve_product_attributes(root: models.ProductType, info):
         def unpack_attributes(attributes):
-            return [ChannelContext(attr, None) for attr, *_ in attributes]
+            return [attr for attr, *_ in attributes]
 
         requestor = get_user_or_app_from_context(info.context)
         if (
@@ -1846,29 +1755,28 @@ class ProductType(ModelObjectType[models.ProductType]):
                 .load(root.pk)
                 .then(unpack_attributes)
             )
-        return (
-            ProductAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
-            .load(root.pk)
-            .then(unpack_attributes)
-        )
+        else:
+            return (
+                ProductAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
+                .load(root.pk)
+                .then(unpack_attributes)
+            )
 
     @staticmethod
     @traced_resolver
     def resolve_variant_attributes(
         root: models.ProductType,
         info,
-        variant_selection: str | None = None,
+        variant_selection: Optional[str] = None,
     ):
         def apply_variant_selection_filter(attributes):
             if not variant_selection or variant_selection == VariantAttributeScope.ALL:
-                return [ChannelContext(attr, None) for attr, *_ in attributes]
+                return [attr for attr, *_ in attributes]
             variant_selection_attrs = get_variant_selection_attributes(attributes)
             if variant_selection == VariantAttributeScope.VARIANT_SELECTION:
-                return [
-                    ChannelContext(attr, None) for attr, *_ in variant_selection_attrs
-                ]
+                return [attr for attr, *_ in variant_selection_attrs]
             return [
-                ChannelContext(attr, None)
+                attr
                 for attr, variant_selection in attributes
                 if (attr, variant_selection) not in variant_selection_attrs
             ]
@@ -1884,42 +1792,34 @@ class ProductType(ModelObjectType[models.ProductType]):
                 .load(root.pk)
                 .then(apply_variant_selection_filter)
             )
-        return (
-            VariantAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
-            .load(root.pk)
-            .then(apply_variant_selection_filter)
-        )
+        else:
+            return (
+                VariantAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
+                .load(root.pk)
+                .then(apply_variant_selection_filter)
+            )
 
     @staticmethod
     @traced_resolver
     def resolve_assigned_variant_attributes(
         root: models.ProductType,
         info,
-        variant_selection: str | None = None,
+        variant_selection: Optional[str] = None,
     ):
         def apply_variant_selection_filter(attributes):
             if not variant_selection or variant_selection == VariantAttributeScope.ALL:
                 return [
-                    {
-                        "attribute": ChannelContext(attr, None),
-                        "variant_selection": variant_selection,
-                    }
+                    {"attribute": attr, "variant_selection": variant_selection}
                     for attr, variant_selection in attributes
                 ]
             variant_selection_attrs = get_variant_selection_attributes(attributes)
             if variant_selection == VariantAttributeScope.VARIANT_SELECTION:
                 return [
-                    {
-                        "attribute": ChannelContext(attr, None),
-                        "variant_selection": variant_selection,
-                    }
+                    {"attribute": attr, "variant_selection": variant_selection}
                     for attr, variant_selection in variant_selection_attrs
                 ]
             return [
-                {
-                    "attribute": ChannelContext(attr, None),
-                    "variant_selection": variant_selection,
-                }
+                {"attribute": attr, "variant_selection": variant_selection}
                 for attr, variant_selection in attributes
                 if (attr, variant_selection) not in variant_selection_attrs
             ]
@@ -1935,11 +1835,12 @@ class ProductType(ModelObjectType[models.ProductType]):
                 .load(root.pk)
                 .then(apply_variant_selection_filter)
             )
-        return (
-            VariantAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
-            .load(root.pk)
-            .then(apply_variant_selection_filter)
-        )
+        else:
+            return (
+                VariantAttributesVisibleInStorefrontByProductTypeIdLoader(info.context)
+                .load(root.pk)
+                .then(apply_variant_selection_filter)
+            )
 
     @staticmethod
     def resolve_products(root: models.ProductType, info, *, channel=None, **kwargs):
@@ -1964,12 +1865,11 @@ class ProductType(ModelObjectType[models.ProductType]):
                 .load(str(channel))
                 .then(_resolve_products)
             )
-        return _resolve_products(None)
+        else:
+            return _resolve_products(None)
 
     @staticmethod
-    def resolve_available_attributes(
-        root: models.ProductType, info, search=None, **kwargs
-    ):
+    def resolve_available_attributes(root: models.ProductType, info, **kwargs):
         qs = attribute_models.Attribute.objects.using(
             get_database_connection_name(info.context)
         ).get_unassigned_product_type_attributes(root.pk)
@@ -1977,9 +1877,6 @@ class ProductType(ModelObjectType[models.ProductType]):
         qs = filter_connection_queryset(
             qs, kwargs, info.context, allow_replica=info.context.allow_replica
         )
-        if search:
-            qs = filter_attribute_search(qs, None, search)
-        qs = ChannelQsContext(qs=qs, channel_slug=None)
         return create_connection_slice(qs, info, kwargs, AttributeCountableConnection)
 
     @staticmethod
@@ -1995,7 +1892,7 @@ class ProductType(ModelObjectType[models.ProductType]):
         )
 
     @staticmethod
-    def __resolve_references(roots: list[models.ProductType], info):
+    def __resolve_references(roots: list["ProductType"], info):
         database_connection_name = get_database_connection_name(info.context)
         return resolve_federation_references(
             ProductType,
@@ -2022,26 +1919,29 @@ class ProductMedia(ModelObjectType[models.ProductMedia]):
     url = ThumbnailField(
         graphene.String, required=True, description="The URL of the media."
     )
-    product_id = graphene.ID(description="Product id the media refers to.")
+    product_id = graphene.ID(
+        description="Product id the media refers to." + ADDED_IN_312
+    )
 
     class Meta:
         description = "Represents a product media."
         interfaces = [relay.Node, ObjectWithMetadata]
         model = models.ProductMedia
+        metadata_since = ADDED_IN_312
 
     @staticmethod
     def resolve_url(
         root: models.ProductMedia,
         info,
         *,
-        size: int | None = None,
-        format: str | None = None,
-    ) -> str | None | Promise[str]:
+        size: Optional[int] = None,
+        format: Optional[str] = None,
+    ):
         if root.external_url:
             return root.external_url
 
         if not root.image:
-            return None
+            return
 
         if size == 0:
             return build_absolute_uri(root.image.url)
@@ -2049,7 +1949,7 @@ class ProductMedia(ModelObjectType[models.ProductMedia]):
         format = get_thumbnail_format(format)
         selected_size = get_thumbnail_size(size)
 
-        def _resolve_url(thumbnail) -> str:
+        def _resolve_url(thumbnail):
             url = get_image_or_proxy_url(
                 thumbnail, str(root.id), "ProductMedia", selected_size, format
             )
@@ -2071,7 +1971,7 @@ class ProductMedia(ModelObjectType[models.ProductMedia]):
         )
 
     @staticmethod
-    def resolve_product_id(root: models.ProductMedia, info) -> str:
+    def resolve_product_id(root: models.ProductMedia, info):
         return graphene.Node.to_global_id("Product", root.product_id)
 
 
@@ -2095,7 +1995,7 @@ class ProductImage(BaseObjectType):
         description = "Represents a product image."
 
     @staticmethod
-    def resolve_id(root: models.ProductMedia, info) -> str:
+    def resolve_id(root: models.ProductMedia, info):
         return graphene.Node.to_global_id("ProductImage", root.id)
 
     @staticmethod
@@ -2103,11 +2003,11 @@ class ProductImage(BaseObjectType):
         root: models.ProductMedia,
         info,
         *,
-        size: int | None = None,
-        format: str | None = None,
-    ) -> None | str | Promise[str]:
+        size: Optional[int] = None,
+        format: Optional[str] = None,
+    ):
         if not root.image:
-            return None
+            return
 
         if size == 0:
             return build_absolute_uri(root.image.url)

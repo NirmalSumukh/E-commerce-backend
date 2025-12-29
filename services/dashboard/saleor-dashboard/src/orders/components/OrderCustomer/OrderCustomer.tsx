@@ -1,8 +1,11 @@
 // @ts-strict-ignore
 import AddressFormatter from "@dashboard/components/AddressFormatter";
 import { DashboardCard } from "@dashboard/components/Card";
+import { Combobox } from "@dashboard/components/Combobox";
 import ExternalLink from "@dashboard/components/ExternalLink";
+import Form from "@dashboard/components/Form";
 import Hr from "@dashboard/components/Hr";
+import Link from "@dashboard/components/Link";
 import RequirePermissions from "@dashboard/components/RequirePermissions";
 import {
   OrderDetailsFragment,
@@ -13,15 +16,16 @@ import {
 } from "@dashboard/graphql";
 import useStateFromProps from "@dashboard/hooks/useStateFromProps";
 import { buttonMessages } from "@dashboard/intl";
+import { orderListUrlWithCustomer } from "@dashboard/orders/urls";
 import { FetchMoreProps, RelayToFlat } from "@dashboard/types";
+import createSingleAutocompleteSelectHandler from "@dashboard/utils/handlers/singleAutocompleteSelectChangeHandler";
 import { Button, Skeleton, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { customerUrl } from "../../../customers/urls";
 import { maybe } from "../../../misc";
 import { AddressTextError } from "./AddrssTextError";
-import { CustomerEditForm } from "./CustomerEditForm";
-import { CustomerSection } from "./CustomerSection";
 import { PickupAnnotation } from "./PickupAnnotation";
 import { useStyles } from "./styles";
 
@@ -32,7 +36,7 @@ export interface CustomerEditData {
   prevUserEmail?: string;
 }
 
-interface OrderCustomerProps extends Partial<FetchMoreProps> {
+export interface OrderCustomerProps extends Partial<FetchMoreProps> {
   order: OrderDetailsFragment;
   users?: RelayToFlat<SearchCustomersQuery["search"]>;
   loading?: boolean;
@@ -46,7 +50,7 @@ interface OrderCustomerProps extends Partial<FetchMoreProps> {
   onShippingAddressEdit?: () => void;
 }
 
-const OrderCustomer = (props: OrderCustomerProps) => {
+const OrderCustomer: React.FC<OrderCustomerProps> = props => {
   const {
     canEditAddresses,
     canEditCustomer,
@@ -65,7 +69,8 @@ const OrderCustomer = (props: OrderCustomerProps) => {
   const classes = useStyles(props);
   const intl = useIntl();
   const user = maybe(() => order.user);
-  const [userDisplayName, setUserDisplayName] = useStateFromProps(maybe(() => user?.email, ""));
+  const userEmail = maybe(() => order.userEmail);
+  const [userDisplayName, setUserDisplayName] = useStateFromProps(maybe(() => user.email, ""));
   const [isInEditMode, setEditModeStatus] = React.useState(false);
   const toggleEditMode = () => setEditModeStatus(!isInEditMode);
   const billingAddress = maybe(() => order.billingAddress);
@@ -103,27 +108,100 @@ const OrderCustomer = (props: OrderCustomerProps) => {
         </DashboardCard.Toolbar>
       </DashboardCard.Header>
       <DashboardCard.Content>
-        {isInEditMode ? (
-          <CustomerEditForm
-            currentUser={user}
-            currentUserEmail={order?.userEmail}
-            allUsers={users}
-            fetchUsers={fetchUsers}
-            onCustomerEdit={onCustomerEdit}
-            onFetchMore={onFetchMoreUsers}
-            hasMore={hasMoreUsers}
-            loading={loading}
-            toggleEditMode={toggleEditMode}
-            setUserDisplayName={setUserDisplayName}
-            userDisplayName={userDisplayName}
-          />
+        {user === undefined ? (
+          <Skeleton />
+        ) : isInEditMode && canEditCustomer ? (
+          <Form confirmLeave initial={{ query: "" }}>
+            {({ change, data }) => {
+              const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+                change(event);
+
+                const value = event.target.value;
+
+                if (!value) {
+                  return;
+                }
+
+                onCustomerEdit({
+                  prevUser: user?.id,
+                  prevUserEmail: userEmail,
+                  [value.includes("@") ? "userEmail" : "user"]: value,
+                });
+                toggleEditMode();
+              };
+              const userChoices = maybe(() => users, []).map(user => ({
+                label: user.email,
+                value: user.id,
+              }));
+              const handleUserChange = createSingleAutocompleteSelectHandler(
+                handleChange,
+                setUserDisplayName,
+                userChoices,
+              );
+
+              return (
+                <Combobox
+                  data-test-id="select-customer"
+                  allowCustomValues={true}
+                  label={intl.formatMessage({
+                    id: "hkSkNx",
+                    defaultMessage: "Search Customers",
+                  })}
+                  options={userChoices}
+                  fetchMore={{
+                    onFetchMore: onFetchMoreUsers,
+                    hasMore: hasMoreUsers,
+                    loading: loading,
+                  }}
+                  fetchOptions={fetchUsers}
+                  name="query"
+                  value={{
+                    label: userDisplayName,
+                    value: data.query,
+                  }}
+                  onChange={handleUserChange}
+                />
+              );
+            }}
+          </Form>
+        ) : user === null ? (
+          userEmail === null ? (
+            <Text>
+              <FormattedMessage id="Qovenh" defaultMessage="Anonymous user" />
+            </Text>
+          ) : (
+            <>
+              <Text className={classes.userEmail}>{userEmail}</Text>
+              <div>
+                <Link underline={false} href={orderListUrlWithCustomer(userEmail)}>
+                  <FormattedMessage id="J4NBVR" defaultMessage="View Orders" description="link" />
+                </Link>
+              </div>
+            </>
+          )
         ) : (
-          <CustomerSection
-            user={user}
-            userEmail={order?.userEmail}
-            onProfileView={onProfileView}
-            userEmailClassName={classes.userEmail}
-          />
+          <>
+            <Text className={classes.userEmail} data-test-id="customer-email">
+              {user.email}
+            </Text>
+            <RequirePermissions requiredPermissions={[PermissionEnum.MANAGE_USERS]}>
+              <div>
+                <Link underline={false} href={customerUrl(user.id)} onClick={onProfileView}>
+                  <FormattedMessage id="VCzrEZ" defaultMessage="View Profile" description="link" />
+                </Link>
+              </div>
+            </RequirePermissions>
+            {/* TODO: Uncomment it after adding ability to filter
+                    orders by customer */}
+            {/* <div>
+                <Link underline={false} href={}>
+                  id="J4NBVR"
+                  <FormattedMessage defaultMessage="View Orders"
+                    description="link"
+                     />
+                </Link>
+              </div> */}
+          </>
         )}
       </DashboardCard.Content>
       {!!user && (

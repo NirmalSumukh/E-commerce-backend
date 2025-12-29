@@ -1,20 +1,21 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface MembersErrorDialogProps {
+export interface MembersErrorDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
 
-const MembersErrorDialog = ({
+const MembersErrorDialog: React.FC<MembersErrorDialogProps> = ({
   confirmButtonState,
   onClose,
   onConfirm,
   open,
-}: MembersErrorDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

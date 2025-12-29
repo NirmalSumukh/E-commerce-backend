@@ -133,7 +133,7 @@ def test_delete_draft_orders_orders_with_transaction_item(
     assert "errors" in content["data"]["draftOrderBulkDelete"]
     errors = content["data"]["draftOrderBulkDelete"]["errors"]
     assert len(errors) == 3
-    for i, _order in enumerate(order_list):
+    for i, order in enumerate(order_list):
         assert errors[i]["code"] == OrderErrorCode.INVALID.name
         assert errors[i]["field"] in ids
         assert (
@@ -164,7 +164,7 @@ def test_fail_to_delete_non_draft_order_lines(
 ):
     permission_group_manage_orders.user_set.add(staff_api_client.user)
     order = order_with_lines
-    order_lines = list(order.lines.all())
+    order_lines = [line for line in order.lines.all()]
     # Ensure we cannot delete a non-draft order
     order.status = OrderStatus.CANCELED
     order.save()
@@ -187,7 +187,7 @@ def test_delete_draft_order_lines(
 ):
     permission_group_manage_orders.user_set.add(staff_api_client.user)
     order = order_with_lines
-    order_lines = list(order.lines.all())
+    order_lines = [line for line in order.lines.all()]
     # Only lines in draft order can be deleted
     order.status = OrderStatus.DRAFT
     order.save()
@@ -217,7 +217,7 @@ def test_delete_draft_order_lines_by_user_no_channel_access(
     # given
     permission_group_all_perms_channel_USD_only.user_set.add(staff_api_client.user)
     order = order_with_lines
-    order_lines = list(order.lines.all())
+    order_lines = [line for line in order.lines.all()]
     # Only lines in draft order can be deleted
     order.status = OrderStatus.DRAFT
     order.channel = channel_PLN
@@ -242,7 +242,7 @@ def test_delete_draft_order_lines_by_app(
 ):
     # given
     order = order_with_lines
-    order_lines = list(order.lines.all())
+    order_lines = [line for line in order.lines.all()]
     # Only lines in draft order can be deleted
     order.status = OrderStatus.DRAFT
     order.save()

@@ -1,6 +1,7 @@
 import django_filters
 
-from ..core.filters import EnumFilter, FilterInputObjectType
+from ..core.filters import EnumFilter
+from ..core.types import FilterInputObjectType
 from .enums import EventDeliveryStatusEnum, WebhookEventTypeEnum
 
 

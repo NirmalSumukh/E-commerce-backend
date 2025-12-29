@@ -11,8 +11,6 @@ import {
   MetadataErrorFragment,
   ProductChannelListingUpdateInput,
   ProductFragment,
-  SearchCategoriesQuery,
-  SearchCollectionsQuery,
   SearchPagesQuery,
   SearchProductsQuery,
 } from "@dashboard/graphql";
@@ -23,9 +21,10 @@ import {
   SubmitPromise,
 } from "@dashboard/hooks/useForm";
 import {
-  FormsetAdditionalDataChange,
+  FormsetAtomicData,
   FormsetChange,
   FormsetData,
+  FormsetMetadataChange,
 } from "@dashboard/hooks/useFormset";
 import { AttributeValuesMetadata } from "@dashboard/products/utils/data";
 import { UseProductUpdateHandlerError } from "@dashboard/products/views/ProductUpdate/handlers/useProductUpdateHandler";
@@ -54,6 +53,15 @@ export interface ProductUpdateFormData extends MetadataFormData {
   preorderEndDateTime?: string;
   weight: string;
 }
+export interface FileAttributeInputData {
+  attributeId: string;
+  file: File;
+}
+export type FileAttributeInput = FormsetAtomicData<FileAttributeInputData, string[]>;
+
+export interface FileAttributesSubmitData {
+  fileAttributes: FileAttributeInput[];
+}
 export interface ProductUpdateData extends ProductUpdateFormData {
   attributes: AttributeInput[];
   channels: ProductChannelListingUpdateInput;
@@ -76,7 +84,7 @@ export interface ProductUpdateHandlers
     Record<"selectAttribute" | "selectAttributeMultiple", FormsetChange<string>> {
   changeChannels: (id: string, data: ChannelOpts) => void;
   selectAttributeReference: FormsetChange<string[]>;
-  selectAttributeReferenceAdditionalData: FormsetAdditionalDataChange<AttributeValuesMetadata[]>;
+  selectAttributeReferenceMetadata: FormsetMetadataChange<AttributeValuesMetadata[]>;
   selectAttributeFile: FormsetChange<File>;
   reorderAttributeValue: FormsetChange<ReorderEvent>;
   changeVariants: (data: DatagridChangeOpts) => void;
@@ -92,7 +100,10 @@ export interface UseProductUpdateFormOutput
   formErrors: FormErrors<ProductUpdateSubmitData>;
 }
 
-type UseProductUpdateFormRenderProps = Omit<UseProductUpdateFormOutput, "datagrid" | "richText">;
+export type UseProductUpdateFormRenderProps = Omit<
+  UseProductUpdateFormOutput,
+  "datagrid" | "richText"
+>;
 
 export interface UseProductUpdateFormOpts
   extends Record<"categories" | "collections" | "taxClasses", Option[]> {
@@ -103,16 +114,10 @@ export interface UseProductUpdateFormOpts
   hasVariants: boolean;
   referencePages: RelayToFlat<SearchPagesQuery["search"]>;
   referenceProducts: RelayToFlat<SearchProductsQuery["search"]>;
-  referenceCategories?: RelayToFlat<SearchCategoriesQuery["search"]>;
-  referenceCollections?: RelayToFlat<SearchCollectionsQuery["search"]>;
   fetchReferencePages?: (data: string) => void;
   fetchMoreReferencePages?: FetchMoreProps;
   fetchReferenceProducts?: (data: string) => void;
   fetchMoreReferenceProducts?: FetchMoreProps;
-  fetchReferenceCollections?: (data: string) => void;
-  fetchMoreReferenceCollections?: FetchMoreProps;
-  fetchReferenceCategories?: (data: string) => void;
-  fetchMoreReferenceCategories?: FetchMoreProps;
   assignReferencesAttributeId?: string;
   isSimpleProduct: boolean;
 }

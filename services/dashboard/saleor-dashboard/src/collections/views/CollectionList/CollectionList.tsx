@@ -5,6 +5,7 @@ import { useConditionalFilterContext } from "@dashboard/components/ConditionalFi
 import { createCollectionsQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
+import { useFlag } from "@dashboard/featureFlags";
 import { useCollectionBulkDeleteMutation, useCollectionListQuery } from "@dashboard/graphql";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
 import useListSettings from "@dashboard/hooks/useListSettings";
@@ -25,7 +26,7 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems, mapNodeToChoice } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import isEqual from "lodash/isEqual";
-import { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import CollectionListPage from "../../components/CollectionListPage/CollectionListPage";
@@ -34,18 +35,19 @@ import {
   CollectionListUrlDialog,
   CollectionListUrlQueryParams,
 } from "../../urls";
-import { getFilterOpts, getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterOpts, getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { canBeSorted, DEFAULT_SORT_KEY, getSortQueryVariables } from "./sort";
 
 interface CollectionListProps {
   params: CollectionListUrlQueryParams;
 }
 
-const CollectionList = ({ params }: CollectionListProps) => {
+export const CollectionList: React.FC<CollectionListProps> = ({ params }) => {
   const navigate = useNavigator();
   const intl = useIntl();
   const notify = useNotifier();
   const { updateListSettings, settings } = useListSettings(ListViews.COLLECTION_LIST);
+  const { enabled: isNewCollectionFilterEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
 
   usePaginationReset(collectionListUrl, params, settings.rowNumber);
@@ -85,19 +87,29 @@ const CollectionList = ({ params }: CollectionListProps) => {
     storageUtils,
   });
   const paginationState = createPaginationState(settings.rowNumber, params);
-  const queryVariables = useMemo(() => {
-    const { channel, filter } = createCollectionsQueryVariables(valueProvider.value);
+  const selectedChannel_legacy = availableChannels.find(channel => channel.slug === params.channel);
+  const queryVariables = React.useMemo(() => {
+    if (!isNewCollectionFilterEnabled) {
+      return {
+        ...paginationState,
+        filter: getFilterVariables(params),
+        sort: getSortQueryVariables(params),
+        channel: selectedChannel_legacy?.slug,
+      };
+    }
+
+    const { channel, ...variables } = createCollectionsQueryVariables(valueProvider.value);
 
     return {
       ...paginationState,
       filter: {
-        ...filter,
+        ...variables,
         search: params.query,
       },
       sort: getSortQueryVariables(params),
       channel, // Saleor docs say 'channel' in filter is deprecated and should be moved to root
     };
-  }, [params, settings.rowNumber, valueProvider.value]);
+  }, [params, settings.rowNumber, valueProvider.value, isNewCollectionFilterEnabled]);
   const selectedChannel = availableChannels.find(
     channel => channel.slug === queryVariables.channel,
   );
@@ -168,7 +180,9 @@ const CollectionList = ({ params }: CollectionListProps) => {
   }, [selectedRowIds]);
 
   const filterOpts = getFilterOpts(params, channelOpts);
-  const selectedChannelId = selectedChannel?.id;
+  const selectedChannelId = isNewCollectionFilterEnabled
+    ? selectedChannel?.id
+    : selectedChannel_legacy?.id;
 
   return (
     <PaginatorContext.Provider value={paginationValues}>
@@ -242,5 +256,4 @@ const CollectionList = ({ params }: CollectionListProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default CollectionList;

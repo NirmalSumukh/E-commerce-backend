@@ -44,8 +44,4 @@ export const columnsMessages = defineMessages({
     id: "MJ2jZQ",
     defaultMessage: "Total",
   },
-  channel: {
-    defaultMessage: "Channel",
-    id: "KeO51o",
-  },
 });

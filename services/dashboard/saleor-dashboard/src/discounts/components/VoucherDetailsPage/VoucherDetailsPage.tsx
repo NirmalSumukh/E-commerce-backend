@@ -1,7 +1,4 @@
 // @ts-strict-ignore
-import { AppWidgets } from "@dashboard/apps/components/AppWidgets/AppWidgets";
-import { useUser } from "@dashboard/auth";
-import { hasPermission } from "@dashboard/auth/misc";
 import { ChannelVoucherData } from "@dashboard/channels/utils";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import CardSpacer from "@dashboard/components/CardSpacer";
@@ -21,9 +18,6 @@ import {
 import { itemsQuantityMessages } from "@dashboard/discounts/translations";
 import { DiscountTypeEnum, RequirementsPicker } from "@dashboard/discounts/types";
 import { voucherListPath } from "@dashboard/discounts/urls";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import { getExtensionsItemsForVoucherDetails } from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import {
   DiscountErrorFragment,
   DiscountValueTypeEnum,
@@ -36,13 +30,10 @@ import { useBackLinkWithState } from "@dashboard/hooks/useBackLinkWithState";
 import { UseListSettings } from "@dashboard/hooks/useListSettings";
 import { LocalPagination } from "@dashboard/hooks/useLocalPaginator";
 import useNavigator from "@dashboard/hooks/useNavigator";
-import { TranslationsButton } from "@dashboard/translations/components/TranslationsButton/TranslationsButton";
-import { languageEntityUrl, TranslatableEntities } from "@dashboard/translations/urls";
-import { useCachedLocales } from "@dashboard/translations/useCachedLocales";
 import { mapEdgesToItems, mapMetadataItemToInput } from "@dashboard/utils/maps";
 import useMetadataChangeTrigger from "@dashboard/utils/metadata/useMetadataChangeTrigger";
-import { Box, Divider, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { splitDateTime } from "../../../misc";
@@ -93,7 +84,7 @@ export interface VoucherDetailsPageFormData extends MetadataFormData {
   singleUse: boolean;
 }
 
-interface VoucherDetailsPageProps
+export interface VoucherDetailsPageProps
   extends Pick<ListProps, Exclude<keyof ListProps, "getRowHref">>,
     TabListActions<
       "categoryListToolbar" | "collectionListToolbar" | "productListToolbar" | "variantListToolbar"
@@ -138,7 +129,6 @@ const CategoriesTab = Tab(VoucherDetailsPageTab.categories);
 const CollectionsTab = Tab(VoucherDetailsPageTab.collections);
 const ProductsTab = Tab(VoucherDetailsPageTab.products);
 const VariantsTab = Tab(VoucherDetailsPageTab.variants);
-
 const VoucherDetailsPage: React.FC<VoucherDetailsPageProps> = ({
   activeTab,
   tabItemsCount = {},
@@ -183,23 +173,19 @@ const VoucherDetailsPage: React.FC<VoucherDetailsPageProps> = ({
   voucherCodesPagination,
   onVoucherCodesSettingsChange,
   voucherCodesSettings,
-}: VoucherDetailsPageProps) => {
+}) => {
   const intl = useIntl();
-  const { lastUsedLocaleOrFallback } = useCachedLocales();
   const navigate = useNavigator();
-  const { user } = useUser();
-  const canTranslate = user && hasPermission(PermissionEnum.MANAGE_TRANSLATIONS, user);
   const [localErrors, setLocalErrors] = React.useState<DiscountErrorFragment[]>([]);
   const { makeChangeHandler: makeMetadataChangeHandler } = useMetadataChangeTrigger();
-  const hasMinimalOrderValueRequirement = voucher?.channelListings?.some(
-    listing => listing.minSpent?.amount > 0,
+  const channel = voucher?.channelListings?.find(
+    listing => listing.channel.id === selectedChannelId,
   );
-
   let requirementsPickerInitValue;
 
   if (voucher?.minCheckoutItemsQuantity > 0) {
     requirementsPickerInitValue = RequirementsPicker.ITEM;
-  } else if (hasMinimalOrderValueRequirement) {
+  } else if (channel?.minSpent?.amount > 0) {
     requirementsPickerInitValue = RequirementsPicker.ORDER;
   } else {
     requirementsPickerInitValue = RequirementsPicker.NONE;
@@ -239,14 +225,6 @@ const VoucherDetailsPage: React.FC<VoucherDetailsPageProps> = ({
     path: voucherListPath,
   });
 
-  const { VOUCHER_DETAILS_MORE_ACTIONS, VOUCHER_DETAILS_WIDGETS } = useExtensions(
-    extensionMountPoints.VOUCHER_DETAILS,
-  );
-  const extensionMenuItems = getExtensionsItemsForVoucherDetails(
-    VOUCHER_DETAILS_MORE_ACTIONS,
-    voucher?.id,
-  );
-
   return (
     <Form confirmLeave initial={initialForm} onSubmit={onSubmit}>
       {({ change, data, submit, triggerChange, set }) => {
@@ -262,26 +240,7 @@ const VoucherDetailsPage: React.FC<VoucherDetailsPageProps> = ({
 
         return (
           <DetailPageLayout>
-            <TopNav href={voucherListBackLink} title={voucher?.name}>
-              {canTranslate && (
-                <TranslationsButton
-                  onClick={() =>
-                    navigate(
-                      languageEntityUrl(
-                        lastUsedLocaleOrFallback,
-                        TranslatableEntities.vouchers,
-                        voucher?.id,
-                      ),
-                    )
-                  }
-                />
-              )}
-              {extensionMenuItems.length > 0 && (
-                <Box marginLeft={3}>
-                  <TopNav.Menu items={[...extensionMenuItems]} dataTestId="menu" />
-                </Box>
-              )}
-            </TopNav>
+            <TopNav href={voucherListBackLink} title={voucher?.name} />
             <DetailPageLayout.Content>
               <VoucherInfo data={data} disabled={disabled} errors={errors} onChange={change} />
               <VoucherCodes
@@ -471,16 +430,6 @@ const VoucherDetailsPage: React.FC<VoucherDetailsPageProps> = ({
                 disabled={disabled}
                 openModal={openChannelsModal}
               />
-              {VOUCHER_DETAILS_WIDGETS.length > 0 && voucher?.id && (
-                <>
-                  <CardSpacer />
-                  <Divider />
-                  <AppWidgets
-                    extensions={VOUCHER_DETAILS_WIDGETS}
-                    params={{ voucherId: voucher?.id }}
-                  />
-                </>
-              )}
             </DetailPageLayout.RightSidebar>
             <Savebar>
               <Savebar.DeleteButton onClick={onRemove} />

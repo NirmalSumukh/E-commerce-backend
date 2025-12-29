@@ -4,7 +4,7 @@ from ...invoice.models import Invoice
 from ..core.dataloaders import DataLoader
 
 
-class InvoicesByOrderIdLoader(DataLoader[int, list[Invoice]]):
+class InvoicesByOrderIdLoader(DataLoader):
     context_key = "invoices_by_order_id"
 
     def batch_load(self, keys):

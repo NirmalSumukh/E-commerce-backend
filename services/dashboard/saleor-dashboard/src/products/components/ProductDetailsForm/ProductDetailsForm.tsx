@@ -8,6 +8,7 @@ import { getFormErrors, getProductErrorMessage } from "@dashboard/utils/errors";
 import { useRichTextContext } from "@dashboard/utils/richText/context";
 import { OutputData } from "@editorjs/editorjs";
 import { Box, Input } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ProductDetailsFormProps {
@@ -22,12 +23,12 @@ interface ProductDetailsFormProps {
   onChange: (event: any) => any;
 }
 
-export const ProductDetailsForm = ({
+export const ProductDetailsForm: React.FC<ProductDetailsFormProps> = ({
   data,
   onChange,
   errors,
   disabled,
-}: ProductDetailsFormProps) => {
+}) => {
   const intl = useIntl();
   const formErrors = getFormErrors(["name", "description", "rating"], errors);
   const { editorRef, defaultValue, isReadyForMount, handleChange } = useRichTextContext();

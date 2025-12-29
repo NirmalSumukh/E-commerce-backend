@@ -5,8 +5,7 @@ import useForm, { CommonUseFormResultWithHandlers, SubmitPromise } from "@dashbo
 import useFormset, { FormsetChange, FormsetData } from "@dashboard/hooks/useFormset";
 import useHandleFormSubmit from "@dashboard/hooks/useHandleFormSubmit";
 import { getById } from "@dashboard/misc";
-import { useEffect } from "react";
-import * as React from "react";
+import React, { useEffect } from "react";
 
 import { OrderRefundAmountCalculationMode } from "../OrderRefundPage/form";
 import { useFulfillmentFormset } from "./useFulfillmentFormset";
@@ -33,7 +32,6 @@ export type FormsetQuantityData = FormsetData<LineItemData, number>;
 export type FormsetReplacementData = FormsetData<LineItemData, boolean>;
 
 export interface OrderReturnData {
-  transactionId: string;
   amount: number;
   refundShipmentCosts: boolean;
   autoGrantRefund: boolean;
@@ -41,7 +39,7 @@ export interface OrderReturnData {
   amountCalculationMode: OrderRefundAmountCalculationMode;
 }
 
-interface OrderReturnHandlers {
+export interface OrderReturnHandlers {
   changeFulfiledItemsQuantity: FormsetChange<number>;
   changeWaitingItemsQuantity: FormsetChange<number>;
   changeUnfulfiledItemsQuantity: FormsetChange<number>;
@@ -60,7 +58,7 @@ export interface OrderReturnFormData extends OrderReturnData {
 
 export type OrderRefundSubmitData = OrderReturnFormData;
 
-type UseOrderRefundFormResult = CommonUseFormResultWithHandlers<
+export type UseOrderRefundFormResult = CommonUseFormResultWithHandlers<
   OrderReturnFormData,
   OrderReturnHandlers
 > & { isAmountDirty: boolean };
@@ -73,11 +71,10 @@ interface OrderReturnProps {
 
 const getOrderRefundPageFormData = (): OrderReturnData => ({
   amount: undefined,
-  amountCalculationMode: OrderRefundAmountCalculationMode.MANUAL,
+  amountCalculationMode: OrderRefundAmountCalculationMode.AUTOMATIC,
   refundShipmentCosts: false,
   autoGrantRefund: false,
   autoSendRefund: false,
-  transactionId: "",
 });
 
 function useOrderReturnForm(
@@ -225,7 +222,7 @@ function useOrderReturnForm(
   };
 }
 
-const OrderReturnForm = ({ children, order, onSubmit }: OrderReturnProps) => {
+const OrderReturnForm: React.FC<OrderReturnProps> = ({ children, order, onSubmit }) => {
   const props = useOrderReturnForm(order as OrderDetailsFragment, onSubmit);
 
   return <form>{children(props)}</form>;

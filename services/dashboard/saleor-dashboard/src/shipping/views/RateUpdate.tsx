@@ -60,18 +60,18 @@ import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHa
 import createMetadataUpdateHandler from "@dashboard/utils/handlers/metadataUpdateHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { ShippingMethodPostalCodeRule } from "@saleor/sdk/dist/apollo/types";
-import { useReducer } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 const FORM_ID = Symbol("shipping-zone-rates-details-form-id");
 
-interface RateUpdateProps {
+export interface RateUpdateProps {
   id: string;
   rateId: string;
   params: ShippingRateUrlQueryParams;
 }
 
-const RateUpdate = ({ id, rateId, params }: RateUpdateProps) => {
+export const RateUpdate: React.FC<RateUpdateProps> = ({ id, rateId, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -156,7 +156,7 @@ const RateUpdate = ({ id, rateId, params }: RateUpdateProps) => {
   });
   const [updateMetadata] = useUpdateMetadataMutation({});
   const [updatePrivateMetadata] = useUpdatePrivateMetadataMutation({});
-  const [state, dispatch] = useReducer(postalCodesReducer, {
+  const [state, dispatch] = React.useReducer(postalCodesReducer, {
     codesToDelete: [],
     havePostalCodesChanged: false,
     inclusionType:

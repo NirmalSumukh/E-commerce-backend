@@ -1,10 +1,8 @@
-from collections import defaultdict
 from functools import reduce
 from operator import add, mul
-from typing import Any, cast
+from typing import Any, Optional, Union, cast
 
 from graphql import (
-    GraphQLArgument,
     GraphQLError,
     GraphQLInterfaceType,
     GraphQLObjectType,
@@ -24,9 +22,13 @@ from graphql.validation import validate
 from graphql.validation.rules.base import ValidationRule
 from graphql.validation.validation import ValidationContext
 
-CostAwareNode = (
-    Field | FragmentDefinition | FragmentSpread | InlineFragment | OperationDefinition
-)
+CostAwareNode = Union[
+    Field,
+    FragmentDefinition,
+    FragmentSpread,
+    InlineFragment,
+    OperationDefinition,
+]
 
 GraphQLFieldMap = dict[str, GraphQLField]
 
@@ -35,8 +37,8 @@ class CostValidator(ValidationRule):
     maximum_cost: int
     default_cost: int = 0
     default_complexity: int = 1
-    variables: dict | None = None
-    cost_map: dict[str, dict[str, Any]] | None = None
+    variables: Optional[dict] = None
+    cost_map: Optional[dict[str, dict[str, Any]]] = None
 
     def __init__(
         self,
@@ -44,8 +46,8 @@ class CostValidator(ValidationRule):
         *,
         default_cost: int = 0,
         default_complexity: int = 1,
-        variables: dict | None = None,
-        cost_map: dict[str, dict[str, Any]] | None = None,
+        variables: Optional[dict] = None,
+        cost_map: Optional[dict[str, dict[str, Any]]] = None,
     ):  # pylint: disable=super-init-not-called
         self.maximum_cost = maximum_cost
         self.variables = variables
@@ -65,11 +67,9 @@ class CostValidator(ValidationRule):
         if isinstance(node, FragmentSpread) or not node.selection_set:
             return 0
         fields: GraphQLFieldMap = {}
-        if isinstance(type_def, GraphQLObjectType | GraphQLInterfaceType):
+        if isinstance(type_def, (GraphQLObjectType, GraphQLInterfaceType)):
             fields = type_def.fields
         total = 0
-        fragment_map_cost: dict[str, int] = defaultdict(int)
-        fragment_name_to_interface_names: dict[str, set[str]] = defaultdict(set)
         for child_node in node.selection_set.selections:
             self.operation_multipliers = parent_multipliers[:]
             node_cost = self.default_cost
@@ -78,7 +78,6 @@ class CostValidator(ValidationRule):
                 if not field:
                     continue
                 field_type = get_named_type(field.type)
-
                 try:
                     field_args: dict[str, Any] = get_argument_values(
                         field.args,
@@ -88,8 +87,6 @@ class CostValidator(ValidationRule):
                 except Exception as e:
                     report_error(self.context, e)
                     field_args = {}
-
-                field_args = self.update_empty_args_with_default(field_args, field.args)
 
                 if not self.cost_map:
                     return 0
@@ -104,6 +101,7 @@ class CostValidator(ValidationRule):
                         node_cost = self.compute_cost(**cost_map_args)
                     except (TypeError, ValueError) as e:
                         report_error(self.context, e)
+
                 child_cost = self.compute_node_cost(
                     child_node, field_type, self.operation_multipliers
                 )
@@ -114,60 +112,20 @@ class CostValidator(ValidationRule):
                     fragment_type = self.context.get_schema().get_type(
                         fragment.type_condition.name.value
                     )
-                    if not fragment_type:
-                        continue
-
-                    fragment_map_cost[fragment_type.name] += self.compute_node_cost(
+                    node_cost = self.compute_node_cost(
                         fragment, fragment_type, self.operation_multipliers
                     )
-                    if (
-                        isinstance(fragment_type, GraphQLObjectType)
-                        and fragment_type.interfaces
-                    ):
-                        fragment_name_to_interface_names[fragment_type.name].update(
-                            interface.name for interface in fragment_type.interfaces
-                        )
-
             if isinstance(child_node, InlineFragment):
                 inline_fragment_type = type_def
                 if child_node.type_condition and child_node.type_condition.name:
                     inline_fragment_type = self.context.get_schema().get_type(
                         child_node.type_condition.name.value
                     )
-                if not inline_fragment_type:
-                    continue
-
-                fragment_map_cost[inline_fragment_type.name] += self.compute_node_cost(
+                node_cost = self.compute_node_cost(
                     child_node, inline_fragment_type, self.operation_multipliers
                 )
-                if (
-                    isinstance(inline_fragment_type, GraphQLObjectType)
-                    and inline_fragment_type.interfaces
-                ):
-                    fragment_name_to_interface_names[inline_fragment_type.name].update(
-                        interface.name for interface in inline_fragment_type.interfaces
-                    )
-
             total += node_cost
-        if fragment_map_cost:
-            for fragment_name, interfaces in fragment_name_to_interface_names.items():
-                interfaces_cost = sum(
-                    [fragment_map_cost.get(interface, 0) for interface in interfaces], 0
-                )
-                fragment_map_cost[fragment_name] += interfaces_cost
-            total += max(fragment_map_cost.values(), default=0)
         return total
-
-    def update_empty_args_with_default(
-        self, field_args: dict[str, Any], args_defs: dict[str, GraphQLArgument]
-    ) -> dict[str, Any]:
-        """Update empty args with default values from argument definition."""
-        for arg_name, value in field_args.items():
-            if value is None and arg_name in args_defs:
-                arg_def = args_defs[arg_name]
-                if arg_def.default_value is not None:
-                    field_args[arg_name] = arg_def.default_value
-        return field_args
 
     def enter_operation_definition(self, node, key, parent, path, ancestors):  # pylint: disable=unused-argument
         if self.cost_map:
@@ -230,7 +188,7 @@ class CostValidator(ValidationRule):
             except (ValueError, TypeError):
                 pass
         multipliers = [
-            len(multiplier) if isinstance(multiplier, list | tuple) else multiplier
+            len(multiplier) if isinstance(multiplier, (list, tuple)) else multiplier
             for multiplier in multipliers
         ]
         return [m for m in multipliers if m > 0]
@@ -249,9 +207,9 @@ class CostValidator(ValidationRule):
     def enter(
         self,
         node: Any,
-        key: int | str | None,
+        key: Optional[Union[int, str]],
         parent: Any,
-        path: list[int | str],
+        path: list[Union[int, str]],
         ancestors: list[Any],
     ):
         if isinstance(node, OperationDefinition):
@@ -260,9 +218,9 @@ class CostValidator(ValidationRule):
     def leave(
         self,
         node: Any,
-        key: int | str | None,
+        key: Optional[Union[int, str]],
         parent: Any,
-        path: list[int | str],
+        path: list[Union[int, str]],
         ancestors: list[Any],
     ):
         if isinstance(node, OperationDefinition):
@@ -278,9 +236,7 @@ def validate_cost_map(cost_map: dict[str, dict[str, Any]], schema: GraphQLSchema
                 f"a type {type_name} that is not defined by the schema."
             )
 
-        if not isinstance(
-            type_map[type_name], GraphQLObjectType | GraphQLInterfaceType
-        ):
+        if not isinstance(type_map[type_name], GraphQLObjectType):
             raise GraphQLError(
                 "The query cost could not be calculated because cost map specifies "
                 f"a type {type_name} that is defined by the schema, but is not an "
@@ -315,8 +271,8 @@ def cost_validator(
     *,
     default_cost: int = 0,
     default_complexity: int = 1,
-    variables: dict | None = None,
-    cost_map: dict[str, dict[str, Any]] | None = None,
+    variables: Optional[dict] = None,
+    cost_map: Optional[dict[str, dict[str, Any]]] = None,
 ) -> CostValidator:
     return CostValidator(
         maximum_cost=maximum_cost,

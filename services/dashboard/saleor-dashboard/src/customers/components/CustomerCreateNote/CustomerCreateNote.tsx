@@ -6,10 +6,10 @@ import { getFormErrors } from "@dashboard/utils/errors";
 import getAccountErrorMessage from "@dashboard/utils/errors/account";
 import { TextField } from "@material-ui/core";
 import { Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface CustomerCreateNoteProps {
+export interface CustomerCreateNoteProps {
   data: {
     note: string;
   };
@@ -18,7 +18,12 @@ interface CustomerCreateNoteProps {
   onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const CustomerCreateNote = ({ data, disabled, errors, onChange }: CustomerCreateNoteProps) => {
+const CustomerCreateNote: React.FC<CustomerCreateNoteProps> = ({
+  data,
+  disabled,
+  errors,
+  onChange,
+}) => {
   const intl = useIntl();
 
   const formErrors = getFormErrors(["note"], errors);

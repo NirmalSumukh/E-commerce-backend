@@ -15,12 +15,13 @@ import {
   TrashBinIcon,
   WarningIcon,
 } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { AppAvatar } from "../AppAvatar/AppAvatar";
 import { useStyles } from "./styles";
 
-export const NotInstalledAppListRow = (props: AppInstallation) => {
+export const NotInstalledAppListRow: React.FC<AppInstallation> = props => {
   const { appInstallation, isExternal, logo } = props;
   const intl = useIntl();
   const classes = useStyles(props);
@@ -107,3 +108,5 @@ export const NotInstalledAppListRow = (props: AppInstallation) => {
     </List.Item>
   );
 };
+
+export default NotInstalledAppListRow;

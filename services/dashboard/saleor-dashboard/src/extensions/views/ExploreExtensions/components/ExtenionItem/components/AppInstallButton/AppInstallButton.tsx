@@ -1,11 +1,12 @@
+import { AppUrls } from "@dashboard/apps/urls";
 import { ButtonWithTooltip } from "@dashboard/components/ButtonWithTooltip";
 import Link from "@dashboard/components/Link";
 import { IS_CLOUD_INSTANCE } from "@dashboard/config";
 import { messages } from "@dashboard/extensions/messages";
-import { ExtensionsUrls } from "@dashboard/extensions/urls";
 import { useHasManagedAppsPermission } from "@dashboard/hooks/useHasManagedAppsPermission";
 import { buttonMessages } from "@dashboard/intl";
 import { Button } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 export const AppInstallButton = ({ manifestUrl }: { manifestUrl: string }) => {
@@ -26,7 +27,7 @@ export const AppInstallButton = ({ manifestUrl }: { manifestUrl: string }) => {
 
   if (IS_CLOUD_INSTANCE) {
     return (
-      <Link href={ExtensionsUrls.resolveInstallCustomExtensionUrl(manifestUrl)}>
+      <Link href={AppUrls.resolveAppInstallUrl(manifestUrl)}>
         <Button variant="secondary" data-test-id="app-install-button">
           <FormattedMessage {...buttonMessages.install} />
         </Button>

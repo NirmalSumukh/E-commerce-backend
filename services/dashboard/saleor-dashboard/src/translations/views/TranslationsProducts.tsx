@@ -11,6 +11,7 @@ import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import { stringifyQs } from "@dashboard/utils/urls";
 import { OutputData } from "@editorjs/editorjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { extractMutationErrors, maybe } from "../../misc";
@@ -23,13 +24,17 @@ type HandleSubmitAttributeValue = OutputData | string;
 export interface TranslationsProductsQueryParams {
   activeField: string;
 }
-interface TranslationsProductsProps {
+export interface TranslationsProductsProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsProductsQueryParams;
 }
 
-const TranslationsProducts = ({ id, languageCode, params }: TranslationsProductsProps) => {
+const TranslationsProducts: React.FC<TranslationsProductsProps> = ({
+  id,
+  languageCode,
+  params,
+}) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

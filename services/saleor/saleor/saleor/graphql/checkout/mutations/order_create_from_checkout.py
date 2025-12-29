@@ -11,12 +11,12 @@ from ....permission.enums import CheckoutPermissions
 from ....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import ADDED_IN_32, ADDED_IN_38
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.types import Error, NonNullList
 from ...core.utils import CHECKOUT_CALCULATE_TAXES_MESSAGE, WebhookEventInfo
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 from ...order.types import Order
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ..enums import OrderCreateFromCheckoutErrorCode
@@ -60,14 +60,16 @@ class OrderCreateFromCheckout(BaseMutation):
         )
         private_metadata = NonNullList(
             MetadataInput,
-            description="Fields required to update the checkout private metadata. "
-            f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+            description=(
+                "Fields required to update the checkout private metadata." + ADDED_IN_38
+            ),
             required=False,
         )
         metadata = NonNullList(
             MetadataInput,
-            description="Fields required to update the checkout metadata. "
-            f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+            description=(
+                "Fields required to update the checkout metadata." + ADDED_IN_38
+            ),
             required=False,
         )
 
@@ -76,6 +78,7 @@ class OrderCreateFromCheckout(BaseMutation):
         description = (
             "Create new order from existing checkout. Requires the "
             "following permissions: AUTHENTICATED_APP and HANDLE_CHECKOUTS."
+            + ADDED_IN_32
         )
         doc_category = DOC_CATEGORY_ORDERS
         object_type = Order
@@ -138,7 +141,7 @@ class OrderCreateFromCheckout(BaseMutation):
         ]
 
     @classmethod
-    def check_permissions(cls, context, permissions=None, **data):  # type: ignore[override]
+    def check_permissions(cls, context, permissions=None, **data):
         """Determine whether app has rights to perform this mutation."""
         permissions = permissions or cls._meta.permissions
         app = getattr(context, "app", None)
@@ -169,14 +172,10 @@ class OrderCreateFromCheckout(BaseMutation):
 
         if cls._meta.support_meta_field and metadata is not None:
             cls.check_metadata_permissions(info, id)
-            cls.create_metadata_from_graphql_input(
-                metadata, error_field_name="metadata"
-            )
+            cls.validate_metadata_keys(metadata)
         if cls._meta.support_private_meta_field and private_metadata is not None:
             cls.check_metadata_permissions(info, id, private=True)
-            cls.create_metadata_from_graphql_input(
-                metadata, error_field_name="private_metadata"
-            )
+            cls.validate_metadata_keys(private_metadata)
 
         manager = get_plugin_manager_promise(info.context).get()
         checkout_lines, unavailable_variant_pks = fetch_checkout_lines(checkout)
@@ -199,7 +198,7 @@ class OrderCreateFromCheckout(BaseMutation):
                 metadata_list=metadata,
                 private_metadata_list=private_metadata,
             )
-        except NotApplicable as e:
+        except NotApplicable:
             code = OrderCreateFromCheckoutErrorCode.VOUCHER_NOT_APPLICABLE.value
             raise ValidationError(
                 {
@@ -208,16 +207,16 @@ class OrderCreateFromCheckout(BaseMutation):
                         code=code,
                     )
                 }
-            ) from e
+            )
         except InsufficientStock as e:
             error = prepare_insufficient_stock_checkout_validation_error(e)
-            raise error from e
+            raise error
         except GiftCardNotApplicable as e:
-            raise ValidationError({"gift_cards": e}) from e
-        except TaxDataError as e:
+            raise ValidationError({"gift_cards": e})
+        except TaxDataError:
             raise ValidationError(
                 "Configured Tax App returned invalid response.",
                 code=OrderCreateFromCheckoutErrorCode.TAX_ERROR.value,
-            ) from e
+            )
 
-        return OrderCreateFromCheckout(order=SyncWebhookControlContext(order))
+        return OrderCreateFromCheckout(order=order)

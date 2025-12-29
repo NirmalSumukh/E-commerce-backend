@@ -1,8 +1,8 @@
+import { Cloud } from "@dashboard/icons/Cloud";
 import { Box, Text } from "@saleor/macaw-ui-next";
-import { CloudIcon } from "lucide-react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { LucideIconsWrapper } from "../LucideIconsWrapper";
 import { useEnvLink } from "./hooks/useEnvLink";
 
 export const EnvironmentLink = () => {
@@ -20,9 +20,7 @@ export const EnvironmentLink = () => {
       alignItems="center"
     >
       <Box __width={20} __height={20}>
-        <LucideIconsWrapper>
-          <CloudIcon />
-        </LucideIconsWrapper>
+        <Cloud />
       </Box>
       <Text size={3} fontWeight="medium" fontStyle="italic" color="default2">
         <FormattedMessage defaultMessage="Saleor Cloud" id="IF2KbT" />

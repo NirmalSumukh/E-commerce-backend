@@ -4,7 +4,7 @@ import { getAttributeInputType } from "../constants";
 import { ConditionSelected } from "../FilterElement/ConditionSelected";
 import { slugFromConditionValue } from "../FilterElement/ConditionValue";
 
-const CONDITIONS = ["is", "equals", "in", "between", "lower", "greater"];
+export const CONDITIONS = ["is", "equals", "in", "between", "lower", "greater"];
 
 const PRODUCT_STATICS = [
   "category",
@@ -19,33 +19,16 @@ const PRODUCT_STATICS = [
 ];
 
 const ORDER_STATICS = [
+  "paymentStatus",
   "status",
-  "fulfillmentStatus",
   "authorizeStatus",
   "chargeStatus",
-  "isGiftCardBought",
-  "isGiftCardUsed",
+  "giftCardBought",
+  "giftCardUsed",
+  "isPreorder",
   "isClickAndCollect",
-  "hasInvoices",
-  "hasFulfillments",
   "channels",
   "ids",
-  "metadata",
-  "number",
-  "userEmail",
-  "voucherCode",
-  "linesCount",
-  "checkoutId",
-  "linesMetadata",
-  "transactionsMetadata",
-  "transactionsPaymentType",
-  "transactionsCardBrand",
-  "fulfillmentsMetadata",
-  "billingPhoneNumber",
-  "billingCountry",
-  "shippingPhoneNumber",
-  "shippingCountry",
-  "fulfillmentWarehouse",
 ];
 
 const VOUCHER_STATICS = ["channel", "discountType", "voucherStatus"];
@@ -88,11 +71,10 @@ export const TokenType = {
   ATTRIBUTE_DATE_TIME: "t",
   ATTRIBUTE_DATE: "d",
   ATTRIBUTE_BOOLEAN: "b",
-  ATTRIBUTE_REFERENCE: "r",
   STATIC: "s",
 } as const;
 
-type TokenTypeValue = (typeof TokenType)[keyof typeof TokenType];
+export type TokenTypeValue = (typeof TokenType)[keyof typeof TokenType];
 
 const resolveTokenType = (name: string): TokenTypeValue => {
   const key = `ATTRIBUTE_${name}` as keyof typeof TokenType;
@@ -123,12 +105,6 @@ export class UrlEntry {
     return UrlEntry.fromConditionSelected(condition, paramName, tokenSlug);
   }
 
-  public static forReferenceAttribute(condition: ConditionSelected, paramName: string) {
-    const tokenSlug = resolveTokenType("REFERENCE");
-
-    return UrlEntry.fromConditionSelected(condition, paramName, tokenSlug);
-  }
-
   public static forStatic(condition: ConditionSelected, paramName: string) {
     return UrlEntry.fromConditionSelected(condition, paramName, TokenType.STATIC);
   }
@@ -136,8 +112,7 @@ export class UrlEntry {
   public getInfo() {
     const [key, value] = Object.entries(this)[0] as [string, string | string[]];
     const [identifier, entryName] = key.split(".");
-    const type = identifier.charAt(0) as TokenTypeValue;
-    const control = parseInt(identifier.slice(1), 10);
+    const [type, control] = identifier.split("") as [TokenTypeValue, number];
     const conditionKid = CONDITIONS[control];
 
     return { key, value, entryName, type, conditionKid };
@@ -187,9 +162,7 @@ export class UrlToken {
 
   public hasDynamicValues() {
     return (
-      TokenType.ATTRIBUTE_DROPDOWN === this.type ||
-      TokenType.ATTRIBUTE_MULTISELECT === this.type ||
-      TokenType.ATTRIBUTE_REFERENCE === this.type
+      TokenType.ATTRIBUTE_DROPDOWN === this.type || TokenType.ATTRIBUTE_MULTISELECT === this.type
     );
   }
 

@@ -4,6 +4,7 @@ import {
   ChannelData,
   ChannelPriceAndPreorderData,
   ChannelPriceArgs,
+  ChannelPriceData,
 } from "@dashboard/channels/utils";
 import {
   ProductChannelListingAddInput,
@@ -51,6 +52,30 @@ export function createChannelsChangeHandler(
     ];
 
     updateChannels(updatedChannels);
+    triggerChange();
+  };
+}
+
+export function createVariantChannelsChangeHandler(
+  channelListings: ChannelPriceData[],
+  setData: (data: ChannelPriceData[]) => void,
+  triggerChange: () => void,
+) {
+  return (id: string, priceData: ChannelPriceArgs) => {
+    const { costPrice, price } = priceData;
+    const channelIndex = channelListings.findIndex(channel => channel.id === id);
+    const channel = channelListings[channelIndex];
+    const updatedChannels = [
+      ...channelListings.slice(0, channelIndex),
+      {
+        ...channel,
+        costPrice,
+        price,
+      },
+      ...channelListings.slice(channelIndex + 1),
+    ];
+
+    setData(updatedChannels);
     triggerChange();
   };
 }

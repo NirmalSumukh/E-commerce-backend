@@ -50,6 +50,7 @@ import { validatePrice } from "@dashboard/products/utils/validation";
 import { ListActionsWithoutToolbar } from "@dashboard/types";
 import useMetadataChangeTrigger from "@dashboard/utils/metadata/useMetadataChangeTrigger";
 import { Button, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { RequirementsPicker } from "../../types";
@@ -78,7 +79,7 @@ import {
   voucherCodeExists,
 } from "./utils";
 
-interface VoucherCreatePageProps extends Omit<ListActionsWithoutToolbar, "selected"> {
+export interface VoucherCreatePageProps extends Omit<ListActionsWithoutToolbar, "selected"> {
   countries: CountryWithCodeFragment[];
   allChannelsCount: number;
   channelListings: ChannelVoucherData[];
@@ -109,7 +110,7 @@ const CategoriesTab = Tab(VoucherCreatePageTab.categories);
 const CollectionsTab = Tab(VoucherCreatePageTab.collections);
 const ProductsTab = Tab(VoucherCreatePageTab.products);
 const VariantsTab = Tab(VoucherCreatePageTab.variants);
-const VoucherCreatePage = ({
+const VoucherCreatePage: React.FC<VoucherCreatePageProps> = ({
   allChannelsCount,
   channelListings = [],
   disabled,
@@ -131,7 +132,7 @@ const VoucherCreatePage = ({
   variantsSearch,
   countries,
   resetSelected,
-}: VoucherCreatePageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const { makeChangeHandler: makeMetadataChangeHandler } = useMetadataChangeTrigger();

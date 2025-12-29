@@ -14,6 +14,7 @@ import { permissionGroupListUrl } from "@dashboard/permissionGroups/urls";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getPermissionGroupErrorMessage from "@dashboard/utils/errors/permissionGroups";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { PermissionData } from "../PermissionGroupDetailsPage";
@@ -37,7 +38,7 @@ const initialForm: PermissionGroupCreateFormData = {
   channels: [],
 };
 
-interface PermissionGroupCreatePageProps {
+export interface PermissionGroupCreatePageProps {
   disabled: boolean;
   errors: PermissionGroupErrorFragment[];
   permissions: PermissionData[];
@@ -47,7 +48,7 @@ interface PermissionGroupCreatePageProps {
   onSubmit: (data: PermissionGroupCreateFormData) => SubmitPromise;
 }
 
-export const PermissionGroupCreatePage = ({
+export const PermissionGroupCreatePage: React.FC<PermissionGroupCreatePageProps> = ({
   disabled,
   permissions,
   channels,
@@ -55,7 +56,7 @@ export const PermissionGroupCreatePage = ({
   saveButtonBarState,
   hasRestrictedChannels,
   errors,
-}: PermissionGroupCreatePageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const formErrors = getFormErrors(["addPermissions"], errors || []);

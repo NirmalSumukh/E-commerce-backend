@@ -1,14 +1,12 @@
+// @ts-strict-ignore
 import { transactionEvent } from "@dashboard/orders/fixtures";
 import Wrapper from "@test/wrapper";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import { MemoryRouter } from "react-router";
 
 import { EventItem } from "./EventItem";
-
-jest.mock("@dashboard/featureFlags", () => ({
-  useFlag: jest.fn(() => ({ enabled: true })),
-}));
 
 describe("EventItem", () => {
   it("displays correct event data", () => {
@@ -20,7 +18,7 @@ describe("EventItem", () => {
           <EventItem
             event={transactionEvent}
             onHover={onHover}
-            hoveredPspReference={"PSP"}
+            hoveredPspReference={null}
             hasCreatedBy={true}
           />
         </Wrapper>
@@ -35,7 +33,7 @@ describe("EventItem", () => {
     expect(row).toHaveTextContent(transactionEvent.amount.currency);
     expect(row).toHaveTextContent(transactionEvent.pspReference);
     expect(row).toHaveTextContent("Aug 12, 2022, 02:40 PM"); // date from transactionEvent
-    expect(row).toHaveTextContent(transactionEvent.createdBy.name as string);
+    expect(row).toHaveTextContent(transactionEvent.createdBy.name);
     expect(onHover).not.toHaveBeenCalled();
   });
   it("hides created by cell if prop is passed", () => {
@@ -44,7 +42,7 @@ describe("EventItem", () => {
         <EventItem
           event={transactionEvent}
           onHover={() => undefined}
-          hoveredPspReference={"PSP"}
+          hoveredPspReference={null}
           hasCreatedBy={false}
         />
       </Wrapper>,
@@ -52,7 +50,7 @@ describe("EventItem", () => {
 
     const row = screen.getByRole("row");
 
-    expect(row).not.toHaveTextContent(transactionEvent.createdBy.name as string);
+    expect(row).not.toHaveTextContent(transactionEvent.createdBy.name);
   });
   it("calls onHover function when hovered", async () => {
     const onHover = jest.fn();
@@ -62,7 +60,7 @@ describe("EventItem", () => {
         <EventItem
           event={transactionEvent}
           onHover={onHover}
-          hoveredPspReference={"PSP"}
+          hoveredPspReference={null}
           hasCreatedBy={false}
         />
       </Wrapper>,

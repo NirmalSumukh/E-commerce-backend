@@ -3,7 +3,7 @@ import { OrderSortField } from "@dashboard/graphql";
 import { OrderDraftListUrlSortField } from "@dashboard/orders/urls";
 import { createGetSortQueryVariables } from "@dashboard/utils/sort";
 
-function getSortQueryField(sort: OrderDraftListUrlSortField): OrderSortField {
+export function getSortQueryField(sort: OrderDraftListUrlSortField): OrderSortField {
   switch (sort) {
     case OrderDraftListUrlSortField.number:
       return OrderSortField.NUMBER;

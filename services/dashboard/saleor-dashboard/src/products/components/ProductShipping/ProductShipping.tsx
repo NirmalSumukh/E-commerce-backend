@@ -4,7 +4,7 @@ import { ProductErrorFragment } from "@dashboard/graphql";
 import { getFormErrors, getProductErrorMessage } from "@dashboard/utils/errors";
 import createNonNegativeValueChangeHandler from "@dashboard/utils/handlers/nonNegativeValueChangeHandler";
 import { Box, Input, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ProductShippingProps {
@@ -17,7 +17,7 @@ interface ProductShippingProps {
   onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-export const ProductShipping = (props: ProductShippingProps) => {
+export const ProductShipping: React.FC<ProductShippingProps> = props => {
   const { data, disabled, errors, weightUnit, onChange } = props;
   const intl = useIntl();
   const formErrors = getFormErrors(["weight"], errors);

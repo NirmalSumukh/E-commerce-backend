@@ -4,12 +4,13 @@ import { DashboardModal } from "@dashboard/components/Modal";
 import { TransactionActionEnum } from "@dashboard/graphql";
 import { buttonMessages } from "@dashboard/intl";
 import { Button, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { mapActionToMessage } from "../OrderTransaction/utils";
 import { messages } from "./messages";
 
-interface OrderTransactionActionDialogProps {
+export interface OrderTransactionActionDialogProps {
   open: boolean;
   confirmButtonState: ConfirmButtonTransitionState;
   onClose: () => void;
@@ -17,13 +18,13 @@ interface OrderTransactionActionDialogProps {
   action: TransactionActionEnum;
 }
 
-export const OrderTransactionActionDialog = ({
+export const OrderTransactionActionDialog: React.FC<OrderTransactionActionDialogProps> = ({
   confirmButtonState,
   open,
   onClose,
   onSubmit,
   action,
-}: OrderTransactionActionDialogProps) => {
+}) => {
   const intl = useIntl();
   const actionIntl = action ? intl.formatMessage(mapActionToMessage[action]) : "";
   const actionType = actionIntl.toLowerCase();

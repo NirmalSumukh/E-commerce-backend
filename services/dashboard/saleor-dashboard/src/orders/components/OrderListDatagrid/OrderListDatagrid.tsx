@@ -14,7 +14,7 @@ import { OrderListUrlSortField } from "@dashboard/orders/urls";
 import { ListProps, RelayToFlat, SortPage } from "@dashboard/types";
 import { Item } from "@glideapps/glide-data-grid";
 import { Box } from "@saleor/macaw-ui-next";
-import { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useLocation } from "react-router";
 
@@ -29,7 +29,7 @@ interface OrderListDatagridProps extends ListProps, SortPage<OrderListUrlSortFie
   hasRowHover?: boolean;
 }
 
-export const OrderListDatagrid = ({
+export const OrderListDatagrid: React.FC<OrderListDatagridProps> = ({
   orders,
   disabled,
   settings,
@@ -39,7 +39,7 @@ export const OrderListDatagrid = ({
   onRowClick,
   hasRowHover,
   rowAnchor,
-}: OrderListDatagridProps) => {
+}) => {
   const location = useLocation();
   const intl = useIntl();
   const datagrid = useDatagridChangeState();

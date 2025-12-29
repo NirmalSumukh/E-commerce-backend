@@ -445,11 +445,13 @@ def test_collections_for_federation_query_count(
 
 
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_delete.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_delete."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_create.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_create."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @pytest.mark.parametrize(
@@ -466,11 +468,13 @@ def test_collection_batching_not_even(mutation_class):
 
 
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_delete.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_delete."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_create.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_create."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @pytest.mark.parametrize(
@@ -487,11 +491,13 @@ def test_collection_batching_even(mutation_class):
 
 
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_delete.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_delete."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_create.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_create."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @pytest.mark.parametrize(
@@ -508,11 +514,13 @@ def test_collection_batching_smaller_than_batch_size(mutation_class):
 
 
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_delete.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_delete."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @patch(
-    "saleor.graphql.product.mutations.collection.collection_create.PRODUCTS_BATCH_SIZE",
+    "saleor.graphql.product.mutations.collection.collection_create."
+    "PRODUCTS_BATCH_SIZE",
     2,
 )
 @pytest.mark.parametrize(

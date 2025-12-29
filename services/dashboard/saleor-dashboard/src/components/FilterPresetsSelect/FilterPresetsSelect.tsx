@@ -11,7 +11,7 @@ import {
   Tooltip,
   vars,
 } from "@saleor/macaw-ui-next";
-import { MouseEvent } from "react";
+import React, { MouseEvent } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FilterPresetItem } from "./FilterPresetItem";

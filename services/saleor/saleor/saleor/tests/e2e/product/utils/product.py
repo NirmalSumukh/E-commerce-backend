@@ -7,7 +7,6 @@ mutation createProduct($input: ProductCreateInput!) {
       field
       code
       message
-      attributes
     }
     product {
       id
@@ -43,34 +42,6 @@ def create_product(
     attributes=None,
     collection_ids=None,
 ):
-    content = raw_create_product(
-        staff_api_client,
-        product_type_id,
-        category_id,
-        product_name=product_name,
-        attributes=attributes,
-        collection_ids=collection_ids,
-    )
-
-    assert content["data"]["productCreate"]["errors"] == []
-
-    data = content["data"]["productCreate"]["product"]
-    assert data["id"] is not None
-    assert data["name"] == product_name
-    assert data["productType"]["id"] == product_type_id
-    assert data["category"]["id"] == category_id
-
-    return data
-
-
-def raw_create_product(
-    staff_api_client,
-    product_type_id,
-    category_id,
-    product_name="Test product",
-    attributes=None,
-    collection_ids=None,
-):
     if not attributes:
         attributes = []
 
@@ -94,4 +65,12 @@ def raw_create_product(
     )
     content = get_graphql_content(response)
 
-    return content
+    assert content["data"]["productCreate"]["errors"] == []
+
+    data = content["data"]["productCreate"]["product"]
+    assert data["id"] is not None
+    assert data["name"] == product_name
+    assert data["productType"]["id"] == product_type_id
+    assert data["category"]["id"] == category_id
+
+    return data

@@ -15,7 +15,6 @@ class Migration(migrations.Migration):
             name="search_document",
             field=models.TextField(blank=True, default=""),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="product",
             index=django.contrib.postgres.indexes.GinIndex(

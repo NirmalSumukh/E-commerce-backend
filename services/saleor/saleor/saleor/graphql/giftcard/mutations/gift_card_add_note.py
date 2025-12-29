@@ -7,6 +7,7 @@ from ....permission.enums import GiftcardPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_31
 from ...core.doc_category import DOC_CATEGORY_GIFT_CARDS
 from ...core.mutations import BaseMutation
 from ...core.types import BaseInputObjectType, GiftCardError
@@ -37,7 +38,7 @@ class GiftCardAddNote(BaseMutation):
         )
 
     class Meta:
-        description = "Adds note to the gift card."
+        description = "Adds note to the gift card." + ADDED_IN_31
         doc_category = DOC_CATEGORY_GIFT_CARDS
         permissions = (GiftcardPermissions.MANAGE_GIFT_CARD,)
         error_type_class = GiftCardError
@@ -52,7 +53,7 @@ class GiftCardAddNote(BaseMutation):
     def clean_input(cls, _info: ResolveInfo, _instance, data):
         try:
             cleaned_input = validate_required_string_field(data, "message")
-        except ValidationError as e:
+        except ValidationError:
             raise ValidationError(
                 {
                     "message": ValidationError(
@@ -60,7 +61,7 @@ class GiftCardAddNote(BaseMutation):
                         code=GiftCardErrorCode.REQUIRED.value,
                     )
                 }
-            ) from e
+            )
         return cleaned_input
 
     @classmethod

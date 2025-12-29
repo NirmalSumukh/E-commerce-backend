@@ -1,10 +1,10 @@
-import datetime
+from datetime import datetime
+
+import pytz
 
 
-def convert_to_utc_date_time(date) -> None | datetime.datetime:
+def convert_to_utc_date_time(date):
     """Convert date into utc date time."""
     if date is None:
-        return None
-    return datetime.datetime.combine(
-        date, datetime.datetime.min.time(), tzinfo=datetime.UTC
-    )
+        return
+    return datetime.combine(date, datetime.min.time(), tzinfo=pytz.UTC)

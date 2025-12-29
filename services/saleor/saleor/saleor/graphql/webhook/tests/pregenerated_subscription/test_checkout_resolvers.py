@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from unittest import mock
 
 from django.test import override_settings
@@ -36,7 +36,7 @@ def test_checkout_total_price_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -84,7 +84,7 @@ def test_checkout_subtotal_price_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -132,7 +132,7 @@ def test_checkout_total_balance_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -174,7 +174,7 @@ def test_checkout_shipping_price_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -225,7 +225,7 @@ def test_checkout_authorize_status_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -264,7 +264,7 @@ def test_checkout_charge_status_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -303,7 +303,7 @@ def test_checkout_line_unit_price_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -363,7 +363,7 @@ def test_checkout_line_total_price_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     checkout_total_price_query = """
@@ -454,24 +454,20 @@ def test_shipping_methods_use_pregenerated_payload(
 
     # then
     assert content["data"]["checkout"]["id"] == checkout_global_id
-
-    shipping_methods = content["data"]["checkout"]["shippingMethods"]
-    first_expected_shipping_method = {
-        "id": shipping_method_global_ids[0],
-        "name": "DHL",
-        "active": True,
-        "message": "",
-    }
-    second_expected_shipping_method = {
-        "id": shipping_method_global_ids[1],
-        "name": "DHL",
-        "active": False,
-        "message": exclude_msg,
-    }
-    assert len(shipping_methods) == 2
-    assert first_expected_shipping_method in shipping_methods
-    assert second_expected_shipping_method in shipping_methods
-
+    assert content["data"]["checkout"]["shippingMethods"] == [
+        {
+            "id": shipping_method_global_ids[0],
+            "name": "DHL",
+            "active": True,
+            "message": "",
+        },
+        {
+            "id": shipping_method_global_ids[1],
+            "name": "DHL",
+            "active": False,
+            "message": exclude_msg,
+        },
+    ]
     mock_request.assert_called_once()
     mock_generate_payload.assert_not_called()
 
@@ -558,7 +554,7 @@ def test_shipping_methods_and_taxes_use_pregenerated_payload(
 ):
     # given
     checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
+    checkout.price_expiration = timezone.now() - timedelta(days=1)
     checkout.save()
     checkout_global_id = to_global_id_or_none(checkout)
     shipping_methods = ShippingMethod.objects.order_by("id").all()
@@ -605,147 +601,22 @@ def test_shipping_methods_and_taxes_use_pregenerated_payload(
 
     # then
     assert content["data"]["checkout"]["id"] == checkout_global_id
-
-    shipping_methods = content["data"]["checkout"]["shippingMethods"]
-    first_expected_shipping_method = {
-        "id": shipping_method_global_ids[0],
-        "name": "DHL",
-        "active": True,
-        "message": "",
-    }
-    second_expected_shipping_method = {
-        "id": shipping_method_global_ids[1],
-        "name": "DHL",
-        "active": False,
-        "message": exclude_msg,
-    }
-    assert len(shipping_methods) == 2
-    assert first_expected_shipping_method in shipping_methods
-    assert second_expected_shipping_method in shipping_methods
-
+    assert content["data"]["checkout"]["shippingMethods"] == [
+        {
+            "id": shipping_method_global_ids[0],
+            "name": "DHL",
+            "active": True,
+            "message": "",
+        },
+        {
+            "id": shipping_method_global_ids[1],
+            "name": "DHL",
+            "active": False,
+            "message": exclude_msg,
+        },
+    ]
     assert content["data"]["checkout"]["totalPrice"]["net"]["amount"] == 16
     assert content["data"]["checkout"]["totalPrice"]["gross"]["amount"] == 20
     mock_tax_request.assert_called_once()
     mock_shipping_request.assert_called_once()
     mock_generate_payload.assert_not_called()
-
-
-CHECKOUTS_QUERY = """
- query CheckoutsQuery {
-   checkouts(first: 1) {
-     edges {
-       node {
-         id
-         deliveryMethod {
-           __typename
-           ... on ShippingMethod {
-             id
-             name
-             price {
-               amount
-             }
-           }
-         }
-         shippingPrice {
-           gross {
-             amount
-           }
-         }
-         totalPrice {
-           gross {
-             amount
-           }
-         }
-         subtotalPrice {
-           gross {
-             amount
-           }
-         }
-         lines {
-           totalPrice {
-             gross {
-               amount
-             }
-           }
-           unitPrice {
-             gross {
-               amount
-             }
-           }
-         }
-         shippingMethods {
-           id
-           name
-           active
-         }
-         availableShippingMethods {
-           id
-           name
-           active
-         }
-       }
-     }
-   }
- }
- """
-
-
-@mock.patch(
-    "saleor.graphql.checkout.types.PregeneratedCheckoutTaxPayloadsByCheckoutTokenLoader"
-)
-def test_pregegenerated_tax_payload_is_skipped_for_bulk_queries(
-    mocked_pregenerated_payload,
-    checkout_with_shipping_address,
-    staff_api_client,
-    permission_manage_checkouts,
-):
-    # given
-    checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
-    checkout.save()
-    checkout_global_id = to_global_id_or_none(checkout)
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHECKOUTS_QUERY,
-        permissions=[permission_manage_checkouts],
-    )
-    content = get_graphql_content(response)
-
-    # then
-    assert len(content["data"]["checkouts"]["edges"]) == 1
-    checkout = content["data"]["checkouts"]["edges"][0]["node"]
-    assert checkout["id"] == checkout_global_id
-
-    mocked_pregenerated_payload.assert_not_called()
-
-
-@mock.patch(
-    "saleor.graphql.checkout.types."
-    "PregeneratedCheckoutFilterShippingMethodPayloadsByCheckoutTokenLoader"
-)
-def test_pregegenerated_exclude_shipping_payload_is_skipped_for_bulk_queries(
-    mocked_pregenerated_payload,
-    checkout_with_shipping_address,
-    staff_api_client,
-    permission_manage_checkouts,
-):
-    # given
-    checkout = checkout_with_shipping_address
-    checkout.price_expiration = timezone.now() - datetime.timedelta(days=1)
-    checkout.save()
-    checkout_global_id = to_global_id_or_none(checkout)
-
-    # when
-    response = staff_api_client.post_graphql(
-        CHECKOUTS_QUERY,
-        permissions=[permission_manage_checkouts],
-    )
-    content = get_graphql_content(response)
-
-    # then
-    assert len(content["data"]["checkouts"]["edges"]) == 1
-    checkout = content["data"]["checkouts"]["edges"][0]["node"]
-    assert checkout["id"] == checkout_global_id
-
-    mocked_pregenerated_payload.assert_not_called()

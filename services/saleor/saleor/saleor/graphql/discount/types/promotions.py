@@ -6,7 +6,7 @@ from ....permission.auth_filters import AuthorizationFilters
 from ...channel.types import Channel
 from ...core import ResolveInfo
 from ...core.connection import CountableConnection
-from ...core.descriptions import ADDED_IN_319, PREVIEW_FEATURE
+from ...core.descriptions import ADDED_IN_317, ADDED_IN_319, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ...core.fields import PermissionsField
 from ...core.scalars import JSON, DateTime, PositiveDecimal
@@ -54,6 +54,8 @@ class Promotion(ModelObjectType[models.Promotion]):
         description = (
             "Represents the promotion that allow creating discounts based on given "
             "conditions, and is visible to all the customers."
+            + ADDED_IN_317
+            + PREVIEW_FEATURE
         )
         interfaces = [relay.Node, ObjectWithMetadata]
         model = models.Promotion
@@ -133,7 +135,7 @@ class PromotionRule(ModelObjectType[models.PromotionRule]):
     class Meta:
         description = (
             "Represents the promotion rule that specifies the conditions that must "
-            "be met to apply the promotion discount."
+            "be met to apply the promotion discount." + ADDED_IN_317 + PREVIEW_FEATURE
         )
         interfaces = [relay.Node]
         model = models.PromotionRule

@@ -4,13 +4,14 @@ import HorizontalSpacer from "@dashboard/components/HorizontalSpacer";
 import Money from "@dashboard/components/Money";
 import { Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import useGiftCardDetails from "../providers/GiftCardDetailsProvider/hooks/useGiftCardDetails";
 import { giftCardUpdateDetailsCardMessages as messages } from "./messages";
 import { useGiftCardDetailsBalanceStyles as useStyles } from "./styles";
 
-const GiftCardUpdateDetailsBalanceSection = () => {
+const GiftCardUpdateDetailsBalanceSection: React.FC = () => {
   const classes = useStyles({});
   const intl = useIntl();
   const {

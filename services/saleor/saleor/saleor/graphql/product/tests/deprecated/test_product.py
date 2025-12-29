@@ -81,7 +81,9 @@ def test_product_query_by_id_with_default_channel(user_api_client, product):
     collection_data = content["data"]["product"]
     assert collection_data is not None
     assert collection_data["name"] == product.name
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_product_query_by_slug_with_default_channel(user_api_client, product):
@@ -92,7 +94,9 @@ def test_product_query_by_slug_with_default_channel(user_api_client, product):
     collection_data = content["data"]["product"]
     assert collection_data is not None
     assert collection_data["name"] == product.name
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_fetch_all_products(user_api_client, product):
@@ -110,7 +114,9 @@ def test_fetch_all_products(user_api_client, product):
         product_channel_listing.available_for_purchase_at.date()
     )
     assert len(content["data"]["products"]["edges"]) == num_products
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_products_query_with_price_filter(
@@ -135,7 +141,9 @@ def test_products_query_with_price_filter(
     products = content["data"]["products"]["edges"]
 
     assert len(products) == 3
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_sort_products_product_type_name(
@@ -152,7 +160,9 @@ def test_sort_products_product_type_name(
     product_type_name_0 = edges[0]["node"]["productType"]["name"]
     product_type_name_1 = edges[1]["node"]["productType"]["name"]
     assert product_type_name_0 < product_type_name_1
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
     # Test sorting by PUBLISHED, descending
     desc_published_query = SORT_PRODUCTS_QUERY % {
@@ -164,7 +174,9 @@ def test_sort_products_product_type_name(
     product_type_name_0 = edges[0]["node"]["productType"]["name"]
     product_type_name_1 = edges[1]["node"]["productType"]["name"]
     assert product_type_name_0 < product_type_name_1
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 QUERY_COLLECTION_FROM_PRODUCT = """
@@ -229,7 +241,9 @@ def test_get_collections_from_product_as_customer(
     collections = content["data"]["product"]["collections"]
     assert len(collections) == 1
     assert {"name": published_collection.name} in collections
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_get_collections_from_product_as_anonymous(
@@ -253,7 +267,9 @@ def test_get_collections_from_product_as_anonymous(
     collections = content["data"]["product"]["collections"]
     assert len(collections) == 1
     assert {"name": published_collection.name} in collections
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_collections_query_with_filter(
@@ -307,7 +323,9 @@ def test_collections_query_with_filter(
     collections = content["data"]["collections"]["edges"]
 
     assert len(collections) == 2
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 def test_collections_query_with_sort(
@@ -342,7 +360,9 @@ def test_collections_query_with_sort(
     collections = content["data"]["collections"]["edges"]
     for order, collection_name in enumerate(["Coll2", "Coll3", "Coll1"]):
         assert collections[order]["node"]["name"] == collection_name
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )
 
 
 QUERY_FETCH_ALL_VARIANTS = """
@@ -383,4 +403,6 @@ def test_fetch_all_variants(api_client, product_variant_list, channel_PLN):
     content = get_graphql_content(response)
     data = content["data"]["productVariants"]
     assert data["totalCount"] == len(product_variant_list)
-    assert any(str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns)
+    assert any(
+        [str(warning.message) == DEPRECATION_WARNING_MESSAGE for warning in warns]
+    )

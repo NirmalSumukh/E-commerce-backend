@@ -47,12 +47,6 @@ mutation OrderDiscountAdd($input: OrderDiscountCommonInput!, $id: ID!) {
           ...BaseTaxedMoney
         }
         unitDiscountReason
-        undiscountedUnitPrice {
-          ...BaseTaxedMoney
-        }
-        undiscountedTotalPrice {
-          ...BaseTaxedMoney
-        }
       }
       voucherCode
       voucher {
@@ -60,16 +54,16 @@ mutation OrderDiscountAdd($input: OrderDiscountCommonInput!, $id: ID!) {
         code
         discountValue
         codes(first: 10) {
-          edges {
-            node {
-              id
-              code
-              isActive
-              used
+            edges {
+              node {
+                id
+                code
+                isActive
+                used
+              }
             }
+            totalCount
           }
-          totalCount
-        }
       }
     }
   }

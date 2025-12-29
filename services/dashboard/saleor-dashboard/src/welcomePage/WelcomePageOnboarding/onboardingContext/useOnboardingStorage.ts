@@ -20,6 +20,7 @@ export const useOnboardingStorage = (): StorageService => {
 
       return JSON.parse(metadata.value);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn("Could not get onboarding state from metadata", { error });
 
       return undefined;
@@ -42,6 +43,7 @@ export const useOnboardingStorage = (): StorageService => {
           },
         });
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn("Could not save onboarding state to metadata");
       }
     },

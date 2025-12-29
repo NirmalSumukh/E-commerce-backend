@@ -1,9 +1,10 @@
 import { DashboardCard } from "@dashboard/components/Card";
-import { NewRadioGroupField as RadioGroupField } from "@dashboard/components/RadioGroupField";
+import PreviewPill from "@dashboard/components/PreviewPill";
+import RadioGroupField from "@dashboard/components/RadioGroupField";
 import { AllocationStrategyEnum, StockSettingsInput } from "@dashboard/graphql";
-import { ChangeEvent } from "@dashboard/hooks/useForm";
 import HelpOutline from "@material-ui/icons/HelpOutline";
 import { Text, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { messages } from "./messages";
@@ -25,14 +26,14 @@ const strategyOptions = [
 interface ChannelAllocationStrategyProps {
   data?: StockSettingsInput;
   disabled: boolean;
-  onChange: (event: ChangeEvent) => void;
+  onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const ChannelAllocationStrategy = ({
+const ChannelAllocationStrategy: React.FC<ChannelAllocationStrategyProps> = ({
   data,
   disabled,
   onChange,
-}: ChannelAllocationStrategyProps) => {
+}) => {
   const classes = useStyles();
 
   return (
@@ -41,6 +42,7 @@ const ChannelAllocationStrategy = ({
         <DashboardCard.Title>
           <div className={classes.preview}>
             <FormattedMessage {...messages.allocationStrategy} />
+            <PreviewPill />
           </div>
         </DashboardCard.Title>
       </DashboardCard.Header>
@@ -48,7 +50,7 @@ const ChannelAllocationStrategy = ({
       <DashboardCard.Content>
         <RadioGroupField
           label={
-            <Text marginBottom={4} display="block">
+            <Text>
               <FormattedMessage {...messages.allocationStrategyDescription} />
               <Tooltip>
                 <Tooltip.Trigger>
@@ -71,14 +73,19 @@ const ChannelAllocationStrategy = ({
           }
           choices={strategyOptions.map(option => ({
             label: (
-              <>
-                <FormattedMessage {...option.title} />
+              <div
+                className={classes.option}
+                data-test-id={`channel-allocation-strategy-option-${option.type}`}
+              >
+                <Text>
+                  <FormattedMessage {...option.title} />
+                </Text>
                 {option.subtitle && (
-                  <Text size={2} fontWeight="light" color="default2" display="block">
+                  <Text fontWeight="medium" fontSize={3} color="default2" display="block">
                     <FormattedMessage {...option.subtitle} />
                   </Text>
                 )}
-              </>
+              </div>
             ),
             value: option.type,
           }))}

@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from prices import MoneyRange
 
@@ -74,7 +74,7 @@ def get_cost_price(variant_channel_listing: "ProductVariantChannelListing") -> "
 
 def get_margin_for_variant_channel_listing(
     variant_channel_listing: "ProductVariantChannelListing",
-) -> float | None:
+) -> Optional[float]:
     if variant_channel_listing.cost_price is None:
         return None
     base_price = variant_channel_listing.price

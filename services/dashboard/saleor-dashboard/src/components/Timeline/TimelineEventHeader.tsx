@@ -1,6 +1,5 @@
 import { Box, Text } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
-import * as React from "react";
+import React, { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { DateTime } from "../Date";
@@ -10,7 +9,7 @@ export interface TitleElement {
   link?: string;
 }
 
-interface TimelineEventHeaderProps {
+export interface TimelineEventHeaderProps {
   title?: React.ReactNode;
   date: string;
   titleElements?: TitleElement[];
@@ -19,14 +18,9 @@ interface TimelineEventHeaderProps {
   children?: ReactNode;
 }
 
-const TimelineEventHeader = ({
-  title,
-  date,
-  titleElements,
-  secondaryTitle,
-  hasPlainDate,
-  children,
-}: TimelineEventHeaderProps) => {
+export const TimelineEventHeader: React.FC<TimelineEventHeaderProps> = props => {
+  const { title, date, titleElements, secondaryTitle, hasPlainDate, children } = props;
+
   const elements = titleElements?.filter(Boolean) ?? [];
 
   return (

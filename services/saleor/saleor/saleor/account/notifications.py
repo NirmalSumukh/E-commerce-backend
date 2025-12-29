@@ -1,3 +1,4 @@
+from typing import Optional
 from urllib.parse import urlencode
 
 from ..core.notification.utils import get_site_context
@@ -36,7 +37,7 @@ def get_user_custom_payload(user: User):
 
 
 def send_password_reset_notification(
-    redirect_url, user, manager, channel_slug: str | None, staff=False
+    redirect_url, user, manager, channel_slug: Optional[str], staff=False
 ):
     """Trigger sending a password reset notification for the given customer/staff."""
 

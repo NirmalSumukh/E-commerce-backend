@@ -1,13 +1,14 @@
 // @ts-strict-ignore
 import { ButtonWithLoader } from "@dashboard/components/ButtonWithLoader/ButtonWithLoader";
 import { commonMessages } from "@dashboard/intl";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { bulkEnableDisableSectionMessages as buttonMessages } from "../../GiftCardsList/messages";
 import useGiftCardDetails from "../providers/GiftCardDetailsProvider/hooks/useGiftCardDetails";
 import useGiftCardActivateToggle from "./hooks/useGiftCardActivateToggle";
 
-const GiftCardEnableDisableSection = () => {
+const GiftCardEnableDisableSection: React.FC = () => {
   const intl = useIntl();
   const {
     giftCard: { id, isActive, isExpired },

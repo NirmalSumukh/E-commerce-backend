@@ -7,6 +7,7 @@ from ....permission.enums import GiftcardPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_31
 from ...core.doc_category import DOC_CATEGORY_GIFT_CARDS
 from ...core.types import BaseInputObjectType, ExportError, NonNullList
 from ...core.utils import WebhookEventInfo
@@ -41,7 +42,7 @@ class ExportGiftCards(BaseExportMutation):
         )
 
     class Meta:
-        description = "Export gift cards to csv file."
+        description = "Export gift cards to csv file." + ADDED_IN_31
         doc_category = DOC_CATEGORY_GIFT_CARDS
         permissions = (GiftcardPermissions.MANAGE_GIFT_CARD,)
         error_type_class = ExportError

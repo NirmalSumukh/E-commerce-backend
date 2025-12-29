@@ -2,7 +2,7 @@ import { useExitFormDialog } from "@dashboard/components/Form/useExitFormDialog"
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import useRichText from "@dashboard/utils/richText/useRichText";
 import { OutputData } from "@editorjs/editorjs";
-import { useCallback, useEffect } from "react";
+import React from "react";
 
 export function useRichTextSubmit(
   initial: string,
@@ -15,7 +15,7 @@ export function useRichTextSubmit(
     loading,
     triggerChange: () => setIsDirty(true),
   });
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = React.useCallback(async () => {
     const result = onSubmit(await getValue());
     const errors = await result;
 
@@ -28,7 +28,10 @@ export function useRichTextSubmit(
     return errors;
   }, [getValue, onSubmit, setIsDirty]);
 
-  useEffect(() => setExitDialogSubmitRef(handleSubmit), [handleSubmit, setExitDialogSubmitRef]);
+  React.useEffect(
+    () => setExitDialogSubmitRef(handleSubmit),
+    [handleSubmit, setExitDialogSubmitRef],
+  );
 
   return {
     defaultValue,

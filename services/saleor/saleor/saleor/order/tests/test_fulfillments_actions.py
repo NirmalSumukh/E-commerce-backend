@@ -71,10 +71,9 @@ def test_create_fulfillments(
     event = events[0]
     assert event.type == OrderEvents.FULFILLMENT_FULFILLED_ITEMS
     assert event.user == staff_user
-    assert set(event.parameters["fulfilled_items"]) == {
-        fulfillment_lines[0].pk,
-        fulfillment_lines[1].pk,
-    }
+    assert set(event.parameters["fulfilled_items"]) == set(
+        [fulfillment_lines[0].pk, fulfillment_lines[1].pk]
+    )
     assert event.parameters["auto"] is False
 
     mock_email_fulfillment.assert_called_once_with(
@@ -146,10 +145,9 @@ def test_create_fulfillments_require_approval(
     event = events[0]
     assert event.type == OrderEvents.FULFILLMENT_AWAITS_APPROVAL
     assert event.user == staff_user
-    assert set(event.parameters["awaiting_fulfillments"]) == {
-        fulfillment_lines[0].pk,
-        fulfillment_lines[1].pk,
-    }
+    assert set(event.parameters["awaiting_fulfillments"]) == set(
+        [fulfillment_lines[0].pk, fulfillment_lines[1].pk]
+    )
 
     mock_email_fulfillment.assert_not_called()
     mock_fulfillment_approved.assert_not_called()
@@ -217,10 +215,9 @@ def test_create_fulfillments_require_approval_as_app(
     assert event.type == OrderEvents.FULFILLMENT_AWAITS_APPROVAL
     assert event.user is None
     assert event.app == app
-    assert set(event.parameters["awaiting_fulfillments"]) == {
-        fulfillment_lines[0].pk,
-        fulfillment_lines[1].pk,
-    }
+    assert set(event.parameters["awaiting_fulfillments"]) == set(
+        [fulfillment_lines[0].pk, fulfillment_lines[1].pk]
+    )
 
     mock_email_fulfillment.assert_not_called()
 

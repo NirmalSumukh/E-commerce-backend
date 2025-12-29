@@ -4,21 +4,22 @@ from graphene import relay
 from ....discount import DiscountValueType, models
 from ....permission.enums import DiscountPermissions
 from ....product.models import Category, Collection, Product, ProductVariant
-from ...channel.dataloaders.by_self import ChannelBySlugLoader
-from ...channel.types import Channel
+from ...channel import ChannelQsContext
+from ...channel.dataloaders import ChannelBySlugLoader
+from ...channel.types import (
+    Channel,
+    ChannelContext,
+    ChannelContextType,
+    ChannelContextTypeWithMetadata,
+)
 from ...core import ResolveInfo
 from ...core.connection import CountableConnection, create_connection_slice
-from ...core.context import (
-    ChannelContext,
-    ChannelQsContext,
-    get_database_connection_name,
-)
-from ...core.descriptions import DEPRECATED_IN_3X_TYPE
+from ...core.context import get_database_connection_name
+from ...core.descriptions import ADDED_IN_31, DEPRECATED_IN_3X_TYPE
 from ...core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ...core.fields import ConnectionField, PermissionsField
 from ...core.scalars import DateTime
 from ...core.types import BaseObjectType, ModelObjectType, NonNullList
-from ...core.types.context import ChannelContextType
 from ...meta.types import ObjectWithMetadata
 from ...product.types import (
     CategoryCountableConnection,
@@ -63,7 +64,7 @@ class SaleChannelListing(BaseObjectType):
         doc_category = DOC_CATEGORY_DISCOUNTS
 
 
-class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
+class Sale(ChannelContextTypeWithMetadata, ModelObjectType[models.Promotion]):
     id = graphene.GlobalID(required=True, description="The ID of the sale.")
     name = graphene.String(required=True, description="The name of the sale.")
     type = SaleType(required=True, description="Type of the sale, fixed or percentage.")
@@ -97,7 +98,7 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
     )
     variants = ConnectionField(
         ProductVariantCountableConnection,
-        description="List of product variants this sale applies to.",
+        description="List of product variants this sale applies to." + ADDED_IN_31,
         permissions=[
             DiscountPermissions.MANAGE_DISCOUNTS,
         ],
@@ -161,7 +162,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
                 return create_connection_slice(
                     qs, info, kwargs, CategoryCountableConnection
                 )
-            return None
 
         return (
             PredicateByPromotionIdLoader(info.context)
@@ -188,7 +188,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
                 return create_connection_slice(
                     qs, info, kwargs, CollectionCountableConnection
                 )
-            return None
 
         return (
             PredicateByPromotionIdLoader(info.context)
@@ -209,7 +208,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
                 return create_connection_slice(
                     qs, info, kwargs, ProductCountableConnection
                 )
-            return None
 
         return (
             PredicateByPromotionIdLoader(info.context)
@@ -230,7 +228,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
                 return create_connection_slice(
                     qs, info, kwargs, ProductVariantCountableConnection
                 )
-            return None
 
         return (
             PredicateByPromotionIdLoader(info.context)
@@ -248,7 +245,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
         def _get_reward_value(rules):
             if rules:
                 return rules[0].reward_value
-            return None
 
         return (
             PromotionRulesByPromotionIdAndChannelSlugLoader(info.context)
@@ -264,7 +260,6 @@ class Sale(ChannelContextType, ModelObjectType[models.Promotion]):
         def _get_currency(channel):
             if channel:
                 return channel.currency_code
-            return None
 
         return (
             ChannelBySlugLoader(info.context)

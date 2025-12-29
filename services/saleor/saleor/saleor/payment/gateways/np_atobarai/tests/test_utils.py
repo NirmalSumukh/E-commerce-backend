@@ -105,11 +105,7 @@ def test_get_shipping_company_code_no_metadata(
 
 @pytest.mark.parametrize(
     ("config_shipping_company_code", "result_shipping_company_code"),
-    zip(
-        SHIPPING_COMPANY_CODES + ["invalid_code"],
-        SHIPPING_COMPANY_CODES + [None],
-        strict=False,
-    ),
+    zip(SHIPPING_COMPANY_CODES + ["invalid_code"], SHIPPING_COMPANY_CODES + [None]),
 )
 def test_get_shipping_company_code_valid_metadata(
     config, fulfillment, config_shipping_company_code, result_shipping_company_code

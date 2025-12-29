@@ -1,8 +1,8 @@
 from collections import defaultdict
+from typing import Optional
 
 import graphene
 from graphene import relay
-from promise import Promise
 
 from ....permission.enums import ProductPermissions
 from ....product import models
@@ -12,24 +12,26 @@ from ....thumbnail.utils import (
     get_thumbnail_format,
     get_thumbnail_size,
 )
-from ...channel.dataloaders.by_self import ChannelBySlugLoader
+from ...channel import ChannelContext, ChannelQsContext
+from ...channel.dataloaders import ChannelBySlugLoader
+from ...channel.types import ChannelContextType, ChannelContextTypeWithMetadata
 from ...core import ResolveInfo
 from ...core.connection import (
     CountableConnection,
     create_connection_slice,
     filter_connection_queryset,
 )
-from ...core.context import (
-    ChannelContext,
-    ChannelQsContext,
-    get_database_connection_name,
+from ...core.context import get_database_connection_name
+from ...core.descriptions import (
+    ADDED_IN_314,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
+    RICH_CONTENT,
 )
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT, RICH_CONTENT
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.federation import federated_entity
 from ...core.fields import FilterConnectionField, JSONString, PermissionsField
 from ...core.types import Image, NonNullList, ThumbnailField
-from ...core.types.context import ChannelContextType
 from ...core.utils import from_global_id_or_error
 from ...meta.types import ObjectWithMetadata
 from ...translations.fields import TranslationField
@@ -39,7 +41,7 @@ from ..dataloaders import (
     CollectionChannelListingByCollectionIdLoader,
     ThumbnailByCollectionIdSizeAndFormatLoader,
 )
-from ..filters.product import ProductFilterInput, ProductWhereInput
+from ..filters import ProductFilterInput, ProductWhereInput
 from ..sorters import ProductOrder
 from ..utils import check_for_sorting_by_rank
 from .channels import CollectionChannelListing
@@ -47,7 +49,7 @@ from .products import ProductCountableConnection
 
 
 @federated_entity("id channel")
-class Collection(ChannelContextType[models.Collection]):
+class Collection(ChannelContextTypeWithMetadata[models.Collection]):
     id = graphene.GlobalID(required=True, description="The ID of the collection.")
     seo_title = graphene.String(description="SEO title of the collection.")
     seo_description = graphene.String(description="SEO description of the collection.")
@@ -64,18 +66,18 @@ class Collection(ChannelContextType[models.Collection]):
     )
     description_json = JSONString(
         description="Description of the collection." + RICH_CONTENT,
-        deprecation_reason="Use the `description` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Use the `description` field instead."
+        ),
     )
     products = FilterConnectionField(
         ProductCountableConnection,
-        filter=ProductFilterInput(
-            description=(
-                f"Filtering options for products. {DEPRECATED_IN_3X_INPUT} "
-                "Use `where` filter instead."
-            )
+        filter=ProductFilterInput(description="Filtering options for products."),
+        where=ProductWhereInput(
+            description="Filtering options for products."
+            + ADDED_IN_314
+            + PREVIEW_FEATURE
         ),
-        where=ProductWhereInput(description="Where filtering options for products."),
-        search=graphene.String(description="Search products."),
         sort_by=ProductOrder(description="Sort products."),
         description="List of products in this collection.",
     )
@@ -107,12 +109,12 @@ class Collection(ChannelContextType[models.Collection]):
     def resolve_background_image(
         root: ChannelContext[models.Collection],
         info: ResolveInfo,
-        size: int | None = None,
-        format: str | None = None,
-    ) -> None | Image | Promise[Image]:
+        size: Optional[int] = None,
+        format: Optional[str] = None,
+    ):
         node = root.node
         if not node.background_image:
-            return None
+            return
 
         alt = node.background_image_alt
         if size == 0:
@@ -150,7 +152,7 @@ class Collection(ChannelContextType[models.Collection]):
 
             if search:
                 qs = ChannelQsContext(
-                    qs=search_products(qs, search), channel_slug=root.channel_slug
+                    qs=search_products(qs.qs, search), channel_slug=root.channel_slug
                 )
             else:
                 qs = ChannelQsContext(qs=qs, channel_slug=root.channel_slug)
@@ -167,7 +169,8 @@ class Collection(ChannelContextType[models.Collection]):
                 .load(str(root.channel_slug))
                 .then(_resolve_products)
             )
-        return _resolve_products(None)
+        else:
+            return _resolve_products(None)
 
     @staticmethod
     def resolve_channel_listings(root: ChannelContext[models.Collection], info):

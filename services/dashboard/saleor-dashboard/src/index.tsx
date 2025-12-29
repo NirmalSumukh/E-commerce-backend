@@ -2,25 +2,25 @@ import "@saleor/macaw-ui-next/style";
 import "./index.css";
 
 import { ApolloProvider } from "@apollo/client";
+import DemoBanner from "@dashboard/components/DemoBanner";
 import { history, Route, Router } from "@dashboard/components/Router";
-import { ExtensionsPaths, extensionsSection } from "@dashboard/extensions/urls";
+import { extensionsSection } from "@dashboard/extensions/urls";
 import { PermissionEnum } from "@dashboard/graphql";
 import useAppState from "@dashboard/hooks/useAppState";
-import { pageListPath } from "@dashboard/modeling/urls";
-import { modelTypesPath } from "@dashboard/modelTypes/urls";
-import { RefundsSettingsRoute } from "@dashboard/refundsSettings/route";
-import { refundsSettingsPath } from "@dashboard/refundsSettings/urls";
-import { structuresListPath } from "@dashboard/structures/urls";
 import { ThemeProvider } from "@dashboard/theme";
 import { OnboardingProvider } from "@dashboard/welcomePage/WelcomePageOnboarding/onboardingContext";
 import { ThemeProvider as LegacyThemeProvider } from "@saleor/macaw-ui";
 import { SaleorProvider } from "@saleor/sdk";
-import { createRoot } from "react-dom/client";
+import React from "react";
+import { render } from "react-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import TagManager from "react-gtm-module";
 import { useIntl } from "react-intl";
-import { Redirect, Switch } from "react-router-dom";
+import { Switch } from "react-router-dom";
 
+import { AppsSectionRoot } from "./apps";
+import { ExternalAppProvider } from "./apps/components/ExternalAppContext";
+import { AppSections } from "./apps/urls";
 import AttributeSection from "./attributes";
 import { attributeSection } from "./attributes/urls";
 import Auth from "./auth";
@@ -38,7 +38,6 @@ import { DateProvider } from "./components/Date";
 import { DevModeProvider } from "./components/DevModePanel/DevModeProvider";
 import ErrorPage from "./components/ErrorPage";
 import ExitFormDialogProvider from "./components/Form/ExitFormDialogProvider";
-import { legacyRedirects } from "./components/LegacyRedirects";
 import { LocaleProvider } from "./components/Locale";
 import MessageManagerProvider from "./components/messages";
 import { NavigatorSearchProvider } from "./components/NavigatorSearch/NavigatorSearchProvider";
@@ -46,34 +45,36 @@ import { ProductAnalytics } from "./components/ProductAnalytics";
 import { SavebarRefProvider } from "./components/Savebar/SavebarRefContext";
 import { ShopProvider } from "./components/Shop";
 import { WindowTitle } from "./components/WindowTitle";
-import { GTM_ID } from "./config";
+import { DEMO_MODE, GTM_ID } from "./config";
 import ConfigurationSection from "./configuration";
 import { getConfigMenuItemsPermissions } from "./configuration/utils";
 import AppStateProvider from "./containers/AppState";
 import BackgroundTasksProvider from "./containers/BackgroundTasks";
+import CustomAppsSection from "./custom-apps";
+import { CustomAppSections } from "./custom-apps/urls";
 import { CustomerSection } from "./customers";
 import DiscountSection from "./discounts";
 import { ExtensionsSection } from "./extensions";
-import { ExternalAppProvider } from "./extensions/components/ExternalAppContext/ExternalAppContext";
 import { FeatureFlagsProviderWithUser } from "./featureFlags/FeatureFlagsProvider";
 import GiftCardSection from "./giftCards";
 import { giftCardsSectionUrlName } from "./giftCards/urls";
 import { apolloClient, saleorClient } from "./graphql/client";
 import { useLocationState } from "./hooks/useLocationState";
 import { commonMessages } from "./intl";
-import PageSection from "./modeling";
-import PageTypesSection from "./modelTypes";
+import NavigationSection from "./navigation";
+import { navigationSection } from "./navigation/urls";
 import { NotFound } from "./NotFound";
 import OrdersSection from "./orders";
+import PageSection from "./pages";
+import PageTypesSection from "./pageTypes";
 import PermissionGroupSection from "./permissionGroups";
+import PluginsSection from "./plugins";
 import ProductSection from "./products";
 import ProductTypesSection from "./productTypes";
-import SearchSection from "./search";
 import errorTracker from "./services/errorTracking";
 import ShippingSection from "./shipping";
 import SiteSettingsSection from "./siteSettings";
 import StaffSection from "./staff";
-import NavigationSection from "./structures";
 import TaxesSection from "./taxes";
 import { paletteOverrides, themeOverrides } from "./themeOverrides";
 import TranslationsSection from "./translations";
@@ -105,12 +106,10 @@ const handleLegacyTheming = () => {
 
 handleLegacyTheming();
 
-const App = () => (
-  // @ts-expect-error legacy types
+const App: React.FC = () => (
   <SaleorProvider client={saleorClient}>
     <ApolloProvider client={apolloClient}>
       <Router>
-        {/* @ts-expect-error legacy types */}
         <LegacyThemeProvider overrides={themeOverrides} palettes={paletteOverrides}>
           <ThemeProvider>
             <DateProvider>
@@ -150,7 +149,7 @@ const App = () => (
     </ApolloProvider>
   </SaleorProvider>
 );
-const Routes = () => {
+const Routes: React.FC = () => {
   const intl = useIntl();
   const [, dispatchAppState] = useAppState();
   const { authenticated, authenticating } = useAuthRedirection();
@@ -163,6 +162,7 @@ const Routes = () => {
   return (
     <>
       <WindowTitle title={intl.formatMessage(commonMessages.dashboard)} />
+      {DEMO_MODE && <DemoBanner />}
       {homePageLoaded ? (
         <ExternalAppProvider>
           <AppLayout fullSize={isAppPath}>
@@ -183,19 +183,7 @@ const Routes = () => {
               )}
             >
               <Switch>
-                {legacyRedirects}
                 <SectionRoute exact path="/" component={WelcomePage} />
-                <SectionRoute
-                  permissions={[
-                    PermissionEnum.MANAGE_PRODUCTS,
-                    PermissionEnum.MANAGE_ORDERS,
-                    PermissionEnum.MANAGE_PAGES,
-                    PermissionEnum.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES,
-                  ]}
-                  matchPermission="any"
-                  path="/search"
-                  component={SearchSection}
-                />
                 <SectionRoute
                   permissions={[PermissionEnum.MANAGE_PRODUCTS]}
                   path="/categories"
@@ -223,7 +211,7 @@ const Routes = () => {
                 />
                 <SectionRoute
                   permissions={[PermissionEnum.MANAGE_PAGES]}
-                  path={pageListPath}
+                  path="/pages"
                   component={PageSection}
                 />
                 <SectionRoute
@@ -231,9 +219,14 @@ const Routes = () => {
                     PermissionEnum.MANAGE_PAGES,
                     PermissionEnum.MANAGE_PAGE_TYPES_AND_ATTRIBUTES,
                   ]}
-                  path={modelTypesPath}
+                  path="/page-types"
                   component={PageTypesSection}
                   matchPermission="any"
+                />
+                <SectionRoute
+                  permissions={[PermissionEnum.MANAGE_PLUGINS]}
+                  path="/plugins"
+                  component={PluginsSection}
                 />
                 <SectionRoute
                   permissions={[PermissionEnum.MANAGE_ORDERS]}
@@ -261,11 +254,6 @@ const Routes = () => {
                   path="/site-settings"
                   component={SiteSettingsSection}
                 />
-                <SectionRoute
-                  permissions={[PermissionEnum.MANAGE_SETTINGS]}
-                  path={refundsSettingsPath}
-                  component={RefundsSettingsRoute}
-                />
                 <SectionRoute path="/taxes" component={TaxesSection} />
                 <SectionRoute
                   permissions={[PermissionEnum.MANAGE_SHIPPING]}
@@ -279,7 +267,7 @@ const Routes = () => {
                 />
                 <SectionRoute
                   permissions={[PermissionEnum.MANAGE_MENUS]}
-                  path={structuresListPath}
+                  path={navigationSection}
                   component={NavigationSection}
                 />
                 <SectionRoute
@@ -290,6 +278,11 @@ const Routes = () => {
                   path={attributeSection}
                   component={AttributeSection}
                   matchPermission="any"
+                />
+                <SectionRoute
+                  permissions={[]}
+                  path={AppSections.appsSection}
+                  component={AppsSectionRoot}
                 />
                 <SectionRoute
                   permissions={[]}
@@ -313,9 +306,7 @@ const Routes = () => {
                   path="/configuration"
                   component={ConfigurationSection}
                 />
-                <Redirect to={ExtensionsPaths.installedExtensions} path={"/apps"} />
-                <Redirect to={ExtensionsPaths.installedExtensions} path="/custom-apps/" />
-                <Redirect to={ExtensionsPaths.installedExtensions} path="/plugins" />
+                <SectionRoute path={CustomAppSections.appsSection} component={CustomAppsSection} />
                 <Route component={NotFound} />
               </Switch>
             </ErrorBoundary>
@@ -330,6 +321,4 @@ const Routes = () => {
   );
 };
 
-const root = createRoot(document.querySelector("#dashboard-app")!);
-
-root.render(<App />);
+render(<App />, document.querySelector("#dashboard-app"));

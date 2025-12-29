@@ -1,5 +1,6 @@
 import { OrderDetailsFragment } from "@dashboard/graphql";
 import { Box, Button, PlusIcon, Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { addTransactionMessages } from "./messages";
@@ -9,7 +10,7 @@ interface OrderAddTransactionProps {
   onAddTransaction: () => void;
 }
 
-const OrderAddTransaction = ({ order, onAddTransaction }: OrderAddTransactionProps) => {
+const OrderAddTransaction: React.FC<OrderAddTransactionProps> = ({ order, onAddTransaction }) => {
   if (!order) {
     return (
       <Box display="flex" justifyContent="flex-end" marginTop={2} marginBottom={2} paddingRight={4}>

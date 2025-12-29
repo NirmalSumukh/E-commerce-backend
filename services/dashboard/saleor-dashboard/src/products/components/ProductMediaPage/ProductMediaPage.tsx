@@ -12,6 +12,7 @@ import { productUrl } from "@dashboard/products/urls";
 import { TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Skeleton, vars } from "@saleor/macaw-ui-next";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import ProductMediaNavigation from "../ProductMediaNavigation";
@@ -81,7 +82,7 @@ interface ProductMediaPageProps {
   onSubmit: (data: { description: string }) => void;
 }
 
-const ProductMediaPage = (props: ProductMediaPageProps) => {
+const ProductMediaPage: React.FC<ProductMediaPageProps> = props => {
   const {
     productId,
     disabled,

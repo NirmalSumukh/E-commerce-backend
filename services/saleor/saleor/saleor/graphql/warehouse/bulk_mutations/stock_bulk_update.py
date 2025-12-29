@@ -11,6 +11,7 @@ from ....warehouse.error_codes import StockBulkUpdateErrorCode
 from ....warehouse.lock_objects import stock_qs_select_for_update
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
+from ...core.descriptions import ADDED_IN_313, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.enums import ErrorPolicyEnum
 from ...core.mutations import BaseMutation
@@ -87,6 +88,8 @@ class StockBulkUpdate(BaseMutation):
             "Updates stocks for a given variant and warehouse. Variant and warehouse "
             "selectors have to be the same for all stock inputs. Is not allowed to "
             "use 'variantId' in one input and 'variantExternalReference' in another."
+            + ADDED_IN_313
+            + PREVIEW_FEATURE
         )
         doc_category = DOC_CATEGORY_PRODUCTS
         permissions = (ProductPermissions.MANAGE_PRODUCTS,)
@@ -432,7 +435,7 @@ class StockBulkUpdate(BaseMutation):
                 index_error_map,
             )
 
-            if any(bool(error) for error in index_error_map.values()):
+            if any([bool(error) for error in index_error_map.values()]):
                 if error_policy == ErrorPolicyEnum.REJECT_EVERYTHING.value:
                     results = cls.get_results(instances_data_with_errors_list, True)
                     return StockBulkUpdate(count=0, results=results)

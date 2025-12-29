@@ -11,7 +11,7 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - Saleor/3.21
+      - Saleor/3.20
     method: GET
     uri: https://sandbox-rest.avatax.com/api/v2/definitions/taxcodes
   response:
@@ -6257,11 +6257,11 @@ interactions:
       DatabaseDuration:
       - 00:00:00
       Date:
-      - Wed, 04 Sep 2024 09:14:15 GMT
+      - Wed, 04 Sep 2024 07:01:14 GMT
       Referrer-Policy:
       - same-origin
       ServerDuration:
-      - '00:00:00.0028647'
+      - '00:00:00.0147454'
       ServiceDuration:
       - 00:00:00
       Strict-Transport-Security:
@@ -6275,9 +6275,9 @@ interactions:
       X-XSS-Protection:
       - 1; mode=block
       x-avalara-uid:
-      - 1011ad52-5594-4ebb-98c6-2ba1cfd85ddb
+      - 33d8bfa0-0ad4-4c3e-82a1-469b6b84c293
       x-correlation-id:
-      - 50b0ce18-3f95-48f9-95ae-db6dc55e4a78
+      - 2649758b-432a-47ef-9784-4b9f7d9505ed
     status:
       code: 200
       message: OK

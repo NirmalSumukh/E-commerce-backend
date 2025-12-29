@@ -8,12 +8,13 @@ import { SeoForm } from "@dashboard/components/SeoForm";
 import { ProductErrorFragment } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { Box } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import CategoryDetailsForm from "../../components/CategoryDetailsForm";
 import CategoryCreateForm, { CategoryCreateData } from "./form";
 
-interface CategoryCreatePageProps {
+export interface CategoryCreatePageProps {
   errors: ProductErrorFragment[];
   disabled: boolean;
   saveButtonBarState: ConfirmButtonTransitionState;
@@ -21,13 +22,13 @@ interface CategoryCreatePageProps {
   onSubmit: (data: CategoryCreateData) => any;
 }
 
-const CategoryCreatePage = ({
+export const CategoryCreatePage: React.FC<CategoryCreatePageProps> = ({
   disabled,
   onSubmit,
   errors,
   saveButtonBarState,
   backUrl,
-}: CategoryCreatePageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
 
@@ -87,6 +88,5 @@ const CategoryCreatePage = ({
     </CategoryCreateForm>
   );
 };
-
 CategoryCreatePage.displayName = "CategoryCreatePage";
 export default CategoryCreatePage;

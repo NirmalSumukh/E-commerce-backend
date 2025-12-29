@@ -1,4 +1,5 @@
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import { ExperimentalFiltersProps } from ".";
 import { createErrorLookup, getErrorByRowIndex } from "./errors";
@@ -17,7 +18,7 @@ export const Filters = ({ value, leftOptions, emitter, locale, error }: FiltersP
     <Box
       display="grid"
       __gridTemplateColumns="repeat(2, auto)"
-      alignItems="center"
+      alignItems="start"
       columnGap={2}
       rowGap={3}
       alignSelf="start"

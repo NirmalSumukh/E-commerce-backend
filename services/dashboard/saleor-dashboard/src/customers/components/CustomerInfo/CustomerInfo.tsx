@@ -9,7 +9,7 @@ import getAccountErrorMessage from "@dashboard/utils/errors/account";
 import { TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 const useStyles = makeStyles(
@@ -24,7 +24,7 @@ const useStyles = makeStyles(
   { name: "CustomerInfo" },
 );
 
-interface CustomerInfoProps {
+export interface CustomerInfoProps {
   data: {
     firstName: string;
     lastName: string;
@@ -35,7 +35,7 @@ interface CustomerInfoProps {
   onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const CustomerInfo = (props: CustomerInfoProps) => {
+const CustomerInfo: React.FC<CustomerInfoProps> = props => {
   const { data, disabled, errors, onChange } = props;
 
   const classes = useStyles(props);

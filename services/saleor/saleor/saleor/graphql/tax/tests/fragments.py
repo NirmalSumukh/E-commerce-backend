@@ -9,7 +9,6 @@ TAX_CONFIGURATION_FRAGMENT = """
     taxCalculationStrategy
     displayGrossPrices
     pricesEnteredWithTax
-    useWeightedTaxForShipping
     countries {
       country {
         code
@@ -19,7 +18,6 @@ TAX_CONFIGURATION_FRAGMENT = """
       taxCalculationStrategy
       displayGrossPrices
       taxAppId
-      useWeightedTaxForShipping
     }
     taxAppId
     metadata {

@@ -1,5 +1,5 @@
 import { Box, BoxProps } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 interface RuleInputWrapperProps extends BoxProps {
   children: ReactNode;

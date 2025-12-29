@@ -110,6 +110,8 @@ def test_checkout_unable_to_exceed_voucher_usage_limit_CORE_0909(
         lines,
         channel_slug,
         email="testEmail@example.com",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout["id"]
     checkout_lines = checkout["lines"][0]
@@ -175,6 +177,8 @@ def test_checkout_unable_to_exceed_voucher_usage_limit_CORE_0909(
         lines,
         channel_slug,
         email="testEmail@example.com",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout["id"]
     checkout_lines = checkout["lines"][0]

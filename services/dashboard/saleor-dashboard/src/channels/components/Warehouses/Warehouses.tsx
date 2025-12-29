@@ -4,12 +4,13 @@ import { SearchWarehousesQuery } from "@dashboard/graphql";
 import { sectionNames } from "@dashboard/intl";
 import { FetchMoreProps, RelayToFlat, ReorderAction } from "@dashboard/types";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import AssignmentList from "../AssignmentList";
 import { messages } from "./messages";
 
-interface WarehousesProps {
+export interface WarehousesProps {
   addWarehouse: (id: string) => void;
   removeWarehouse: (id: string) => void;
   searchWarehouses: (searchPhrase: string) => void;
@@ -21,17 +22,18 @@ interface WarehousesProps {
   warehousesChoices: RelayToFlat<SearchWarehousesQuery["search"]>;
 }
 
-const Warehouses = ({
-  addWarehouse,
-  removeWarehouse,
-  searchWarehouses,
-  reorderWarehouses,
-  loading,
-  totalCount,
-  fetchMoreWarehouses,
-  warehouses,
-  warehousesChoices,
-}: WarehousesProps) => {
+const Warehouses: React.FC<WarehousesProps> = props => {
+  const {
+    addWarehouse,
+    removeWarehouse,
+    searchWarehouses,
+    reorderWarehouses,
+    loading,
+    totalCount,
+    fetchMoreWarehouses,
+    warehouses,
+    warehousesChoices,
+  } = props;
   const intl = useIntl();
 
   return (

@@ -3,6 +3,7 @@ import { productVariantEditUrl } from "@dashboard/products/urls";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Box, Skeleton, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
@@ -24,6 +25,7 @@ export const VariantItem = ({
   thumbnail,
   isDefault,
   isActive,
+  productId,
   draggable,
 }: VariantItemProps) => {
   const intl = useIntl();
@@ -58,7 +60,7 @@ export const VariantItem = ({
           <Drag />
         </Box>
 
-        <Link to={productVariantEditUrl(variant.id)} style={{ width: "100%" }}>
+        <Link to={productVariantEditUrl(productId, variant.id)} style={{ width: "100%" }}>
           <Box display="flex" alignItems="center" gap={5}>
             {thumbnail?.url ? (
               <Box

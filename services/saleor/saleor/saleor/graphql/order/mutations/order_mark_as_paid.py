@@ -19,7 +19,6 @@ from ....payment import PaymentError
 from ....permission.enums import OrderPermissions
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.types import OrderError
@@ -63,7 +62,7 @@ class OrderMarkAsPaid(BaseMutation):
         request_user: User,
         app: Optional["App"],
         manager: "PluginsManager",
-        external_reference: str | None = None,
+        external_reference: Optional[str] = None,
     ):
         try_payment_action(
             order, request_user, app, None, clean_mark_order_as_paid, order
@@ -83,7 +82,7 @@ class OrderMarkAsPaid(BaseMutation):
         request_user: User,
         app: Optional["App"],
         manager: "PluginsManager",
-        external_reference: str | None = None,
+        external_reference: Optional[str] = None,
     ):
         try:
             clean_mark_order_as_paid(order=order)
@@ -98,7 +97,7 @@ class OrderMarkAsPaid(BaseMutation):
                         message, code=OrderErrorCode.TRANSACTION_ERROR.value
                     )
                 }
-            ) from e
+            )
         mark_order_as_paid_with_transaction(
             order=order,
             request_user=request_user,
@@ -131,4 +130,4 @@ class OrderMarkAsPaid(BaseMutation):
 
         update_order_search_vector(order)
 
-        return OrderMarkAsPaid(order=SyncWebhookControlContext(order))
+        return OrderMarkAsPaid(order=order)

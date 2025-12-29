@@ -1,97 +1,96 @@
-import { Box, BoxProps, Button, CloseIcon, GripIcon, Text } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
-import * as React from "react";
-import { Link } from "react-router-dom";
+import CloseIcon from "@material-ui/icons/Close";
+import { makeStyles } from "@saleor/macaw-ui";
+import { Text } from "@saleor/macaw-ui-next";
+import clsx from "clsx";
+import React from "react";
+import { SortableElement, SortableElementProps } from "react-sortable-hoc";
 
-const ChipLabel = ({ url, label }: { url?: string; label: ReactNode }) => {
-  const labelContent = (
-    <Text textDecoration={url ? { hover: "underline" } : undefined}>{label}</Text>
-  );
+import SortableHandle from "./SortableHandle";
 
-  if (url) {
-    return <Link to={url}>{labelContent}</Link>;
-  }
-
-  return labelContent;
-};
-
-type SortableChipProps = {
-  label: ReactNode;
+export interface SortableChipProps extends SortableElementProps {
+  className?: string;
+  label: React.ReactNode;
   onClose?: () => void;
   loading?: boolean;
-  url?: string;
-  /** Indicates that element is held by user and is dragged around screen */
-  isDragged?: boolean;
-  /** Indicates that element is being rendered as "overlay":
-   * preview of list state after user stops dragging */
-  isDraggedOverlay?: boolean;
-} & BoxProps;
+}
 
-/** Chip which can be used within a list of sortable elements, should be used with
- * Draggable component which returns correct handlers from @dnd-kit */
-export const SortableChip = React.forwardRef<HTMLDivElement, SortableChipProps>(
-  (
-    { label, onClose, loading, url, isDragged, isDraggedOverlay, className, style, ...props },
-    ref,
-  ) => {
-    const handleClose = (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-
-      if (onClose) {
-        onClose();
-      }
-    };
-
-    return (
-      <Box
-        ref={ref}
-        style={style}
-        as="div"
-        className={className}
-        borderWidth={1}
-        borderStyle="solid"
-        borderColor={isDraggedOverlay ? "transparent" : "default1"}
-        borderRadius={4}
-        paddingY={1}
-        paddingX={1.5}
-        paddingRight={1}
-        backgroundColor={isDraggedOverlay ? "default3" : "default1"}
-        opacity={isDraggedOverlay ? "0.2" : "1"}
-        {...props}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          style={{ visibility: isDraggedOverlay ? "hidden" : "visible" }}
-        >
-          <Box
-            display="flex"
-            alignItems="center"
-            __cursor={loading ? "not-allowed" : "grab"}
-            marginRight={1}
-          >
-            <GripIcon
-              color="default2"
-              size="small"
-              data-test-id="button-drag-handle"
-              style={{ cursor: isDragged ? "grabbing" : "grab", outline: "none" }}
-            />
-          </Box>
-          <ChipLabel label={label} url={url} />
-          <Box marginLeft={1}>
-            <Button
-              variant="tertiary"
-              size="small"
-              onClick={handleClose}
-              data-test-id="button-close"
-              disabled={loading}
-              type="button"
-              icon={<CloseIcon size="small" />}
-            />
-          </Box>
-        </Box>
-      </Box>
-    );
-  },
+const useStyles = makeStyles(
+  theme => ({
+    closeButton: {
+      marginLeft: theme.spacing(),
+      background: "none",
+      border: "none",
+    },
+    closeIcon: {
+      cursor: "pointer",
+      fontSize: 16,
+      verticalAlign: "middle",
+    },
+    content: {
+      alignItems: "center",
+      display: "flex",
+    },
+    root: {
+      border: `1px solid ${theme.palette.divider}`,
+      borderRadius: 18,
+      display: "inline-block",
+      marginRight: theme.spacing(2),
+      padding: "6px 12px",
+    },
+    sortableHandle: {
+      marginRight: theme.spacing(1),
+    },
+    disabled: {
+      cursor: "not-allowed",
+    },
+  }),
+  { name: "SortableChip" },
 );
+const SortableChip = SortableElement((props: SortableChipProps) => {
+  const { className, label, onClose, loading } = props;
+  const classes = useStyles(props);
+  const handleClose = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      className={clsx(classes.root, className, {
+        [classes.disabled]: loading,
+      })}
+    >
+      <div className={classes.content}>
+        <SortableHandle
+          className={clsx(classes.sortableHandle, {
+            [classes.disabled]: loading,
+          })}
+          data-test-id="button-drag-handle"
+        />
+        <Text data-test-id="chip-label">{label}</Text>
+        {onClose && (
+          <button
+            className={clsx(classes.closeButton, {
+              [classes.disabled]: loading,
+            })}
+            onClick={handleClose}
+            data-test-id="button-close"
+            disabled={loading}
+          >
+            <CloseIcon
+              className={clsx(classes.closeIcon, {
+                [classes.disabled]: loading,
+              })}
+            />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 SortableChip.displayName = "SortableChip";
+export default SortableChip;

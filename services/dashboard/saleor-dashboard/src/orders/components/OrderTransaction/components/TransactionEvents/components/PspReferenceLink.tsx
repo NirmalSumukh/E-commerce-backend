@@ -1,5 +1,5 @@
 import { makeStyles } from "@saleor/macaw-ui";
-import * as React from "react";
+import React from "react";
 
 interface PspRerefenceLinkProps {
   href: string | null;
@@ -15,7 +15,7 @@ const useStyles = makeStyles(
   { name: "PspReferenceLink" },
 );
 
-export const PspReferenceLink = ({ href, children }: PspRerefenceLinkProps) => {
+export const PspReferenceLink: React.FC<PspRerefenceLinkProps> = ({ href, children }) => {
   const classes = useStyles();
 
   if (href) {

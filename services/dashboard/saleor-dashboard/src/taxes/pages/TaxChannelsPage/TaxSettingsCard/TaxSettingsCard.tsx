@@ -16,24 +16,25 @@ import {
   Typography,
 } from "@material-ui/core";
 import { Option } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { TaxConfigurationFormData } from "../TaxChannelsPage";
 import { useStyles } from "./styles";
 
-interface TaxSettingsCardProps {
+export interface TaxSettingsCardProps {
   values: TaxConfigurationFormData;
   strategyChoices: Option[];
   onChange: FormChange;
   strategyChoicesLoading: boolean;
 }
 
-const TaxSettingsCard = ({
+export const TaxSettingsCard: React.FC<TaxSettingsCardProps> = ({
   values,
   strategyChoices,
   onChange,
   strategyChoicesLoading,
-}: TaxSettingsCardProps) => {
+}) => {
   const intl = useIntl();
   const classes = useStyles();
 

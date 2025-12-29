@@ -1,9 +1,10 @@
 import { Box, Text, Toggle } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import { AvailableColumn } from "../types";
 import { filterEmptyColumn, isLastEnabledColumn } from "./utils";
 
-interface ColumnPickerStaticColumnsProps {
+export interface ColumnPickerStaticColumnsProps {
   staticColumns: AvailableColumn[];
   handleToggle: (id: string) => void;
   selectedColumns: string[];

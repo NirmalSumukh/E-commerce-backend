@@ -1,6 +1,3 @@
-import { AttributeEntityTypeEnum } from "@dashboard/graphql";
-import errorTracker from "@dashboard/services/errorTracking";
-
 import { InitialProductStateResponse } from "../API/initialState/product/InitialProductStateResponse";
 import { RowType, STATIC_OPTIONS } from "../constants";
 import { LeftOperand } from "../LeftOperandsProvider";
@@ -17,7 +14,6 @@ export class ExpressionValue {
     public value: string,
     public label: string,
     public type: string,
-    public entityType: AttributeEntityTypeEnum | null = null,
   ) {}
 
   public setLabel(label: string) {
@@ -37,12 +33,7 @@ export class ExpressionValue {
   }
 
   public static fromLeftOperand(leftOperand: LeftOperand) {
-    return new ExpressionValue(
-      leftOperand.slug,
-      leftOperand.label,
-      leftOperand.type,
-      leftOperand.entityType,
-    );
+    return new ExpressionValue(leftOperand.slug, leftOperand.label, leftOperand.type);
   }
 
   public static fromUrlToken(token: UrlToken) {
@@ -58,23 +49,7 @@ export class ExpressionValue {
   public static forAttribute(attributeName: string, response: InitialProductStateResponse) {
     const attribute = response.attributeByName(attributeName);
 
-    if (!attribute) {
-      const error = new Error(
-        `Attribute "${attributeName}" not found when creating ExpressionValue. This may indicate a deleted attribute or invalid URL.`,
-      );
-
-      console.error(error.message);
-      errorTracker.captureException(error);
-
-      return ExpressionValue.emptyStatic();
-    }
-
-    return new ExpressionValue(
-      attributeName,
-      attribute.label,
-      attribute.inputType,
-      attribute.entityType,
-    );
+    return new ExpressionValue(attributeName, attribute.label, attribute.inputType);
   }
 
   public static emptyStatic() {
@@ -88,25 +63,11 @@ export class FilterElement {
     public condition: Condition,
     public loading: boolean,
     public constraint?: Constraint,
-    public selectedAttribute: ExpressionValue | null = null,
-    public availableAttributesList: LeftOperand[] = [],
-    public attributeLoading = false,
   ) {
-    this.updateConstraint();
-  }
+    const newConstraint = Constraint.fromSlug(this.value.value);
 
-  private updateConstraint() {
-    if (this.isAttribute) {
-      if (this.selectedAttribute) {
-        // Attribute is selected, so no constraint on value input
-        this.constraint = undefined;
-      } else {
-        // "Attribute" is selected, but not a specific one. Disable value input.
-        this.constraint = new Constraint([], ["right"]);
-      }
-    } else {
-      // Not an attribute filter, use static constraints from config
-      this.constraint = Constraint.fromSlug(this.value.value) || undefined;
+    if (newConstraint) {
+      this.constraint = newConstraint;
     }
   }
 
@@ -125,22 +86,10 @@ export class FilterElement {
   public updateLeftOperator(leftOperand: LeftOperand) {
     this.value = ExpressionValue.fromLeftOperand(leftOperand);
     this.condition = Condition.emptyFromLeftOperand(leftOperand);
-    this.selectedAttribute = null;
-    this.updateConstraint();
   }
 
-  public updateSelectedAttribute(leftOperand: LeftOperand) {
-    this.selectedAttribute = ExpressionValue.fromLeftOperand(leftOperand);
-    this.condition = Condition.emptyFromLeftOperand(leftOperand);
-    this.updateConstraint();
-  }
-
-  public updateAvailableAttributesList(options: LeftOperand[]) {
-    this.availableAttributesList = options;
-  }
-
-  public updateAttributeLoadingState(loading: boolean) {
-    this.attributeLoading = loading;
+  public updateLeftLoadingState(loading: boolean) {
+    this.loading = loading;
   }
 
   public updateCondition(conditionValue: ConditionItem) {
@@ -173,17 +122,17 @@ export class FilterElement {
     return ConditionOptions.isStaticName(this.value.type);
   }
 
-  public get isAttribute() {
-    return this.value.value === "attribute";
-  }
-
-  public isAttributeValueInputDisabled() {
-    return this.isAttribute && !this.selectedAttribute;
+  public isAttribute() {
+    return ConditionOptions.isAttributeInputType(this.value.type);
   }
 
   public rowType(): RowType | null {
-    if (this.isStatic() || this.isAttribute) {
+    if (this.isStatic()) {
       return this.value.value as RowType;
+    }
+
+    if (this.isAttribute()) {
+      return "attribute";
     }
 
     return null;
@@ -198,18 +147,8 @@ export class FilterElement {
   }
 
   public asUrlEntry(): UrlEntry {
-    if (this.isAttribute && this.selectedAttribute) {
-      if (
-        this.selectedAttribute.type === "REFERENCE" ||
-        this.selectedAttribute.type === "SINGLE_REFERENCE"
-      ) {
-        return UrlEntry.forReferenceAttribute(
-          this.condition.selected,
-          this.selectedAttribute.value,
-        );
-      }
-
-      return UrlEntry.forAttribute(this.condition.selected, this.selectedAttribute.value);
+    if (this.isAttribute()) {
+      return UrlEntry.forAttribute(this.condition.selected, this.value.value);
     }
 
     return UrlEntry.forStatic(this.condition.selected, this.value.value);
@@ -229,21 +168,11 @@ export class FilterElement {
   }
 
   public static createEmpty() {
-    return new FilterElement(
-      ExpressionValue.emptyStatic(),
-      Condition.createEmpty(),
-      false,
-      undefined,
-    );
+    return new FilterElement(ExpressionValue.emptyStatic(), Condition.createEmpty(), false);
   }
 
   public static createStaticBySlug(slug: StaticElementName) {
-    return new FilterElement(
-      ExpressionValue.fromSlug(slug),
-      Condition.emptyFromSlug(slug),
-      false,
-      undefined,
-    );
+    return new FilterElement(ExpressionValue.fromSlug(slug), Condition.emptyFromSlug(slug), false);
   }
 
   public static fromUrlToken(token: UrlToken, response: InitialResponseType) {
@@ -256,25 +185,10 @@ export class FilterElement {
     }
 
     if (token.isAttribute()) {
-      const attribute = (response as InitialProductStateResponse).attributeByName(token.name);
-
-      if (!attribute) {
-        const error = new Error(
-          `Attribute "${token.name}" not found when creating FilterElement from URL token. This may indicate a deleted attribute or invalid URL parameter.`,
-        );
-
-        console.error(error.message, { token, response });
-        errorTracker.captureException(error);
-
-        return FilterElement.createEmpty();
-      }
-
       return new FilterElement(
-        ExpressionValue.fromSlug("attribute"),
+        ExpressionValue.forAttribute(token.name, response as InitialProductStateResponse),
         Condition.fromUrlToken(token, response),
         false,
-        undefined,
-        ExpressionValue.forAttribute(token.name, response as InitialProductStateResponse),
       );
     }
 

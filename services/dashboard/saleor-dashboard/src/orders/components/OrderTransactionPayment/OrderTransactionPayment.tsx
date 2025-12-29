@@ -4,13 +4,12 @@ import {
   PaymentGatewayFragment,
   TransactionActionEnum,
 } from "@dashboard/graphql";
-import OrderTransaction, {
-  OrderTransactionProps,
-} from "@dashboard/orders/components/OrderTransaction/OrderTransaction";
+import { OrderTransactionProps } from "@dashboard/orders/components/OrderTransaction/OrderTransaction";
 import { FakeTransaction } from "@dashboard/orders/types";
 import { prepareMoney } from "@dashboard/orders/utils/data";
-import { useMemo } from "react";
+import React from "react";
 
+import OrderTransaction from "../OrderTransaction/OrderTransaction";
 import {
   findMethodName,
   getTransactionAmount,
@@ -25,19 +24,22 @@ interface OrderTransactionPaymentProps {
   onVoid: () => void;
 }
 
-const OrderTransactionPayment = ({
+const OrderTransactionPayment: React.FC<OrderTransactionPaymentProps> = ({
   payment,
   allPaymentMethods,
   onCapture,
   onVoid,
-}: OrderTransactionPaymentProps) => {
+}) => {
   const currency = payment.total.currency;
   const total = payment?.total?.amount ?? 0;
   const captured = payment?.capturedAmount?.amount ?? 0;
   const authorized = payment?.availableCaptureAmount?.amount ?? 0;
   const refunded = total - captured - authorized;
-
-  const fakeEvents = useMemo(() => mapPaymentToTransactionEvents(payment), [payment.transactions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fakeEvents = React.useMemo(
+    () => mapPaymentToTransactionEvents(payment),
+    [payment.transactions],
+  );
   const transactionFromPayment: FakeTransaction = {
     id: payment.id,
     name: findMethodName(payment.gateway, allPaymentMethods),

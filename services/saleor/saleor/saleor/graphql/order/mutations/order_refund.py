@@ -1,3 +1,5 @@
+from typing import Optional
+
 import graphene
 from django.core.exceptions import ValidationError
 
@@ -10,7 +12,6 @@ from ....payment import models as payment_models
 from ....permission.enums import OrderPermissions
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
 from ...core.doc_category import DOC_CATEGORY_ORDERS
 from ...core.mutations import BaseMutation
 from ...core.scalars import PositiveDecimal
@@ -21,7 +22,7 @@ from .utils import clean_payment, try_payment_action
 
 
 def clean_refund_payment(
-    payment: payment_models.Payment | None,
+    payment: Optional[payment_models.Payment],
 ) -> payment_models.Payment:
     payment = clean_payment(payment)
     if not payment.can_refund():
@@ -114,4 +115,4 @@ class OrderRefund(BaseMutation):
         order.fulfillments.create(
             status=FulfillmentStatus.REFUNDED, total_refund_amount=amount
         )
-        return OrderRefund(order=SyncWebhookControlContext(order))
+        return OrderRefund(order=order)

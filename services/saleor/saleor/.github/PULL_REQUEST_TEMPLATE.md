@@ -1,7 +1,6 @@
 I want to merge this change because...
 
 <!-- Please mention all relevant issue numbers. -->
-<!-- GitHub issue number is required for external contributions. -->
 
 # Impact
 

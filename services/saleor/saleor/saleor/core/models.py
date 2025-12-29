@@ -2,7 +2,8 @@ import datetime
 from collections.abc import Iterable
 from typing import Any, TypeVar
 
-from django.contrib.postgres.indexes import GinIndex, PostgresIndex
+import pytz
+from django.contrib.postgres.indexes import GinIndex
 from django.core.files.base import ContentFile
 from django.db import models, transaction
 from django.db.models import F, JSONField, Max, Q
@@ -50,7 +51,7 @@ T = TypeVar("T", bound="PublishableModel")
 
 class PublishedQuerySet(models.QuerySet[T]):
     def published(self):
-        today = datetime.datetime.now(tz=datetime.UTC)
+        today = datetime.datetime.now(pytz.UTC)
         return self.filter(
             Q(published_at__lte=today) | Q(published_at__isnull=True),
             is_published=True,
@@ -73,20 +74,18 @@ class PublishableModel(models.Model):
     def is_visible(self):
         return self.is_published and (
             self.published_at is None
-            or self.published_at <= datetime.datetime.now(tz=datetime.UTC)
+            or self.published_at <= datetime.datetime.now(pytz.UTC)
         )
 
 
 class ModelWithMetadata(models.Model):
     private_metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
+        blank=True, null=True, default=dict, encoder=CustomJsonEncoder
     )
-    metadata = JSONField(
-        blank=True, db_default={}, default=dict, encoder=CustomJsonEncoder
-    )
+    metadata = JSONField(blank=True, null=True, default=dict, encoder=CustomJsonEncoder)
 
     class Meta:
-        indexes: list[PostgresIndex] = [
+        indexes = [
             GinIndex(fields=["private_metadata"], name="%(class)s_p_meta_idx"),
             GinIndex(fields=["metadata"], name="%(class)s_meta_idx"),
         ]
@@ -103,11 +102,9 @@ class ModelWithMetadata(models.Model):
     def clear_private_metadata(self):
         self.private_metadata = {}
 
-    def delete_value_from_private_metadata(self, key: str) -> bool:
+    def delete_value_from_private_metadata(self, key: str):
         if key in self.private_metadata:
             del self.private_metadata[key]
-            return True
-        return False
 
     def get_value_from_metadata(self, key: str, default: Any = None) -> Any:
         return self.metadata.get(key, default)
@@ -162,7 +159,7 @@ class EventPayloadManager(models.Manager["EventPayload"]):
         self, objs: Iterable["EventPayload"], payloads=Iterable[str]
     ) -> list["EventPayload"]:
         created_objs = self.bulk_create(objs)
-        for obj, payload_data in zip(created_objs, payloads, strict=False):
+        for obj, payload_data in zip(created_objs, payloads):
             obj.save_payload_file(payload_data, save_instance=False)
         self.bulk_update(created_objs, ["payload_file"])
         return created_objs

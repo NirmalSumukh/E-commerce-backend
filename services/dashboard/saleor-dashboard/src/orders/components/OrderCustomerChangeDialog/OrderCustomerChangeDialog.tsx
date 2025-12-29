@@ -3,19 +3,20 @@ import { DashboardModal } from "@dashboard/components/Modal";
 import { buttonMessages } from "@dashboard/intl";
 import { FormControlLabel, Radio, RadioGroup } from "@material-ui/core";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import OrderCustomerChangeForm, { CustomerChangeActionEnum, OrderCustomerChangeData } from "./form";
 import messages from "./messages";
 import { useStyles } from "./styles";
 
-interface OrderCustomerChangeDialogProps {
+export interface OrderCustomerChangeDialogProps {
   open: boolean;
   onConfirm: (data: OrderCustomerChangeData) => void;
   onClose: () => any;
 }
 
-const OrderCustomerChangeDialog = (props: OrderCustomerChangeDialogProps) => {
+const OrderCustomerChangeDialog: React.FC<OrderCustomerChangeDialogProps> = props => {
   const { open, onClose, onConfirm } = props;
   const classes = useStyles(props);
   const intl = useIntl();

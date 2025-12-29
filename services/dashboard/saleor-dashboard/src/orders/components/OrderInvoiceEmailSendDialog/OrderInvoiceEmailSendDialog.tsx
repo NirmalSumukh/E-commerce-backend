@@ -7,23 +7,24 @@ import { buttonMessages } from "@dashboard/intl";
 import { DialogProps } from "@dashboard/types";
 import getInvoiceErrorMessage from "@dashboard/utils/errors/invoice";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface OrderInvoiceEmailSendDialogProps extends DialogProps {
+export interface OrderInvoiceEmailSendDialogProps extends DialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   errors: InvoiceErrorFragment[];
   invoice: InvoiceFragment;
   onSend: () => void;
 }
 
-const OrderInvoiceEmailSendDialog = ({
+const OrderInvoiceEmailSendDialog: React.FC<OrderInvoiceEmailSendDialogProps> = ({
   confirmButtonState,
   errors,
   open,
   invoice,
   onClose,
   onSend,
-}: OrderInvoiceEmailSendDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

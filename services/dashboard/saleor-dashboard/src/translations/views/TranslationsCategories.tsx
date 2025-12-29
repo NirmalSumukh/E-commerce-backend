@@ -11,6 +11,7 @@ import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import { stringifyQs } from "@dashboard/utils/urls";
 import { OutputData } from "@editorjs/editorjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationsCategoriesPage from "../components/TranslationsCategoriesPage";
@@ -22,13 +23,17 @@ type HandleSubmitData = string | OutputData;
 export interface TranslationsCategoriesQueryParams {
   activeField: string;
 }
-interface TranslationsCategoriesProps {
+export interface TranslationsCategoriesProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsCategoriesQueryParams;
 }
 
-const TranslationsCategories = ({ id, languageCode, params }: TranslationsCategoriesProps) => {
+const TranslationsCategories: React.FC<TranslationsCategoriesProps> = ({
+  id,
+  languageCode,
+  params,
+}) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

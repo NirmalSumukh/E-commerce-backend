@@ -9,6 +9,7 @@ import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TaxChannelsPage from "../pages/TaxChannelsPage";
@@ -26,7 +27,7 @@ interface TaxChannelsListProps {
   params: TaxesUrlQueryParams | undefined;
 }
 
-const TaxChannelsList = ({ id, params }: TaxChannelsListProps) => {
+export const TaxChannelsList: React.FC<TaxChannelsListProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();

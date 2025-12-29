@@ -5,6 +5,8 @@ import { ChangeEvent } from "@dashboard/hooks/useForm";
 import { sectionNames } from "@dashboard/intl";
 import { taxesMessages } from "@dashboard/taxes/messages";
 import { FetchMoreProps } from "@dashboard/types";
+import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 import { useIntl } from "react-intl";
 
 interface ProductTypeTaxesProps {
@@ -18,12 +20,21 @@ interface ProductTypeTaxesProps {
   onFetchMore: FetchMoreProps;
 }
 
-const ProductTypeTaxes = (props: ProductTypeTaxesProps) => {
+const useStyles = makeStyles(
+  {
+    root: {
+      overflow: "visible",
+    },
+  },
+  { name: "ProductTypeTaxes" },
+);
+const ProductTypeTaxes: React.FC<ProductTypeTaxesProps> = props => {
   const { data, disabled, taxClasses, taxClassDisplayName, onChange, onFetchMore } = props;
+  const classes = useStyles(props);
   const intl = useIntl();
 
   return (
-    <DashboardCard>
+    <DashboardCard className={classes.root}>
       <DashboardCard.Header>
         <DashboardCard.Title>{intl.formatMessage(sectionNames.taxes)}</DashboardCard.Title>
       </DashboardCard.Header>

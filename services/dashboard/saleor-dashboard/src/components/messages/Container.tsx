@@ -1,4 +1,6 @@
 // @ts-strict-ignore
+import React from "react";
+
 import { useStyles } from "./styles";
 
 const Container = ({ children }) => {

@@ -5,10 +5,10 @@ from ...permission.auth_filters import AuthorizationFilters
 from ...permission.enums import AppPermission
 from ..core import ResolveInfo
 from ..core.connection import create_connection_slice, filter_connection_queryset
+from ..core.descriptions import ADDED_IN_31
 from ..core.doc_category import DOC_CATEGORY_APPS
 from ..core.fields import FilterConnectionField, PermissionsField
-from ..core.filters import FilterInputObjectType
-from ..core.types import NonNullList
+from ..core.types import FilterInputObjectType, NonNullList
 from ..core.utils import from_global_id_or_error
 from .dataloaders import AppByIdLoader, AppExtensionByIdLoader, app_promise_callback
 from .filters import AppExtensionFilter, AppFilter
@@ -20,7 +20,6 @@ from .mutations import (
     AppDeleteFailedInstallation,
     AppFetchManifest,
     AppInstall,
-    AppReenableSyncWebhooks,
     AppRetryInstall,
     AppTokenCreate,
     AppTokenDelete,
@@ -99,7 +98,7 @@ class AppQueries(graphene.ObjectType):
         filter=AppExtensionFilterInput(
             description="Filtering options for apps extensions."
         ),
-        description="List of all extensions.",
+        description="List of all extensions." + ADDED_IN_31,
         permissions=[
             AuthorizationFilters.AUTHENTICATED_STAFF_USER,
             AuthorizationFilters.AUTHENTICATED_APP,
@@ -111,7 +110,7 @@ class AppQueries(graphene.ObjectType):
         id=graphene.Argument(
             graphene.ID, description="ID of the app extension.", required=True
         ),
-        description="Look up an app extension by ID.",
+        description="Look up an app extension by ID." + ADDED_IN_31,
         permissions=[
             AuthorizationFilters.AUTHENTICATED_STAFF_USER,
             AuthorizationFilters.AUTHENTICATED_APP,
@@ -140,7 +139,7 @@ class AppQueries(graphene.ObjectType):
             _, app_id = from_global_id_or_error(id, only_type="App")
             if int(app_id) == app.id:
                 return app
-            if not app.has_perm(AppPermission.MANAGE_APPS):
+            elif not app.has_perm(AppPermission.MANAGE_APPS):
                 raise PermissionDenied(permissions=[AppPermission.MANAGE_APPS])
         return resolve_app(info, id)
 
@@ -190,5 +189,3 @@ class AppMutations(graphene.ObjectType):
 
     app_activate = AppActivate.Field()
     app_deactivate = AppDeactivate.Field()
-
-    app_reenable_sync_webhooks = AppReenableSyncWebhooks.Field()

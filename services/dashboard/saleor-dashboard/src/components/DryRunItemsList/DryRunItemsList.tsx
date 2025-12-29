@@ -1,6 +1,6 @@
 // @ts-strict-ignore
 
-import { useStyles } from "@dashboard/extensions/components/WebhookDetailsPage/components/WebhookEvents/styles";
+import { useStyles } from "@dashboard/custom-apps/components/WebhookEvents/styles";
 import { useQuery } from "@dashboard/hooks/graphql";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { Radio } from "@material-ui/core";
@@ -14,20 +14,24 @@ import {
 } from "@saleor/macaw-ui";
 import { Skeleton } from "@saleor/macaw-ui-next";
 import camelCase from "lodash/camelCase";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import Avatar from "../TableCellAvatar/Avatar";
 import { messages } from "./messages";
 import { DocumentMap, TData, TVariables } from "./utils";
 
-interface DryRunItemsListProps {
+export interface DryRunItemsListProps {
   objectId: string;
   setObjectId: React.Dispatch<any>;
   object: string;
 }
 
-const DryRunItemsList = ({ object, objectId, setObjectId }: DryRunItemsListProps) => {
+const DryRunItemsList: React.FC<DryRunItemsListProps> = ({
+  object,
+  objectId,
+  setObjectId,
+}: DryRunItemsListProps) => {
   const intl = useIntl();
   const classes = useStyles({});
   const { checkbox } = useListWidths();

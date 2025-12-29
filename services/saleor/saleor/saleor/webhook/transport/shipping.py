@@ -1,59 +1,105 @@
+import base64
 import json
 import logging
 from collections import defaultdict
-from collections.abc import Callable
-from typing import Any, Union
+from typing import Any, Callable, Optional, Union
 
 from django.db.models import QuerySet
-from pydantic import ValidationError
+from graphql import GraphQLError
+from prices import Money
 
 from ...app.models import App
 from ...checkout.models import Checkout
+from ...graphql.core.utils import from_global_id_or_error
+from ...graphql.shipping.types import ShippingMethod
 from ...graphql.webhook.utils import get_pregenerated_subscription_payload
 from ...order.models import Order
 from ...plugins.base_plugin import ExcludedShippingMethod, RequestorOrLazyObject
 from ...settings import WEBHOOK_SYNC_TIMEOUT
 from ...shipping.interface import ShippingMethodData
 from ...webhook.utils import get_webhooks_for_event
-from ..const import CACHE_EXCLUDED_SHIPPING_TIME
-from ..models import Webhook
-from ..response_schemas.shipping import (
-    ExcludedShippingMethodSchema,
-    FilterShippingMethodsSchema,
-    ListShippingMethodsSchema,
-)
+from ..const import APP_ID_PREFIX, CACHE_EXCLUDED_SHIPPING_TIME
 from .synchronous.transport import trigger_webhook_sync_if_not_cached
 
 logger = logging.getLogger(__name__)
 
 
-def parse_list_shipping_methods_response(
-    response_data: Any, app: "App", object_currency: str
-) -> list["ShippingMethodData"]:
+def to_shipping_app_id(app: "App", shipping_method_id: str) -> "str":
+    app_identifier = app.identifier or app.id
+    return base64.b64encode(
+        str.encode(f"{APP_ID_PREFIX}:{app_identifier}:{shipping_method_id}")
+    ).decode("utf-8")
+
+
+def convert_to_app_id_with_identifier(shipping_app_id: str):
+    """Prepare the shipping_app_id in format `app:<app-identifier>/method_id>`.
+
+    The format of shipping_app_id has been changes so we need to support both of them.
+    This method is preparing the new shipping_app_id format based on assumptions
+    that right now the old one is used which is `app:<app-pk>:method_id>`
+    """
+    decoded_id = base64.b64decode(shipping_app_id).decode()
+    splitted_id = decoded_id.split(":")
+    if len(splitted_id) != 3:
+        return
     try:
-        list_shipping_method_model = ListShippingMethodsSchema.model_validate(
-            response_data,
-            context={
-                "app": app,
-                "currency": object_currency,
-                "custom_message": "Skipping invalid shipping method (ListShippingMethodsSchema)",
-            },
+        app_id = int(splitted_id[1])
+    except (TypeError, ValueError):
+        return None
+    app = App.objects.filter(id=app_id).first()
+    if app is None:
+        return None
+    return to_shipping_app_id(app, splitted_id[2])
+
+
+def method_metadata_is_valid(metadata) -> bool:
+    if not isinstance(metadata, dict):
+        return False
+    for key, value in metadata.items():
+        if not isinstance(key, str) or not isinstance(value, str) or not key.strip():
+            return False
+    return True
+
+
+def parse_list_shipping_methods_response(
+    response_data: Any, app: "App"
+) -> list["ShippingMethodData"]:
+    shipping_methods = []
+    for shipping_method_data in response_data:
+        if not validate_shipping_method_data(shipping_method_data):
+            continue
+        method_id = shipping_method_data.get("id")
+        method_name = shipping_method_data.get("name")
+        method_amount = shipping_method_data.get("amount")
+        method_currency = shipping_method_data.get("currency")
+        method_maximum_delivery_days = shipping_method_data.get("maximum_delivery_days")
+        method_minimum_delivery_days = shipping_method_data.get("minimum_delivery_days")
+        method_description = shipping_method_data.get("description")
+        method_metadata = shipping_method_data.get("metadata") or {}
+        if method_metadata:
+            method_metadata = (
+                method_metadata if method_metadata_is_valid(method_metadata) else {}
+            )
+
+        shipping_methods.append(
+            ShippingMethodData(
+                id=to_shipping_app_id(app, method_id),
+                name=method_name,
+                price=Money(method_amount, method_currency),
+                maximum_delivery_days=method_maximum_delivery_days,
+                minimum_delivery_days=method_minimum_delivery_days,
+                description=method_description,
+                metadata=method_metadata,
+            )
         )
-    except ValidationError:
-        logger.warning("Skipping invalid shipping method response: %s", response_data)
-        return []
-    return [
-        ShippingMethodData(
-            id=shipping_method.id,
-            name=shipping_method.name,
-            price=shipping_method.price,
-            maximum_delivery_days=shipping_method.maximum_delivery_days,
-            minimum_delivery_days=shipping_method.minimum_delivery_days,
-            description=shipping_method.description,
-            metadata=shipping_method.metadata,
-        )
-        for shipping_method in list_shipping_method_model.root
-    ]
+    return shipping_methods
+
+
+def validate_shipping_method_data(shipping_method_data):
+    if not isinstance(shipping_method_data, dict):
+        return False
+    keys = ["id", "name", "amount", "currency"]
+    return all(key in shipping_method_data for key in keys)
 
 
 def get_cache_data_for_exclude_shipping_methods(payload: str) -> dict:
@@ -71,10 +117,10 @@ def get_excluded_shipping_methods_or_fetch(
     webhooks: QuerySet,
     event_type: str,
     payload: str,
-    subscribable_object: Union["Order", "Checkout"] | None,
+    subscribable_object: Optional[Union["Order", "Checkout"]],
     allow_replica: bool,
-    requestor: RequestorOrLazyObject | None,
-    pregenerated_subscription_payloads: dict | None = None,
+    requestor: Optional[RequestorOrLazyObject],
+    pregenerated_subscription_payloads: Optional[dict] = None,
 ) -> dict[str, list[ExcludedShippingMethod]]:
     """Return data of all excluded shipping methods.
 
@@ -84,7 +130,7 @@ def get_excluded_shipping_methods_or_fetch(
     if pregenerated_subscription_payloads is None:
         pregenerated_subscription_payloads = {}
     cache_data = get_cache_data_for_exclude_shipping_methods(payload)
-    excluded_methods: list[ExcludedShippingMethodSchema] = []
+    excluded_methods = []
     # Gather responses from webhooks
     for webhook in webhooks:
         pregenerated_subscription_payload = get_pregenerated_subscription_payload(
@@ -104,7 +150,7 @@ def get_excluded_shipping_methods_or_fetch(
         )
         if response_data and isinstance(response_data, dict):
             excluded_methods.extend(
-                get_excluded_shipping_methods_from_response(response_data, webhook)
+                get_excluded_shipping_methods_from_response(response_data)
             )
     return parse_excluded_shipping_methods(excluded_methods)
 
@@ -113,10 +159,10 @@ def get_excluded_shipping_data(
     event_type: str,
     previous_value: list[ExcludedShippingMethod],
     payload_fun: Callable[[], str],
-    subscribable_object: Union["Order", "Checkout"] | None,
+    subscribable_object: Optional[Union["Order", "Checkout"]],
     allow_replica: bool,
-    requestor: RequestorOrLazyObject | None = None,
-    pregenerated_subscription_payloads: dict | None = None,
+    requestor: Optional[RequestorOrLazyObject] = None,
+    pregenerated_subscription_payloads: Optional[dict] = None,
 ) -> list[ExcludedShippingMethod]:
     """Exclude not allowed shipping methods by sync webhook.
 
@@ -162,36 +208,36 @@ def get_excluded_shipping_data(
 
 def get_excluded_shipping_methods_from_response(
     response_data: dict,
-    webhook: "Webhook",
-) -> list[ExcludedShippingMethodSchema]:
+) -> list[dict]:
     excluded_methods = []
-    try:
-        filter_methods_schema = FilterShippingMethodsSchema.model_validate(
-            response_data,
-            context={
-                "custom_message": "Skipping invalid shipping method (FilterShippingMethodsSchema)"
-            },
-        )
-        excluded_methods.extend(filter_methods_schema.excluded_methods)
-    except ValidationError:
-        logger.warning(
-            "Skipping invalid response from app %s: %s",
-            str(webhook.app.identifier),
-            response_data,
+    for method_data in response_data.get("excluded_methods", []):
+        try:
+            type_name, method_id = from_global_id_or_error(method_data["id"])
+            if type_name not in (APP_ID_PREFIX, str(ShippingMethod)):
+                logger.warning(
+                    "Invalid type received. Expected ShippingMethod, got %s", type_name
+                )
+                continue
+
+        except (KeyError, ValueError, TypeError, GraphQLError) as e:
+            logger.warning("Malformed ShippingMethod id was provided: %s", e)
+            continue
+        excluded_methods.append(
+            {"id": method_id, "reason": method_data.get("reason", "")}
         )
     return excluded_methods
 
 
 def parse_excluded_shipping_methods(
-    excluded_methods: list[ExcludedShippingMethodSchema],
+    excluded_methods: list[dict],
 ) -> dict[str, list[ExcludedShippingMethod]]:
-    """Prepare method_id to excluded methods map."""
     excluded_methods_map = defaultdict(list)
     for excluded_method in excluded_methods:
-        method_id = excluded_method.id
-        reason = excluded_method.reason or ""
+        method_id = excluded_method["id"]
         excluded_methods_map[method_id].append(
-            ExcludedShippingMethod(id=method_id, reason=reason)
+            ExcludedShippingMethod(
+                id=method_id, reason=excluded_method.get("reason", "")
+            )
         )
     return excluded_methods_map
 

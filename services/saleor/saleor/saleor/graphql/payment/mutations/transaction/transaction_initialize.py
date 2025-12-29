@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 import graphene
 from django.conf import settings
@@ -15,6 +16,12 @@ from .....payment.utils import handle_transaction_initialize_session
 from .....permission.enums import PaymentPermissions
 from ....app.dataloaders import get_app_promise
 from ....channel.enums import TransactionFlowStrategyEnum
+from ....core.descriptions import (
+    ADDED_IN_313,
+    ADDED_IN_314,
+    ADDED_IN_316,
+    PREVIEW_FEATURE,
+)
 from ....core.doc_category import DOC_CATEGORY_PAYMENTS
 from ....core.enums import TransactionInitializeErrorCode
 from ....core.scalars import JSON, PositiveDecimal
@@ -56,7 +63,7 @@ class TransactionInitialize(TransactionSessionBase):
                 "The idempotency key assigned to the action. It will be passed to the "
                 "payment app to discover potential duplicate actions. If not provided, "
                 "the default one will be generated. If empty string provided, INVALID "
-                "error code will be raised."
+                "error code will be raised." + ADDED_IN_314
             )
         )
         action = graphene.Argument(
@@ -75,7 +82,7 @@ class TransactionInitialize(TransactionSessionBase):
                 "The customer's IP address will be passed to the payment app. "
                 "The IP should be in ipv4 or ipv6 format. "
                 "The field can be used only by an app that has `HANDLE_PAYMENTS` "
-                "permission."
+                "permission." + ADDED_IN_316
             )
         )
         payment_gateway = graphene.Argument(
@@ -90,12 +97,12 @@ class TransactionInitialize(TransactionSessionBase):
             "Initializes a transaction session. It triggers the webhook "
             "`TRANSACTION_INITIALIZE_SESSION`, to the requested `paymentGateways`. "
             f"There is a limit of {settings.TRANSACTION_ITEMS_LIMIT} transaction "
-            "items per checkout / order."
+            "items per checkout / order." + ADDED_IN_313 + PREVIEW_FEATURE
         )
         error_type_class = common_types.TransactionInitializeError
 
     @classmethod
-    def clean_action(cls, info, action: str | None, channel: "Channel"):
+    def clean_action(cls, info, action: Optional[str], channel: "Channel"):
         if not action:
             return channel.default_transaction_flow_strategy
         app = get_app_promise(info.context).get()
@@ -122,7 +129,7 @@ class TransactionInitialize(TransactionSessionBase):
         return app
 
     @classmethod
-    def clean_idempotency_key(cls, idempotency_key: str | None):
+    def clean_idempotency_key(cls, idempotency_key: Optional[str]):
         if not idempotency_key and isinstance(idempotency_key, str):
             raise ValidationError(
                 {
@@ -137,7 +144,7 @@ class TransactionInitialize(TransactionSessionBase):
         return idempotency_key
 
     @classmethod
-    def perform_mutation(  # type: ignore[override]
+    def perform_mutation(
         cls,
         root,
         info,
@@ -192,7 +199,7 @@ class TransactionInitialize(TransactionSessionBase):
                 manager=manager,
                 idempotency_key=idempotency_key,
             )
-        except TransactionItemIdempotencyUniqueError as e:
+        except TransactionItemIdempotencyUniqueError:
             if payment_ids:
                 activate_payments(payment_ids)
             raise ValidationError(
@@ -205,7 +212,7 @@ class TransactionInitialize(TransactionSessionBase):
                         code=TransactionInitializeErrorCode.UNIQUE.value,
                     )
                 }
-            ) from e
+            )
         return cls(transaction=transaction, transaction_event=event, data=data)
 
     @staticmethod

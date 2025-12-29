@@ -1,14 +1,14 @@
-import datetime
 from collections import defaultdict
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import graphene
+import pytz
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.db.models import Exists, F, OuterRef, Q, QuerySet
 
 from ..celeryconf import app
-from ..core.db.connection import allow_writer
 from ..graphql.discount.utils import get_variants_for_catalogue_predicate
 from ..order import OrderStatus
 from ..order.models import Order, OrderLine
@@ -45,7 +45,6 @@ PROMOTION_TOGGLE_BATCH_SIZE = 100
 
 
 @app.task
-@allow_writer()
 def handle_promotion_toggle():
     """Send the notification about promotion toggle and recalculate discounted prices.
 
@@ -111,9 +110,7 @@ def handle_promotion_toggle():
     # DEPRECATED: will be removed in Saleor 4.0.
     promotion_ids_str = ", ".join([str(promo.id) for promo in promotions])
 
-    promotions.update(
-        last_notification_scheduled_at=datetime.datetime.now(tz=datetime.UTC)
-    )
+    promotions.update(last_notification_scheduled_at=datetime.now(pytz.UTC))
     if starting_promotion_ids:
         task_logger.info(
             "The promotion_started webhook sent for Promotions with ids: %s",
@@ -138,7 +135,7 @@ def get_starting_promotions(batch=False):
     and the notification date is null or the last notification was sent
     before the start date.
     """
-    now = datetime.datetime.now(tz=datetime.UTC)
+    now = datetime.now(pytz.UTC)
     promotions = Promotion.objects.filter(
         (
             Q(last_notification_scheduled_at__isnull=True)
@@ -158,7 +155,7 @@ def get_ending_promotions(batch=False):
     and the notification date is null or the last notification was sent
     before the end date.
     """
-    now = datetime.datetime.now(tz=datetime.UTC)
+    now = datetime.now(pytz.UTC)
     promotions = Promotion.objects.filter(
         (
             Q(last_notification_scheduled_at__isnull=True)
@@ -191,7 +188,6 @@ def fetch_promotion_variants_and_product_ids(promotions: "QuerySet[Promotion]"):
 
 
 @app.task
-@allow_writer()
 def clear_promotion_rule_variants_task():
     """Clear all promotion rule variants."""
     promotions = Promotion.objects.using(
@@ -215,24 +211,17 @@ def clear_promotion_rule_variants_task():
 
 
 def decrease_voucher_code_usage_of_draft_orders(channel_id: int):
-    codes = (
-        Order.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
-        .filter(
-            channel_id=channel_id, status=OrderStatus.DRAFT, voucher_code__isnull=False
-        )
-        .values_list("voucher_code", flat=True)
-    )
-    voucher_code_ids = (
-        VoucherCode.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
-        .filter(code__in=codes)
-        .values_list("pk", flat=True)
+    codes = Order.objects.filter(
+        channel_id=channel_id, status=OrderStatus.DRAFT, voucher_code__isnull=False
+    ).values_list("voucher_code", flat=True)
+    voucher_code_ids = VoucherCode.objects.filter(code__in=codes).values_list(
+        "pk", flat=True
     )
     decrease_voucher_codes_usage_task.delay(list(voucher_code_ids), list(codes))
 
 
 @app.task
-@allow_writer()
-def decrease_voucher_codes_usage_task(voucher_code_ids, codes):
+def decrease_voucher_codes_usage_task(voucher_code_ids, codes=None):
     # Batch of size 1000 takes ~1sec and consumes ~20mb at peak
     BATCH_SIZE = 1000
     ids = voucher_code_ids[:BATCH_SIZE]
@@ -243,9 +232,14 @@ def decrease_voucher_codes_usage_task(voucher_code_ids, codes):
     ):
         for voucher_code in voucher_codes:
             if voucher_code.voucher.usage_limit and voucher_code.used > 0:
-                used_in_draft_orders = len(
-                    list(filter(lambda x: voucher_code.code == x, codes))
-                )
+                # to ensure backward compatibility we must handle the case
+                # without `codes`
+                if codes is None:
+                    used_in_draft_orders = 1
+                else:
+                    used_in_draft_orders = len(
+                        list(filter(lambda x: voucher_code.code == x, codes))
+                    )
                 total_used = voucher_code.used
                 voucher_code.used = max(total_used - used_in_draft_orders, 0)
             if voucher_code.voucher.single_use:
@@ -256,18 +250,13 @@ def decrease_voucher_codes_usage_task(voucher_code_ids, codes):
 
 
 def disconnect_voucher_codes_from_draft_orders(channel_id: int):
-    order_ids = (
-        Order.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
-        .filter(
-            channel_id=channel_id, status=OrderStatus.DRAFT, voucher_code__isnull=False
-        )
-        .values_list("pk", flat=True)
-    )
+    order_ids = Order.objects.filter(
+        channel_id=channel_id, status=OrderStatus.DRAFT, voucher_code__isnull=False
+    ).values_list("pk", flat=True)
     disconnect_voucher_codes_from_draft_orders_task.delay(list(order_ids))
 
 
 @app.task
-@allow_writer()
 def disconnect_voucher_codes_from_draft_orders_task(order_ids):
     # Batch of size 1000 takes ~1sec and consumes ~20mb at peak
     BATCH_SIZE = 1000
@@ -292,7 +281,6 @@ def disconnect_voucher_codes_from_draft_orders_task(order_ids):
 @app.task(
     name="saleor.discount.migrations.tasks.saleor3_17.update_discounted_prices_task"
 )
-@allow_writer()
 def update_discounted_prices_task():
     """Recalculate discounted prices during sale to promotion migration."""
     # WARNING: this function is run during `0047_migrate_sales_to_promotions` migration,
@@ -329,7 +317,6 @@ def update_discounted_prices_task():
 @app.task(
     name="saleor.discount.migrations.tasks.saleor3_17.set_promotion_rule_variants"
 )
-@allow_writer()
 def set_promotion_rule_variants_task(start_id=None):
     # WARNING: this function is run during `0067_fulfill_promotionrule_variants`
     # migration, be careful while updating.

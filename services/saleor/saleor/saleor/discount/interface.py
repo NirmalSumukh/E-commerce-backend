@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
-from . import DiscountType, DiscountValueType
-from .models import PromotionRule, Voucher
+from .models import Voucher
 
 if TYPE_CHECKING:
     from ..product.models import (
@@ -19,31 +17,11 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DiscountInfo:
-    """It stores the discount details.
-
-    The dataclass used to represent the discount before storing it on database side.
-    """
-
-    currency: str
-    type: str = DiscountType.MANUAL
-    value_type: str = DiscountValueType.FIXED
-    value: Decimal = Decimal("0.0")
-    amount_value: Decimal = Decimal("0.0")
-    name: str | None = None
-    translated_name: str | None = None
-    reason: str | None = None
-    promotion_rule: PromotionRule | None = None
-    voucher: Voucher | None = None
-    voucher_code: str | None = None
-
-
-@dataclass
 class VoucherInfo:
     """It contains the voucher's details and PKs of all applicable objects."""
 
     voucher: Voucher
-    voucher_code: str | None
+    voucher_code: Optional[str]
     product_pks: list[int]
     variant_pks: list[int]
     collection_pks: list[int]
@@ -51,12 +29,12 @@ class VoucherInfo:
 
 
 def fetch_voucher_info(
-    voucher: Voucher, voucher_code: str | None = None
+    voucher: Voucher, voucher_code: Optional[str] = None
 ) -> VoucherInfo:
-    variant_pks = [variant.id for variant in voucher.variants.all()]
-    product_pks = [product.id for product in voucher.products.all()]
-    category_pks = [category.id for category in voucher.categories.all()]
-    collection_pks = [collection.id for collection in voucher.collections.all()]
+    variant_pks = list(variant.id for variant in voucher.variants.all())
+    product_pks = list(product.id for product in voucher.products.all())
+    category_pks = list(category.id for category in voucher.categories.all())
+    collection_pks = list(collection.id for collection in voucher.collections.all())
 
     return VoucherInfo(
         voucher=voucher,

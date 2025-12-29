@@ -18,7 +18,7 @@ const fulfiledStatuses = [FulfillmentStatus.FULFILLED, FulfillmentStatus.REFUNDE
 export const getOrderUnfulfilledLines = (order: OrderDetailsFragment) =>
   order?.lines.filter(line => line.quantityToFulfill > 0) || [];
 
-const getFulfilledFulfillment = (fulfillment: OrderDetailsFragment["fulfillments"][0]) =>
+export const getFulfilledFulfillment = (fulfillment: OrderDetailsFragment["fulfillments"][0]) =>
   fulfiledStatuses.includes(fulfillment.status);
 
 export const getFulfilledFulfillemnts = (order?: OrderDetailsFragment) =>
@@ -30,16 +30,16 @@ export const getWaitingFulfillments = (order: OrderDetailsFragment) =>
 export const getUnfulfilledLines = (order?: OrderDetailsFragment) =>
   order?.lines.filter(line => line.quantityToFulfill > 0) || [];
 
-export const getAllOrderFulfilledLines = (order?: OrderDetailsFragment): ParsedFulfillmentLine[] =>
+export const getAllOrderFulfilledLines = (order?: OrderDetailsFragment) =>
   getFulfilledFulfillemnts(order).reduce(
     (result, { lines }) => [...result, ...getParsedLines(lines)],
-    [] as ParsedFulfillmentLine[],
+    [],
   );
 
-export const getAllOrderWaitingLines = (order?: OrderDetailsFragment): ParsedFulfillmentLine[] =>
+export const getAllOrderWaitingLines = (order?: OrderDetailsFragment) =>
   getWaitingFulfillments(order).reduce(
     (result, { lines }) => [...result, ...getParsedLines(lines)],
-    [] as ParsedFulfillmentLine[],
+    [],
   );
 
 // TODO: Migrate this utils file to strict mode
@@ -80,18 +80,15 @@ export function getParsedLineDataForFulfillmentStatus<T>(
   );
 }
 
-const getFulfillmentsWithStatus = (
+export const getFulfillmentsWithStatus = (
   order: OrderDetailsFragment,
   fulfillmentStatus: FulfillmentStatus,
 ) => order?.fulfillments.filter(({ status }) => status === fulfillmentStatus) || [];
 
-const getParsedLinesOfFulfillments = (
+export const getParsedLinesOfFulfillments = (
   fullfillments: OrderDetailsFragment["fulfillments"],
 ): ParsedFulfillmentLine[] =>
-  fullfillments.reduce(
-    (result, { lines }) => [...result, ...getParsedLines(lines)],
-    [] as ParsedFulfillmentLine[],
-  );
+  fullfillments.reduce((result, { lines }) => [...result, ...getParsedLines(lines)], []);
 
 export const getParsedLines = (
   lines: OrderDetailsFragment["fulfillments"][0]["lines"],
@@ -114,6 +111,10 @@ const isIncludedInIds = function <T extends Node>(arrayToCompare: string[] | T[]
 
 export function getByIds<T extends Node>(arrayToCompare: string[] | T[]) {
   return (obj: Node) => isIncludedInIds(arrayToCompare, obj);
+}
+
+export function getByUnmatchingIds<T extends Node>(arrayToCompare: string[] | T[]) {
+  return (obj: Node) => !isIncludedInIds(arrayToCompare, obj);
 }
 
 export function getByType<TType, TObject extends { type: TType }>(typeToCompare: TType) {

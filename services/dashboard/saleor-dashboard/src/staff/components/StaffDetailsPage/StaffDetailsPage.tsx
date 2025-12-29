@@ -22,9 +22,11 @@ import UserStatus from "@dashboard/staff/components/UserStatus";
 import { staffListPath } from "@dashboard/staff/urls";
 import { getMemberPermissionGroups, isMemberActive } from "@dashboard/staff/utils";
 import { FetchMoreProps, RelayToFlat, SearchPageProps } from "@dashboard/types";
-import { Button, Option, Text } from "@saleor/macaw-ui-next";
+import { Option, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
+import StaffPassword from "../StaffPassword/StaffPassword";
 import StaffPreferences from "../StaffPreferences";
 import StaffProperties from "../StaffProperties/StaffProperties";
 import { staffDetailsPageMessages as messages } from "./messages";
@@ -37,7 +39,7 @@ export interface StaffDetailsFormData {
   permissionGroups: Option[];
 }
 
-interface StaffDetailsPageProps extends SearchPageProps {
+export interface StaffDetailsPageProps extends SearchPageProps {
   availablePermissionGroups: RelayToFlat<SearchPermissionGroupsQuery["search"]>;
   canEditAvatar: boolean;
   canEditPreferences: boolean;
@@ -48,14 +50,14 @@ interface StaffDetailsPageProps extends SearchPageProps {
   saveButtonBarState: ConfirmButtonTransitionState;
   staffMember: StaffMemberDetailsFragment | UserFragment;
   errors: StaffErrorFragment[];
-  onResetPassword: () => void;
+  onChangePassword: () => void;
   onDelete: () => void;
   onImageDelete: () => void;
   onSubmit: (data: StaffDetailsFormData) => SubmitPromise;
   onImageUpload: (file: File) => any;
 }
 
-export const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
+const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
   availablePermissionGroups,
   canEditAvatar,
   canEditPreferences,
@@ -65,7 +67,7 @@ export const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
   errors,
   fetchMorePermissionGroups,
   initialSearch,
-  onResetPassword,
+  onChangePassword,
   onDelete,
   onImageDelete,
   onImageUpload,
@@ -97,21 +99,7 @@ export const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
       {({ data: formData, change, isSaveDisabled, submit }) => {
         return (
           <DetailPageLayout>
-            <TopNav href={staffListBackLink} title={getUserName(staffMember)}>
-              {canEditPreferences && (
-                <Button
-                  onClick={onResetPassword}
-                  data-test-id="resetPasswordBtn"
-                  variant="secondary"
-                  alignSelf="center"
-                >
-                  {intl.formatMessage({
-                    defaultMessage: "Reset password",
-                    id: "Yy/yDL",
-                  })}
-                </Button>
-              )}
-            </TopNav>
+            <TopNav href={staffListBackLink} title={getUserName(staffMember)} />
             <DetailPageLayout.Content>
               <StaffProperties
                 errors={errors}
@@ -123,6 +111,12 @@ export const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
                 onImageUpload={onImageUpload}
                 onImageDelete={onImageDelete}
               />
+              {canEditPreferences && (
+                <>
+                  <CardSpacer />
+                  <StaffPassword onChangePassword={onChangePassword} />
+                </>
+              )}
             </DetailPageLayout.Content>
 
             <DetailPageLayout.RightSidebar>
@@ -188,3 +182,6 @@ export const StaffDetailsPage: React.FC<StaffDetailsPageProps> = ({
     </Form>
   );
 };
+
+StaffDetailsPage.displayName = "StaffDetailsPage";
+export default StaffDetailsPage;

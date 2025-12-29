@@ -1,9 +1,8 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { LanguageCodeEnum, ShippingMethodTranslationFragment } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import {
@@ -15,15 +14,16 @@ import {
   languageEntityUrl,
   TranslatableEntities,
 } from "@dashboard/translations/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsShippingMethodPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsShippingMethodPageProps extends TranslationsEntitiesPageProps {
   data: ShippingMethodTranslationFragment;
 }
 
-const TranslationsShippingMethodPage = ({
+const TranslationsShippingMethodPage: React.FC<TranslationsShippingMethodPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -34,9 +34,8 @@ const TranslationsShippingMethodPage = ({
   onDiscard,
   onEdit,
   onSubmit,
-}: TranslationsShippingMethodPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -56,11 +55,11 @@ const TranslationsShippingMethodPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.shippingMethods, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.shippingMethods, translationId)
           }
         />
       </TopNav>

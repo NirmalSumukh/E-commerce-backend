@@ -1,7 +1,7 @@
 import { DashboardModal } from "@dashboard/components/Modal";
 import { buttonMessages } from "@dashboard/intl";
 import { Button, Textarea } from "@saleor/macaw-ui-next";
-import { useEffect, useState } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { refundTableMessages } from "../OrderTransactionRefundTable/messages";
@@ -19,9 +19,9 @@ export const OrderTransactionReasonModal = ({
   onClose,
   onConfirm,
 }: OrderTransactionReasonModalProps) => {
-  const [tempReason, setTempReason] = useState<string>(reason ?? "");
+  const [tempReason, setTempReason] = React.useState<string>(reason ?? "");
 
-  useEffect(() => {
+  React.useEffect(() => {
     setTempReason(reason ?? "");
   }, [reason]);
 

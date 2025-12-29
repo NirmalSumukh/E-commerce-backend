@@ -1,6 +1,7 @@
 import { ButtonLink } from "@dashboard/components/ButtonLink";
 import { TransactionActionEnum } from "@dashboard/graphql";
 import { Box, Button, ExternalLinkIcon, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { OrderTransactionProps } from "../../OrderTransaction";
@@ -48,11 +49,11 @@ const TransactionTitle = ({
   );
 };
 
-export const OrderTransactionCardTitle = ({
+export const OrderTransactionCardTitle: React.FC<CardTitleProps> = ({
   transaction,
   onTransactionAction,
   showActions = true,
-}: CardTitleProps) => {
+}) => {
   const intl = useIntl();
 
   const {
@@ -139,16 +140,18 @@ export const OrderTransactionCardTitle = ({
 
         {showActionButtons && (
           <Box display="flex" flexDirection="row" gap={2}>
-            {actions.map(action => (
-              <div key={`transaction-action-${action}`}>
-                <Button
-                  variant="secondary"
-                  onClick={() => onTransactionAction(transaction.id, action)}
-                >
-                  <FormattedMessage {...mapActionToMessage[action]} />
-                </Button>
-              </div>
-            ))}
+            {actions
+              .filter(action => action !== TransactionActionEnum.REFUND)
+              .map(action => (
+                <div key={`transaction-action-${action}`}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onTransactionAction(transaction.id, action)}
+                  >
+                    <FormattedMessage {...mapActionToMessage[action]} />
+                  </Button>
+                </div>
+              ))}
           </Box>
         )}
       </Box>

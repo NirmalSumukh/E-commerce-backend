@@ -24,17 +24,17 @@ import {
 import { useTaxClassFetchMore } from "@dashboard/taxes/utils/useTaxClassFetchMore";
 import { MinMax } from "@dashboard/types";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
-import { useReducer } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 const FORM_ID = Symbol("shipping-zone-rates-create-form-id");
 
-interface RateCreateProps {
+export interface RateCreateProps {
   id: string;
   params: ShippingRateCreateUrlQueryParams;
 }
 
-const RateCreate = ({ id, params }: RateCreateProps) => {
+export const RateCreate: React.FC<RateCreateProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const intl = useIntl();
   const [openModal, closeModal] = createDialogActionHandlers<
@@ -59,7 +59,7 @@ const RateCreate = ({ id, params }: RateCreateProps) => {
     setCurrentChannels,
     toggleAllChannels,
   } = useChannels(allChannels, params?.action, { closeModal, openModal }, { formId: FORM_ID });
-  const [state, dispatch] = useReducer(postalCodesReducer, {
+  const [state, dispatch] = React.useReducer(postalCodesReducer, {
     codesToDelete: [],
     havePostalCodesChanged: false,
     inclusionType: PostalCodeRuleInclusionTypeEnum.EXCLUDE,

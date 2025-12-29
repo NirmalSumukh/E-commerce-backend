@@ -6,6 +6,7 @@ a thread-safe structure and methods that use it underneath.
 """
 
 import threading
+from typing import Union
 
 from django.contrib.sites.models import Site, SiteManager
 from django.core.exceptions import ImproperlyConfigured
@@ -13,7 +14,7 @@ from django.http.request import split_domain_port
 
 lock = threading.Lock()
 with lock:
-    THREADED_SITE_CACHE: dict[str | int, Site] = {}
+    THREADED_SITE_CACHE: dict[Union[str, int], Site] = {}
 
 
 def new_get_current(self, request=None):
@@ -32,7 +33,7 @@ def new_get_current(self, request=None):
                 )
                 THREADED_SITE_CACHE[site_id] = site
         return THREADED_SITE_CACHE[site_id]
-    if request:
+    elif request:
         host = request.get_host()
         try:
             # First attempt to look up the site by host with or without port.

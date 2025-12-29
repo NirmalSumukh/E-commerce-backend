@@ -44,7 +44,7 @@ import {
   OpenModalFunction,
 } from "@dashboard/utils/handlers/dialogActionHandlers";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
-import { useEffect, useState } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { customerUrl } from "../../../../customers/urls";
@@ -110,7 +110,7 @@ interface ApprovalState {
   notifyCustomer: boolean;
 }
 
-export const OrderNormalDetails = ({
+export const OrderNormalDetails: React.FC<OrderNormalDetailsProps> = ({
   id,
   params,
   data,
@@ -134,7 +134,7 @@ export const OrderNormalDetails = ({
   updatePrivateMetadataOpts,
   openModal,
   closeModal,
-}: OrderNormalDetailsProps) => {
+}) => {
   const order = data?.order;
   const shop = data?.shop;
   const navigate = useNavigator();
@@ -159,12 +159,12 @@ export const OrderNormalDetails = ({
       input: data,
     });
   const intl = useIntl();
-  const [transactionReference, setTransactionReference] = useState("");
-  const [currentApproval, setCurrentApproval] = useState<ApprovalState | null>(null);
-  const [stockExceeded, setStockExceeded] = useState(false);
+  const [transactionReference, setTransactionReference] = React.useState("");
+  const [currentApproval, setCurrentApproval] = React.useState<ApprovalState | null>(null);
+  const [stockExceeded, setStockExceeded] = React.useState(false);
   const approvalErrors = orderFulfillmentApprove.opts.data?.orderFulfillmentApprove.errors || [];
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (approvalErrors.length && approvalErrors.every(err => err.code === "INSUFFICIENT_STOCK")) {
       setStockExceeded(true);
     }
@@ -394,7 +394,6 @@ export const OrderNormalDetails = ({
         errors={orderFulfillmentCancel.opts.data?.orderFulfillmentCancel.errors || []}
         open={params.action === "cancel-fulfillment"}
         warehouses={warehouses || []}
-        fulfillmentStatus={order?.fulfillments.find(getById(params.id))?.status}
         onConfirm={variables =>
           orderFulfillmentCancel.mutate({
             id: params.id,
@@ -476,3 +475,5 @@ export const OrderNormalDetails = ({
     </>
   );
 };
+
+export default OrderNormalDetails;

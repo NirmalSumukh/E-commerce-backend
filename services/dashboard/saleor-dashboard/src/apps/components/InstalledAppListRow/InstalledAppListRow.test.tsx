@@ -5,16 +5,17 @@ import { getAppsConfig } from "@dashboard/config";
 import { useFlag } from "@dashboard/featureFlags";
 import Wrapper from "@test/wrapper";
 import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
 import { MemoryRouter as Router } from "react-router-dom";
 
-import { InstalledAppListRow } from "./InstalledAppListRow";
+import InstalledAppListRow from "./InstalledAppListRow";
 
 jest.mock("@dashboard/featureFlags");
 (useFlag as jest.Mock).mockReturnValue({ enabled: true });
 
 const Component = ({ data, context }: { data: InstalledApp; context: AppListContextValues }) => (
   <Wrapper>
-    <Router initialEntries={["/"]}>
+    <Router>
       <AppListContext.Provider value={context}>
         <InstalledAppListRow {...data} />
       </AppListContext.Provider>
@@ -130,7 +131,7 @@ describe("Apps InstalledAppListRow", () => {
 
     // Assert
     expect(screen.queryAllByRole("link").at(-1)?.getAttribute("href")).toBe(
-      `/apps/${encodeURIComponent(appWithFailedEventDeliveries.id)}/app`,
+      `/apps/${appWithFailedEventDeliveries.id}`,
     );
   });
 });

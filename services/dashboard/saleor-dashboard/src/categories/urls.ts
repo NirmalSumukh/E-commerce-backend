@@ -24,7 +24,7 @@ export enum CategoryListUrlSortField {
   productCount = "products",
   subcategoryCount = "subcategories",
 }
-type CategoryListUrlSort = Sort<CategoryListUrlSortField>;
+export type CategoryListUrlSort = Sort<CategoryListUrlSortField>;
 export type CategoryListUrlQueryParams = ActiveTab &
   BulkAction &
   CategoryListUrlFilters &

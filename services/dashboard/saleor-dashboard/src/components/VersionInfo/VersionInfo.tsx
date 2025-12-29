@@ -1,4 +1,5 @@
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import { useStyles } from "./styles";
 
@@ -7,7 +8,7 @@ interface VersionInfoProps {
   coreVersion: string;
 }
 
-const VersionInfo = ({ dashboardVersion, coreVersion }: VersionInfoProps) => {
+const VersionInfo: React.FC<VersionInfoProps> = ({ dashboardVersion, coreVersion }) => {
   const classes = useStyles({});
 
   if (!dashboardVersion || !coreVersion) {

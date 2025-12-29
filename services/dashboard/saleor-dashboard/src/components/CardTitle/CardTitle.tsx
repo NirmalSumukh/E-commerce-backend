@@ -1,5 +1,5 @@
 import { CardHeader } from "@material-ui/core";
-import * as React from "react";
+import React from "react";
 
 interface CardTitleProps {
   children?: React.ReactNode;
@@ -11,7 +11,14 @@ interface CardTitleProps {
   onClose?: () => void;
 }
 
-const CardTitle = ({ className, children, title, subtitle, toolbar, ...rest }: CardTitleProps) => (
+const CardTitle: React.FC<CardTitleProps> = ({
+  className,
+  children,
+  title,
+  subtitle,
+  toolbar,
+  ...rest
+}) => (
   <CardHeader action={toolbar} className={className} title={title} subheader={subtitle} {...rest}>
     {children}
   </CardHeader>

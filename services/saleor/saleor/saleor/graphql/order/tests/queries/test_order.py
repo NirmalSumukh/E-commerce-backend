@@ -7,10 +7,9 @@ from prices import Money, TaxedMoney
 from .....checkout.utils import PRIVATE_META_APP_SHIPPING_ID
 from .....core.prices import quantize_price
 from .....core.taxes import zero_taxed_money
-from .....discount import DiscountType
-from .....order import FulfillmentStatus, OrderOrigin, OrderStatus
+from .....order import OrderStatus
 from .....order.events import transaction_event
-from .....order.models import Order, OrderGrantedRefund
+from .....order.models import FulfillmentStatus, Order, OrderGrantedRefund
 from .....order.utils import (
     get_order_country,
     update_order_authorize_data,
@@ -22,7 +21,6 @@ from .....payment import ChargeStatus, TransactionAction
 from .....payment.models import TransactionEvent, TransactionItem
 from .....shipping.models import ShippingMethod, ShippingMethodChannelListing
 from .....warehouse.models import Stock, Warehouse
-from ....core.utils import to_global_id_or_none
 from ....order.enums import OrderAuthorizeStatusEnum, OrderChargeStatusEnum
 from ....payment.types import PaymentChargeStatusEnum
 from ....tests.utils import (
@@ -57,9 +55,7 @@ query OrdersQuery {
     }
     }
 }
-
 """
-
 
 ORDERS_FULL_QUERY = """
 query OrdersQuery {
@@ -98,14 +94,6 @@ query OrdersQuery {
                 totalBalance{
                     amount
                     currency
-                }
-                metadata{
-                    key
-                    value
-                }
-                privateMetadata{
-                    key
-                    value
                 }
                 undiscountedShippingPrice{
                     amount
@@ -147,27 +135,12 @@ query OrdersQuery {
                             amount
                         }
                     }
-                    discounts{
-                        id
-                        valueType
-                        value
-                        reason
-                        total{
-                            amount
-                        }
-                        unit{
-                            amount
-                        }
-                    }
                 }
                 discounts{
                     id
                     valueType
                     value
                     reason
-                    total{
-                        amount
-                    }
                     amount{
                         amount
                     }
@@ -334,7 +307,7 @@ def test_order_query(
 ):
     # given
     order = fulfilled_order
-    shipping_net = Money(amount=Decimal(10), currency="USD")
+    shipping_net = Money(amount=Decimal("10"), currency="USD")
     shipping_gross = Money(
         amount=shipping_net.amount * Decimal(1.23), currency="USD"
     ).quantize()
@@ -375,16 +348,6 @@ def test_order_query(
     assert order_data["isPaid"] == order.is_fully_paid()
     assert order_data["userEmail"] == order.user_email
     assert order_data["languageCodeEnum"] == order.language_code.upper()
-    assert order_data["metadata"][0]["value"] == list(order.metadata.values())[0]
-    assert (
-        order_data["privateMetadata"][0]["value"]
-        == list(order.private_metadata.values())[0]
-    )
-    assert order_data["metadata"][0]["key"] == list(order.metadata.keys())[0]
-    assert (
-        order_data["privateMetadata"][0]["key"]
-        == list(order.private_metadata.keys())[0]
-    )
     expected_price = Money(
         amount=str(order_data["shippingPrice"]["gross"]["amount"]), currency="USD"
     )
@@ -451,85 +414,6 @@ def test_order_query(
     assert order_data["checkoutId"] == (
         graphene.Node.to_global_id("Checkout", checkout.token)
     )
-
-
-QUERY_ORDER_WITH_EMAIL_BY_ID = """
-    query OrderQuery($id: ID) {
-        order(id: $id) {
-            id
-            userEmail
-        }
-    }
-"""
-
-
-def test_order_query_without_email(
-    user_api_client,
-    fulfilled_order,
-):
-    # given
-    order = fulfilled_order
-    order.user_email = ""
-    order.user = None
-    order.save()
-    assert order.user is None
-
-    # when
-    response = user_api_client.post_graphql(
-        QUERY_ORDER_WITH_EMAIL_BY_ID, {"id": to_global_id_or_none(order)}
-    )
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["order"]
-    assert order_data["userEmail"] is None
-
-
-def test_order_query_with_explicit_email_for_anonymous_user(
-    user_api_client,
-    fulfilled_order,
-):
-    # given
-    expected_order_email = "different_email@example.com"
-    order = fulfilled_order
-    order.user_email = expected_order_email
-    order.user = None
-    order.save()
-    assert order.user is None
-    assert order.user_email == expected_order_email
-
-    # when
-    response = user_api_client.post_graphql(
-        QUERY_ORDER_WITH_EMAIL_BY_ID, {"id": to_global_id_or_none(order)}
-    )
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["order"]
-    assert order_data["userEmail"] == expected_order_email
-
-
-def test_order_query_with_explicit_email_for_authenticated_user(
-    user_api_client,
-    fulfilled_order,
-):
-    # given
-    expected_order_email = "different_email@example.com"
-    order = fulfilled_order
-    order.user_email = expected_order_email
-    order.save()
-    assert order.user is not None
-    assert order.user.email != expected_order_email
-
-    # when
-    response = user_api_client.post_graphql(
-        QUERY_ORDER_WITH_EMAIL_BY_ID, {"id": to_global_id_or_none(order)}
-    )
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["order"]
-    assert order_data["userEmail"] == expected_order_email
 
 
 def test_order_query_denormalized_shipping_tax_class_data(
@@ -608,7 +492,7 @@ def test_order_query_total_price_is_0(
     price = zero_taxed_money(order.currency)
     order.shipping_price = price
     order.total = price
-    shipping_tax_rate = Decimal(0)
+    shipping_tax_rate = Decimal("0")
     order.shipping_tax_rate = shipping_tax_rate
     private_value = "abc123"
     public_value = "123abc"
@@ -789,13 +673,13 @@ def test_order_query_customer(api_client):
 @pytest.mark.parametrize(
     ("total_authorized", "total_charged", "expected_status"),
     [
-        (Decimal("98.40"), Decimal(0), OrderAuthorizeStatusEnum.FULL.name),
-        (Decimal(0), Decimal("98.40"), OrderAuthorizeStatusEnum.FULL.name),
-        (Decimal(10), Decimal("88.40"), OrderAuthorizeStatusEnum.FULL.name),
-        (Decimal(0), Decimal(0), OrderAuthorizeStatusEnum.NONE.name),
-        (Decimal(11), Decimal(0), OrderAuthorizeStatusEnum.PARTIAL.name),
-        (Decimal(0), Decimal("50.00"), OrderAuthorizeStatusEnum.PARTIAL.name),
-        (Decimal(10), Decimal("40.40"), OrderAuthorizeStatusEnum.PARTIAL.name),
+        (Decimal("98.40"), Decimal("0"), OrderAuthorizeStatusEnum.FULL.name),
+        (Decimal("0"), Decimal("98.40"), OrderAuthorizeStatusEnum.FULL.name),
+        (Decimal("10"), Decimal("88.40"), OrderAuthorizeStatusEnum.FULL.name),
+        (Decimal("0"), Decimal("0"), OrderAuthorizeStatusEnum.NONE.name),
+        (Decimal("11"), Decimal("0"), OrderAuthorizeStatusEnum.PARTIAL.name),
+        (Decimal("0"), Decimal("50.00"), OrderAuthorizeStatusEnum.PARTIAL.name),
+        (Decimal("10"), Decimal("40.40"), OrderAuthorizeStatusEnum.PARTIAL.name),
     ],
 )
 def test_order_query_authorize_status(
@@ -829,12 +713,12 @@ def test_order_query_authorize_status(
 @pytest.mark.parametrize(
     ("total_authorized", "total_charged", "expected_status"),
     [
-        (Decimal("10.40"), Decimal(0), OrderChargeStatusEnum.NONE.name),
-        (Decimal("98.40"), Decimal(0), OrderChargeStatusEnum.NONE.name),
-        (Decimal(0), Decimal(0), OrderChargeStatusEnum.NONE.name),
-        (Decimal(0), Decimal("11.00"), OrderChargeStatusEnum.PARTIAL.name),
+        (Decimal("10.40"), Decimal("0"), OrderChargeStatusEnum.NONE.name),
+        (Decimal("98.40"), Decimal("0"), OrderChargeStatusEnum.NONE.name),
+        (Decimal("0"), Decimal("0"), OrderChargeStatusEnum.NONE.name),
+        (Decimal("0"), Decimal("11.00"), OrderChargeStatusEnum.PARTIAL.name),
         (Decimal("88.40"), Decimal("10.00"), OrderChargeStatusEnum.PARTIAL.name),
-        (Decimal(0), Decimal("98.40"), OrderChargeStatusEnum.FULL.name),
+        (Decimal("0"), Decimal("98.40"), OrderChargeStatusEnum.FULL.name),
     ],
 )
 def test_order_query_charge_status(
@@ -897,7 +781,7 @@ def test_order_query_with_transactions_details(
 ):
     # given
     order = fulfilled_order
-    net = Money(amount=Decimal(100), currency="USD")
+    net = Money(amount=Decimal("100"), currency="USD")
     gross = Money(amount=net.amount * Decimal(1.23), currency="USD").quantize()
     shipping_price = TaxedMoney(net=net, gross=gross)
     order.shipping_price = shipping_price
@@ -924,7 +808,7 @@ def test_order_query_with_transactions_details(
                 name="Credit card",
                 psp_reference="123",
                 currency="USD",
-                authorized_value=Decimal(15),
+                authorized_value=Decimal("15"),
                 available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
             ),
             TransactionItem(
@@ -933,7 +817,7 @@ def test_order_query_with_transactions_details(
                 name="Credit card",
                 psp_reference="321",
                 currency="USD",
-                authorized_value=Decimal(10),
+                authorized_value=Decimal("10"),
                 available_actions=[TransactionAction.CHARGE, TransactionAction.CANCEL],
             ),
             TransactionItem(
@@ -942,7 +826,7 @@ def test_order_query_with_transactions_details(
                 name="Credit card",
                 psp_reference="111",
                 currency="USD",
-                charged_value=Decimal(15),
+                charged_value=Decimal("15"),
                 available_actions=[TransactionAction.REFUND],
             ),
             TransactionItem(
@@ -951,7 +835,7 @@ def test_order_query_with_transactions_details(
                 name="Credit card",
                 psp_reference="111",
                 currency="USD",
-                canceled_value=Decimal(19),
+                canceled_value=Decimal("19"),
                 available_actions=[],
             ),
         ]
@@ -991,10 +875,10 @@ def test_order_query_with_transactions_details(
     assert order_data["isPaid"] == order.is_fully_paid()
 
     assert len(order_data["payments"]) == order.payments.count()
-    assert Decimal(order_data["totalAuthorized"]["amount"]) == Decimal(25)
-    assert Decimal(order_data["totalCaptured"]["amount"]) == Decimal(15)
-    assert Decimal(order_data["totalCharged"]["amount"]) == Decimal(15)
-    assert Decimal(order_data["totalCanceled"]["amount"]) == Decimal(19)
+    assert Decimal(order_data["totalAuthorized"]["amount"]) == Decimal("25")
+    assert Decimal(order_data["totalCaptured"]["amount"]) == Decimal("15")
+    assert Decimal(order_data["totalCharged"]["amount"]) == Decimal("15")
+    assert Decimal(order_data["totalCanceled"]["amount"]) == Decimal("19")
 
     assert Decimal(str(order_data["totalBalance"]["amount"])) == Decimal("-83.4")
 
@@ -1094,188 +978,7 @@ def test_order_discounts_query(
     assert discount_data["valueType"] == discount.value_type.upper()
     assert discount_data["value"] == discount.value
     assert discount_data["amount"]["amount"] == discount.amount_value
-    assert discount_data["total"]["amount"] == discount.amount_value
     assert discount_data["reason"] == discount.reason
-
-
-def test_order_discounts_with_line_lvl_voucher_discount_from_checkout_and_legacy_flow(
-    staff_api_client,
-    permission_group_manage_orders,
-    permission_group_manage_shipping,
-    order_with_lines,
-    voucher,
-    channel_USD,
-):
-    # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = True
-    channel_USD.save()
-
-    order = order_with_lines
-    order.voucher = voucher
-    order.voucher_code = voucher.code
-    order.status = OrderStatus.UNCONFIRMED
-    order.origin = OrderOrigin.CHECKOUT
-    order.save()
-
-    expected_reason = "Voucher"
-    expected_discount_value = Decimal(5)
-
-    first_order_line = order.lines.first()
-    first_order_line_discount = first_order_line.discounts.create(
-        type=DiscountType.VOUCHER,
-        value_type=voucher.discount_value_type,
-        value=expected_discount_value,
-        amount_value=expected_discount_value,
-        currency=first_order_line.currency,
-        reason="Voucher",
-        voucher=voucher,
-        voucher_code=voucher.code,
-    )
-
-    second_order_line = order.lines.last()
-    second_order_line_discount = second_order_line.discounts.create(
-        type=DiscountType.VOUCHER,
-        value_type=voucher.discount_value_type,
-        value=expected_discount_value,
-        amount_value=expected_discount_value,
-        currency=second_order_line.currency,
-        reason="Voucher",
-        voucher=voucher,
-        voucher_code=voucher.code,
-    )
-
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-    permission_group_manage_shipping.user_set.add(staff_api_client.user)
-
-    assert not order.discounts.exists()
-
-    # when
-    response = staff_api_client.post_graphql(ORDERS_FULL_QUERY)
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["orders"]["edges"][0]["node"]
-    discounts_data = order_data.get("discounts")
-    assert len(discounts_data) == 1
-    discount_data = discounts_data[0]
-    _, discount_id = graphene.Node.from_global_id(discount_data["id"])
-    assert discount_id == str(first_order_line_discount.id)
-    assert discount_data["valueType"] == voucher.discount_value_type.upper()
-    assert discount_data["reason"] == expected_reason
-    order_discount_amount = (
-        first_order_line_discount.amount_value + second_order_line_discount.amount_value
-    )
-    assert discount_data["amount"]["amount"] == order_discount_amount
-    assert discount_data["total"]["amount"] == order_discount_amount
-
-    assert len(order_data["lines"][0]["discounts"]) == 0
-    assert len(order_data["lines"][1]["discounts"]) == 0
-
-
-def test_order_discounts_with_line_lvl_voucher_discount_from_checkout(
-    staff_api_client,
-    permission_group_manage_orders,
-    permission_group_manage_shipping,
-    order_with_lines,
-    voucher,
-    channel_USD,
-):
-    # given
-    channel_USD.use_legacy_line_discount_propagation_for_order = False
-    channel_USD.save()
-
-    order = order_with_lines
-    order.voucher = voucher
-    order.voucher_code = voucher.code
-    order.status = OrderStatus.UNCONFIRMED
-    order.origin = OrderOrigin.CHECKOUT
-    order.save()
-
-    expected_reason = "Voucher"
-    expected_discount_value = Decimal(5)
-
-    first_order_line_discount = Decimal(3)
-    first_order_line = order.lines.first()
-    first_order_line_discount = first_order_line.discounts.create(
-        type=DiscountType.VOUCHER,
-        value_type=voucher.discount_value_type,
-        value=expected_discount_value,
-        amount_value=first_order_line_discount,
-        currency=first_order_line.currency,
-        reason="Voucher",
-        voucher=voucher,
-        voucher_code=voucher.code,
-    )
-
-    second_order_line = order.lines.last()
-    second_order_line_discount = Decimal(4)
-    second_order_line_discount = second_order_line.discounts.create(
-        type=DiscountType.VOUCHER,
-        value_type=voucher.discount_value_type,
-        value=expected_discount_value,
-        amount_value=second_order_line_discount,
-        currency=second_order_line.currency,
-        reason="Voucher",
-        voucher=voucher,
-        voucher_code=voucher.code,
-    )
-
-    permission_group_manage_orders.user_set.add(staff_api_client.user)
-    permission_group_manage_shipping.user_set.add(staff_api_client.user)
-
-    assert not order.discounts.exists()
-
-    # when
-    response = staff_api_client.post_graphql(ORDERS_FULL_QUERY)
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["orders"]["edges"][0]["node"]
-    discounts_data = order_data.get("discounts")
-    assert len(discounts_data) == 0
-
-    order_lines_data = order_data["lines"]
-
-    first_order_line_id = to_global_id_or_none(first_order_line)
-    first_order_line_data = [
-        line for line in order_lines_data if line["id"] == first_order_line_id
-    ][0]
-    assert len(first_order_line_data["discounts"]) == 1
-    first_line_discount_data = first_order_line_data["discounts"][0]
-    assert first_line_discount_data["id"] == to_global_id_or_none(
-        first_order_line_discount
-    )
-    assert first_line_discount_data["valueType"] == voucher.discount_value_type.upper()
-    assert first_line_discount_data["reason"] == expected_reason
-    assert (
-        first_line_discount_data["unit"]["amount"]
-        == first_order_line_discount.amount_value / first_order_line.quantity
-    )
-    assert (
-        first_line_discount_data["total"]["amount"]
-        == first_order_line_discount.amount_value
-    )
-
-    second_order_line_id = to_global_id_or_none(second_order_line)
-    second_order_line_data = [
-        line for line in order_lines_data if line["id"] == second_order_line_id
-    ][0]
-
-    assert len(second_order_line_data["discounts"]) == 1
-    second_line_discount_data = second_order_line_data["discounts"][0]
-    assert second_line_discount_data["id"] == to_global_id_or_none(
-        second_order_line_discount
-    )
-    assert second_line_discount_data["valueType"] == voucher.discount_value_type.upper()
-    assert second_line_discount_data["reason"] == expected_reason
-    assert (
-        second_line_discount_data["unit"]["amount"]
-        == second_order_line_discount.amount_value / second_order_line.quantity
-    )
-    assert (
-        second_line_discount_data["total"]["amount"]
-        == second_order_line_discount.amount_value
-    )
 
 
 def test_order_line_discount_query(
@@ -1506,44 +1209,6 @@ def test_staff_query_order_with_invalid_object_type(staff_api_client, order):
 
     # then
     assert content["data"]["order"] is None
-
-
-def test_query_order_and_lines_metadata_as_app(app_api_client, order_with_lines):
-    # given
-    id = graphene.Node.to_global_id("Order", order_with_lines.id)
-    line = order_with_lines.lines.first()
-
-    line.metadata = {"foo": "bar"}
-    line.save(update_fields=["metadata"])
-
-    variables = {"id": id}
-    query = """
-        query OrderQuery($id: ID) {
-            order(id: $id) {
-                id
-                number
-                status
-                metadata {
-                    key
-                    value
-                }
-                lines {
-                    metadata {
-                        key
-                        value
-                    }
-                }
-            }
-        }
-    """
-
-    # when
-    response = app_api_client.post_graphql(query, variables)
-    content = get_graphql_content(response)
-
-    # then
-    order_data = content["data"]["order"]
-    assert order_data["id"] == id
 
 
 QUERY_ORDER_BY_EXTERNAL_REFERENCE = """

@@ -92,6 +92,8 @@ def test_checkout_with_shipping_method_with_min_order_value_CORE_0501(
         lines,
         channel_slug,
         email="jon.doe@saleor.io",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
 
@@ -119,6 +121,8 @@ def test_checkout_with_shipping_method_with_min_order_value_CORE_0501(
         lines,
         channel_slug,
         email="jon.doe@saleor.io",
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
 

@@ -3,11 +3,11 @@ import {
   FilterElementKeyValue,
   FilterElementRegular,
   IFilter,
-} from "@dashboard/components/Filter/types";
+} from "@dashboard/components/Filter";
 import { findValueInEnum } from "@dashboard/misc";
 import { ActiveTab } from "@dashboard/types";
 
-export function createFilterUtils<TQueryParams extends {}, TFilters extends {}>(filters: {}) {
+function createFilterUtils<TQueryParams extends {}, TFilters extends {}>(filters: {}) {
   function getActiveFilters(params: TQueryParams): TFilters {
     return Object.keys(params)
       .filter(key => Object.values(filters).includes(key))
@@ -193,3 +193,5 @@ export function getKeyValueQueryParam<TKey extends string, TUrlKey extends strin
     [key]: filledOutPairs,
   };
 }
+
+export default createFilterUtils;

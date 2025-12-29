@@ -5,6 +5,7 @@ import { OrderEventFragment, OrderEventsEnum } from "@dashboard/graphql";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
 import camelCase from "lodash/camelCase";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import ExtendedDiscountTimelineEvent from "./ExtendedDiscountTimelineEvent";
@@ -40,7 +41,7 @@ const useStyles = makeStyles(
   { name: "OrderHistory" },
 );
 
-const productTitles = defineMessages({
+export const productTitles = defineMessages({
   draftCreatedFromReplace: {
     id: "a1uffz",
     defaultMessage: "Products replaced",
@@ -63,7 +64,7 @@ const productTitles = defineMessages({
   },
 });
 
-const titles = defineMessages({
+export const titles = defineMessages({
   draftCreatedFromReplace: {
     id: "5R4VMl",
     defaultMessage: "Draft was reissued from order ",
@@ -116,7 +117,7 @@ const titles = defineMessages({
   },
 });
 
-const messages = defineMessages({
+export const messages = defineMessages({
   by: {
     id: "xrPv2K",
     defaultMessage: "by",
@@ -145,11 +146,11 @@ interface ExtendedTimelineEventProps {
   hasPlainDate?: boolean;
 }
 
-const ExtendedTimelineEvent = ({
+const ExtendedTimelineEvent: React.FC<ExtendedTimelineEventProps> = ({
   event,
   orderCurrency,
   hasPlainDate,
-}: ExtendedTimelineEventProps) => {
+}) => {
   const { id, date, type, lines, amount, transactionReference, shippingCostsIncluded } = event;
   const classes = useStyles({});
   const intl = useIntl();

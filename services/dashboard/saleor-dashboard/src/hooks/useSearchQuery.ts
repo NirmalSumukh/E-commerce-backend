@@ -1,9 +1,9 @@
 import { ChangeEvent } from "@dashboard/hooks/useForm";
-import { useState } from "react";
+import React from "react";
 
-type UseSearchQuery = [string, (event: ChangeEvent) => void, () => void];
+export type UseSearchQuery = [string, (event: ChangeEvent) => void, () => void];
 function useSearchQuery(onFetch: (query: string) => void, initial?: string): UseSearchQuery {
-  const [query, setQuery] = useState(initial || "");
+  const [query, setQuery] = React.useState(initial || "");
   const change = (event: ChangeEvent) => {
     const value = event.target.value;
 

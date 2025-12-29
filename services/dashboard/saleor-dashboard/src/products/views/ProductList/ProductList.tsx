@@ -55,7 +55,7 @@ import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHa
 import { mapEdgesToItems, mapNodeToChoice } from "@dashboard/utils/maps";
 import { getSortUrlVariables } from "@dashboard/utils/sort";
 import isEqual from "lodash/isEqual";
-import { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import ProductListPage, { ProductFilterKeys } from "../../components/ProductListPage";
@@ -68,7 +68,7 @@ interface ProductListProps {
   params: ProductListUrlQueryParams;
 }
 
-const ProductList = ({ params }: ProductListProps) => {
+export const ProductList: React.FC<ProductListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const { queue } = useBackgroundTask();
@@ -206,7 +206,7 @@ const ProductList = ({ params }: ProductListProps) => {
     queryParams: params,
   });
   const sort = getSortQueryVariables(params, !!selectedChannel);
-  const queryVariables = useMemo<
+  const queryVariables = React.useMemo<
     Omit<
       ProductListQueryVariables,
       "hasChannel" | "hasSelectedAttributes" | "includeCategories" | "includeCollections"
@@ -408,5 +408,4 @@ const ProductList = ({ params }: ProductListProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default ProductList;

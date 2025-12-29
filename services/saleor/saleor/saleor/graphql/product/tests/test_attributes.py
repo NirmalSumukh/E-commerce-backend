@@ -25,282 +25,34 @@ from ...tests.utils import get_graphql_content
 from ..enums import ProductAttributeType
 
 QUERY_PRODUCT_AND_VARIANTS_ATTRIBUTES = """
-query ($channel: String) {
-  products(first: 1, channel: $channel) {
-    edges {
-      node {
-        attributes {
-          attribute {
-            slug
-            type
-          }
-          values {
-            slug
-          }
-        }
-        assignedAttributes(limit:10) {
-          attr: attribute {
-              slug
-              type
-          }
-          ... on AssignedNumericAttribute {
-            attribute {
-              id
-            }
-            value
-          }
-          ... on AssignedTextAttribute {
-            text: value
-            text_translation: translation(languageCode: FR)
-          }
-          ... on AssignedPlainTextAttribute {
-            plain_text: value
-            plain_translation: translation(languageCode: FR)
-          }
-          ... on AssignedFileAttribute {
-            file: value {
-              contentType
-            }
-          }
-          ... on AssignedSinglePageReferenceAttribute {
-            page_ref: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedSingleProductReferenceAttribute {
-            product_ref: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedSingleProductVariantReferenceAttribute {
-            variant_ref: value {
-              __typename
-              sku
-            }
-          }
-          ... on AssignedSingleCategoryReferenceAttribute {
-            category_ref: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedSingleCollectionReferenceAttribute {
-            collection_ref: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedMultiPageReferenceAttribute {
-            __typename
-            pages: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedMultiProductReferenceAttribute {
-            __typename
-            producs: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedMultiProductVariantReferenceAttribute {
-            __typename
-            variants: value {
-              __typename
-              sku
-            }
-          }
-          ... on AssignedMultiCategoryReferenceAttribute {
-            __typename
-            categories: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedMultiCollectionReferenceAttribute {
-            __typename
-            collections: value {
-              __typename
-              slug
-            }
-          }
-          ... on AssignedSingleChoiceAttribute {
-            __typename
-            choice: value {
-              name
-              slug
-              translation(languageCode: FR)
-            }
-          }
-          ... on AssignedMultiChoiceAttribute {
-            __typename
-            multi: value {
-              name
-              slug
-              translation(languageCode: FR)
-            }
-          }
-          ... on AssignedSwatchAttribute {
-            swatch: value {
-              name
-              slug
-              hexColor
-              file {
-                url
-                contentType
-              }
-            }
-          }
-          ... on AssignedBooleanAttribute {
-            bool: value
-          }
-          ... on AssignedDateAttribute {
-            date: value
-          }
-          ... on AssignedDateTimeAttribute {
-            datetime: value
-          }
-        }
-        variants {
-          attributes {
-            attribute {
-              slug
-              type
-            }
-            values {
-              slug
-            }
-          }
-          assignedAttributes(limit:10) {
-            ... on AssignedNumericAttribute {
+    query ($channel: String){
+      products(first: 1, channel: $channel) {
+        edges {
+          node {
+            attributes {
               attribute {
-                id
+                slug
+                type
               }
-              value
-            }
-            ... on AssignedTextAttribute {
-              text: value
-              text_translation: translation(languageCode: FR)
-            }
-            ... on AssignedPlainTextAttribute {
-              plain_text: value
-              plain_translation: translation(languageCode: FR)
-            }
-            ... on AssignedFileAttribute {
-              file: value {
-                contentType
-              }
-            }
-            ... on AssignedSinglePageReferenceAttribute {
-              page_ref: value {
-                __typename
+              values {
                 slug
               }
             }
-            ... on AssignedSingleProductReferenceAttribute {
-              product_ref: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedSingleProductVariantReferenceAttribute {
-              variant_ref: value {
-                __typename
-                sku
-              }
-            }
-            ... on AssignedSingleCategoryReferenceAttribute {
-              category_ref: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedSingleCollectionReferenceAttribute {
-              collection_ref: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedMultiPageReferenceAttribute {
-              __typename
-              pages: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedMultiProductReferenceAttribute {
-              __typename
-              producs: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedMultiProductVariantReferenceAttribute {
-              __typename
-              variants: value {
-                __typename
-                sku
-              }
-            }
-            ... on AssignedMultiCategoryReferenceAttribute {
-              __typename
-              categories: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedMultiCollectionReferenceAttribute {
-              __typename
-              collections: value {
-                __typename
-                slug
-              }
-            }
-            ... on AssignedSingleChoiceAttribute {
-              __typename
-              choice: value {
-                name
-                slug
-                translation(languageCode: FR)
-              }
-            }
-            ... on AssignedMultiChoiceAttribute {
-              __typename
-              multi: value {
-                name
-                slug
-                translation(languageCode: FR)
-              }
-            }
-            ... on AssignedSwatchAttribute {
-              swatch: value {
-                name
-                slug
-                hexColor
-                file {
-                  url
-                  contentType
+            variants {
+              attributes {
+                attribute {
+                  slug
+                  type
+                }
+                values {
+                  slug
                 }
               }
-            }
-            ... on AssignedBooleanAttribute {
-              bool: value
-            }
-            ... on AssignedDateAttribute {
-              date: value
-            }
-            ... on AssignedDateTimeAttribute {
-              datetime: value
             }
           }
         }
       }
     }
-  }
-}
 """
 
 
@@ -1530,14 +1282,14 @@ def test_sort_attributes_within_product_type(
     )["data"]["productTypeReorderAttributes"]
     assert not content["errors"]
 
-    assert content["productType"]["id"] == product_type_id, (
-        "Did not return the correct product type"
-    )
+    assert (
+        content["productType"]["id"] == product_type_id
+    ), "Did not return the correct product type"
 
     gql_attributes = content["productType"][snake_to_camel_case(relation_field)]
     assert len(gql_attributes) == len(expected_order)
 
-    for attr, expected_pk in zip(gql_attributes, expected_order, strict=False):
+    for attr, expected_pk in zip(gql_attributes, expected_order):
         gql_type, gql_attr_id = graphene.Node.from_global_id(attr["id"])
         assert gql_type == "Attribute"
         assert int(gql_attr_id) == expected_pk
@@ -1648,7 +1400,7 @@ def test_sort_product_attribute_values(
     gql_attribute_values = content["product"]["attributes"][0]["values"]
     assert len(gql_attribute_values) == 3
 
-    for attr, expected_pk in zip(gql_attribute_values, expected_order, strict=False):
+    for attr, expected_pk in zip(gql_attribute_values, expected_order):
         db_type, value_pk = graphene.Node.from_global_id(attr["id"])
         assert db_type == "AttributeValue"
         assert int(value_pk) == expected_pk
@@ -1878,14 +1630,14 @@ def test_sort_product_variant_attribute_values(
     )["data"]["productVariantReorderAttributeValues"]
     assert not content["errors"]
 
-    assert content["productVariant"]["id"] == variant_id, (
-        "Did not return the correct product variant"
-    )
+    assert (
+        content["productVariant"]["id"] == variant_id
+    ), "Did not return the correct product variant"
 
     gql_attribute_values = content["productVariant"]["attributes"][0]["values"]
     assert len(gql_attribute_values) == 3
 
-    for attr, expected_pk in zip(gql_attribute_values, expected_order, strict=False):
+    for attr, expected_pk in zip(gql_attribute_values, expected_order):
         db_type, value_pk = graphene.Node.from_global_id(attr["id"])
         assert db_type == "AttributeValue"
         assert int(value_pk) == expected_pk

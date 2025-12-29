@@ -1,14 +1,12 @@
-import datetime
 import uuid
+from datetime import date, datetime
 from tempfile import NamedTemporaryFile
-from typing import IO, TYPE_CHECKING, Any
+from typing import IO, TYPE_CHECKING, Any, Optional, Union
 
 import petl as etl
 from django.conf import settings
 from django.utils import timezone
 
-from ...core.db.connection import allow_writer
-from ...core.utils.batches import queryset_in_batches
 from ...discount.models import VoucherCode
 from ...giftcard.models import GiftCard
 from ...product.models import Product
@@ -28,12 +26,12 @@ BATCH_SIZE = 1000
 
 def export_products(
     export_file: "ExportFile",
-    scope: dict[str, str | dict],
+    scope: dict[str, Union[str, dict]],
     export_info: dict[str, list],
     file_type: str,
     delimiter: str = ",",
 ):
-    from ...graphql.product.filters.product import ProductFilter
+    from ...graphql.product.filters import ProductFilter
 
     file_name = get_filename("product", file_type)
     queryset = get_queryset(Product, ProductFilter, scope)
@@ -58,12 +56,13 @@ def export_products(
 
     save_csv_file_in_export_file(export_file, temporary_file, file_name)
     temporary_file.close()
+
     send_export_download_link_notification(export_file, "products")
 
 
 def export_gift_cards(
     export_file: "ExportFile",
-    scope: dict[str, str | dict],
+    scope: dict[str, Union[str, dict]],
     file_type: str,
     delimiter: str = ",",
 ):
@@ -88,14 +87,15 @@ def export_gift_cards(
 
     save_csv_file_in_export_file(export_file, temporary_file, file_name)
     temporary_file.close()
+
     send_export_download_link_notification(export_file, "gift cards")
 
 
 def export_voucher_codes(
     export_file: "ExportFile",
     file_type: str,
-    voucher_id: int | None = None,
-    ids: list[int] | None = None,
+    voucher_id: Optional[int] = None,
+    ids: Optional[list[int]] = None,
     delimiter: str = ",",
 ):
     file_name = get_filename("voucher_code", file_type)
@@ -133,7 +133,7 @@ def get_filename(model_name: str, file_type: str) -> str:
     )
 
 
-def get_queryset(model, filter, scope: dict[str, str | dict]) -> "QuerySet":
+def get_queryset(model, filter, scope: dict[str, Union[str, dict]]) -> "QuerySet":
     queryset = model.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME).all()
     if "ids" in scope:
         queryset = model.objects.using(
@@ -147,7 +147,7 @@ def get_queryset(model, filter, scope: dict[str, str | dict]) -> "QuerySet":
     return queryset
 
 
-def parse_input(data: Any) -> dict[str, str | dict]:
+def parse_input(data: Any) -> dict[str, Union[str, dict]]:
     """Parse input into correct data types.
 
     Scope coming from Celery will be passed as strings.
@@ -158,15 +158,15 @@ def parse_input(data: Any) -> dict[str, str | dict]:
         for attr in data.get("attributes") or []:
             if "date_time" in attr:
                 if gte := attr["date_time"].get("gte"):
-                    attr["date_time"]["gte"] = datetime.datetime.fromisoformat(gte)
+                    attr["date_time"]["gte"] = datetime.fromisoformat(gte)
                 if lte := attr["date_time"].get("lte"):
-                    attr["date_time"]["lte"] = datetime.datetime.fromisoformat(lte)
+                    attr["date_time"]["lte"] = datetime.fromisoformat(lte)
 
             if "date" in attr:
                 if gte := attr["date"].get("gte"):
-                    attr["date"]["gte"] = datetime.date.fromisoformat(gte)
+                    attr["date"]["gte"] = date.fromisoformat(gte)
                 if lte := attr["date"].get("lte"):
-                    attr["date"]["lte"] = datetime.date.fromisoformat(lte)
+                    attr["date"]["lte"] = date.fromisoformat(lte)
 
             serialized_attributes.append(attr)
 
@@ -202,7 +202,7 @@ def export_products_in_batches(
     attributes = export_info.get("attributes")
     channels = export_info.get("channels")
 
-    for batch_pks in queryset_in_batches(queryset, BATCH_SIZE):
+    for batch_pks in queryset_in_batches(queryset):
         product_batch = (
             Product.objects.using(settings.DATABASE_CONNECTION_REPLICA_NAME)
             .filter(pk__in=batch_pks)
@@ -229,7 +229,7 @@ def export_gift_cards_in_batches(
     temporary_file: Any,
     file_type: str,
 ):
-    for batch_pks in queryset_in_batches(queryset, BATCH_SIZE):
+    for batch_pks in queryset_in_batches(queryset):
         gift_card_batch = GiftCard.objects.using(
             settings.DATABASE_CONNECTION_REPLICA_NAME
         ).filter(pk__in=batch_pks)
@@ -246,7 +246,7 @@ def export_voucher_codes_in_batches(
     temporary_file: Any,
     file_type: str,
 ):
-    for batch_pks in queryset_in_batches(queryset, BATCH_SIZE):
+    for batch_pks in queryset_in_batches(queryset):
         voucher_codes_batch = VoucherCode.objects.using(
             settings.DATABASE_CONNECTION_REPLICA_NAME
         ).filter(pk__in=batch_pks)
@@ -256,8 +256,27 @@ def export_voucher_codes_in_batches(
         append_to_file(export_data, export_fields, temporary_file, file_type, delimiter)
 
 
+def queryset_in_batches(queryset):
+    """Slice a queryset into batches.
+
+    Input queryset should be sorted be pk.
+    """
+    start_pk = 0
+
+    while True:
+        qs = queryset.order_by("pk").filter(pk__gt=start_pk)[:BATCH_SIZE]
+        pks = list(qs.values_list("pk", flat=True))
+
+        if not pks:
+            break
+
+        yield pks
+
+        start_pk = pks[-1]
+
+
 def append_to_file(
-    export_data: list[dict[str, str | bool]],
+    export_data: list[dict[str, Union[str, bool]]],
     headers: list[str],
     temporary_file: Any,
     file_type: str,
@@ -271,7 +290,6 @@ def append_to_file(
         etl.io.xlsx.appendxlsx(table, temporary_file.name)
 
 
-@allow_writer()
 def save_csv_file_in_export_file(
     export_file: "ExportFile", temporary_file: IO[bytes], file_name: str
 ):

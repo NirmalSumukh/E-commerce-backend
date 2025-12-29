@@ -1,16 +1,17 @@
 // @ts-strict-ignore
 import HorizontalSpacer from "@dashboard/components/HorizontalSpacer";
 import { CollectionFragment } from "@dashboard/graphql";
+import ScrollableContent from "@dashboard/plugins/components/PluginsList/PluginAvailabilityStatusPopup/ScrollableContent";
 import { PillColor } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { MessageDescriptor, useIntl } from "react-intl";
 
 import { messages } from "../ChannelsAvailabilityDropdown/messages";
 import { Pill } from "../Pill";
-import { ScrollableContent } from "./PluginAvailabilityStatusPopup/ScrollableContent";
 import { useStyles } from "./styles";
 
-interface ChannelsAvailabilityMenuContentProps {
+export interface ChannelsAvailabilityMenuContentProps {
   pills: Pill[];
 }
 export interface Pill {
@@ -19,9 +20,9 @@ export interface Pill {
   label: MessageDescriptor;
 }
 
-export const ChannelsAvailabilityMenuContent = ({
+export const ChannelsAvailabilityMenuContent: React.FC<ChannelsAvailabilityMenuContentProps> = ({
   pills,
-}: ChannelsAvailabilityMenuContentProps) => {
+}) => {
   const intl = useIntl();
   const classes = useStyles({});
 
@@ -47,5 +48,5 @@ export const ChannelsAvailabilityMenuContent = ({
     </div>
   );
 };
-
 ChannelsAvailabilityMenuContent.displayName = "ChannelsAvailabilityMenuContent";
+export default ChannelsAvailabilityMenuContent;

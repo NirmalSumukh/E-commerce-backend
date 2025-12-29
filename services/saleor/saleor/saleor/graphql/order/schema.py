@@ -1,23 +1,17 @@
+from typing import Optional
+
 import graphene
 from django.core.exceptions import ValidationError
 from graphql import GraphQLError
 
 from ...core.exceptions import PermissionDenied
 from ...order import models
-from ...order.search import search_orders
 from ...permission.enums import OrderPermissions
 from ...permission.utils import has_one_of_permissions
 from ..core import ResolveInfo
-from ..core.connection import (
-    create_connection_slice_for_sync_webhook_control_context,
-    filter_connection_queryset,
-)
+from ..core.connection import create_connection_slice, filter_connection_queryset
 from ..core.context import get_database_connection_name
-from ..core.descriptions import (
-    ADDED_IN_322,
-    DEFAULT_DEPRECATION_REASON,
-    DEPRECATED_IN_3X_INPUT,
-)
+from ..core.descriptions import ADDED_IN_310, DEPRECATED_IN_3X_FIELD
 from ..core.doc_category import DOC_CATEGORY_ORDERS
 from ..core.enums import ReportingPeriod
 from ..core.fields import (
@@ -26,21 +20,15 @@ from ..core.fields import (
     FilterConnectionField,
     PermissionsField,
 )
-from ..core.filters import FilterInputObjectType
 from ..core.scalars import UUID
-from ..core.types import TaxedMoney
+from ..core.types import FilterInputObjectType, TaxedMoney
 from ..core.utils import ext_ref_to_global_id_or_error, from_global_id_or_error
 from ..core.validators import validate_one_of_args_is_in_query
 from ..utils import get_user_or_app_from_context
 from .bulk_mutations.draft_orders import DraftOrderBulkDelete, DraftOrderLinesBulkDelete
 from .bulk_mutations.order_bulk_cancel import OrderBulkCancel
 from .bulk_mutations.order_bulk_create import OrderBulkCreate
-from .filters import (
-    DraftOrderFilter,
-    DraftOrderWhereInput,
-    OrderFilter,
-    OrderWhereInput,
-)
+from .filters import DraftOrderFilter, OrderFilter
 from .mutations.draft_order_complete import DraftOrderComplete
 from .mutations.draft_order_create import DraftOrderCreate
 from .mutations.draft_order_delete import DraftOrderDelete
@@ -84,13 +72,11 @@ from .types import Order, OrderCountableConnection, OrderEventCountableConnectio
 
 
 def search_string_in_kwargs(kwargs: dict) -> bool:
-    filter_search = (
-        kwargs.get("filter", {}).get("search", "") or kwargs.get("search", "") or ""
-    )
+    filter_search = kwargs.get("filter", {}).get("search", "") or ""
     return bool(filter_search.strip())
 
 
-def sort_field_from_kwargs(kwargs: dict) -> list[str] | None:
+def sort_field_from_kwargs(kwargs: dict) -> Optional[list[str]]:
     return kwargs.get("sort_by", {}).get("field") or None
 
 
@@ -116,7 +102,7 @@ class OrderQueries(graphene.ObjectType):
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
         ],
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
     )
     order = BaseField(
         Order,
@@ -125,7 +111,7 @@ class OrderQueries(graphene.ObjectType):
         external_reference=graphene.Argument(
             graphene.String,
             description=(
-                "External ID of an order. "
+                f"External ID of an order. {ADDED_IN_310}."
                 "\n\nRequires one of the following permissions: MANAGE_ORDERS."
             ),
         ),
@@ -134,24 +120,11 @@ class OrderQueries(graphene.ObjectType):
     orders = FilterConnectionField(
         OrderCountableConnection,
         sort_by=OrderSortingInput(description="Sort orders."),
-        filter=OrderFilterInput(
-            description=(
-                f"Filtering options for orders. {DEPRECATED_IN_3X_INPUT} "
-                "Use `where` filter instead."
-            )
-        ),
-        where=OrderWhereInput(
-            description="Where filtering options for orders." + ADDED_IN_322
-        ),
+        filter=OrderFilterInput(description="Filtering options for orders."),
         channel=graphene.String(
             description="Slug of a channel for which the data should be returned."
         ),
-        search=graphene.String(description="Search orders." + ADDED_IN_322),
-        description=(
-            "List of orders. The query will not initiate any external requests, "
-            "including filtering available shipping methods, or performing external "
-            "tax calculations."
-        ),
+        description="List of orders.",
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
         ],
@@ -160,21 +133,8 @@ class OrderQueries(graphene.ObjectType):
     draft_orders = FilterConnectionField(
         OrderCountableConnection,
         sort_by=OrderSortingInput(description="Sort draft orders."),
-        filter=OrderDraftFilterInput(
-            description=(
-                f"Filtering options for draft orders. {DEPRECATED_IN_3X_INPUT} "
-                "Use `where` filter instead."
-            )
-        ),
-        where=DraftOrderWhereInput(
-            description="Where filtering options for draft orders." + ADDED_IN_322
-        ),
-        search=graphene.String(description="Search orders." + ADDED_IN_322),
-        description=(
-            "List of draft orders. The query will not initiate any external requests, "
-            "including filtering available shipping methods, or performing external "
-            "tax calculations."
-        ),
+        filter=OrderDraftFilterInput(description="Filtering options for draft orders."),
+        description="List of draft orders.",
         permissions=[
             OrderPermissions.MANAGE_ORDERS,
         ],
@@ -192,12 +152,12 @@ class OrderQueries(graphene.ObjectType):
             OrderPermissions.MANAGE_ORDERS,
         ],
         doc_category=DOC_CATEGORY_ORDERS,
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
     )
     order_by_token = BaseField(
         Order,
         description="Look up an order by token.",
-        deprecation_reason=DEFAULT_DEPRECATION_REASON,
+        deprecation_reason=DEPRECATED_IN_3X_FIELD,
         token=graphene.Argument(UUID, description="The order's token.", required=True),
         doc_category=DOC_CATEGORY_ORDERS,
     )
@@ -205,9 +165,7 @@ class OrderQueries(graphene.ObjectType):
     @staticmethod
     def resolve_homepage_events(_root, info: ResolveInfo, **kwargs):
         qs = resolve_homepage_events(info)
-        return create_connection_slice_for_sync_webhook_control_context(
-            qs, info, kwargs, OrderEventCountableConnection, allow_sync_webhooks=False
-        )
+        return create_connection_slice(qs, info, kwargs, OrderEventCountableConnection)
 
     @staticmethod
     def resolve_order(_root, info: ResolveInfo, *, external_reference=None, id=None):
@@ -244,16 +202,11 @@ class OrderQueries(graphene.ObjectType):
             kwargs["sort_by"] = product_type.create_container(
                 {"direction": "-", "field": ["search_rank", "id"]}
             )
-        search = kwargs.get("search")
         qs = resolve_orders(info, channel)
-        if search:
-            qs = search_orders(qs, search)
         qs = filter_connection_queryset(
             qs, kwargs, allow_replica=info.context.allow_replica
         )
-        return create_connection_slice_for_sync_webhook_control_context(
-            qs, info, kwargs, OrderCountableConnection, allow_sync_webhooks=False
-        )
+        return create_connection_slice(qs, info, kwargs, OrderCountableConnection)
 
     @staticmethod
     def resolve_draft_orders(_root, info: ResolveInfo, **kwargs):
@@ -270,16 +223,11 @@ class OrderQueries(graphene.ObjectType):
             kwargs["sort_by"] = product_type.create_container(
                 {"direction": "-", "field": ["search_rank", "id"]}
             )
-        search = kwargs.get("search")
         qs = resolve_draft_orders(info)
-        if search:
-            qs = search_orders(qs, search)
         qs = filter_connection_queryset(
             qs, kwargs, allow_replica=info.context.allow_replica
         )
-        return create_connection_slice_for_sync_webhook_control_context(
-            qs, info, kwargs, OrderCountableConnection, allow_sync_webhooks=False
-        )
+        return create_connection_slice(qs, info, kwargs, OrderCountableConnection)
 
     @staticmethod
     def resolve_orders_total(_root, info: ResolveInfo, *, period, channel=None):
@@ -296,12 +244,12 @@ class OrderMutations(graphene.ObjectType):
     draft_order_delete = DraftOrderDelete.Field()
     draft_order_bulk_delete = DraftOrderBulkDelete.Field()
     draft_order_lines_bulk_delete = DraftOrderLinesBulkDelete.Field(
-        deprecation_reason=DEFAULT_DEPRECATION_REASON
+        deprecation_reason=DEPRECATED_IN_3X_FIELD
     )
     draft_order_update = DraftOrderUpdate.Field()
 
     order_add_note = OrderAddNote.Field(
-        deprecation_reason="Use `orderNoteAdd` instead."
+        deprecation_reason=(f"{DEPRECATED_IN_3X_FIELD} Use `orderNoteAdd` instead.")
     )
     order_cancel = OrderCancel.Field()
     order_capture = OrderCapture.Field()

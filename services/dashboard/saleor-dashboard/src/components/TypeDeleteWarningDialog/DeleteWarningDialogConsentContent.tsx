@@ -1,5 +1,5 @@
 import { Checkbox, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 interface DeleteWarningDialogConsentContentProps {
   description: string | React.ReactNode[] | readonly React.ReactNode[];
@@ -8,12 +8,12 @@ interface DeleteWarningDialogConsentContentProps {
   onConsentChange: (value: boolean) => void;
 }
 
-const DeleteWarningDialogConsentContent = ({
+const DeleteWarningDialogConsentContent: React.FC<DeleteWarningDialogConsentContentProps> = ({
   description,
   consentLabel,
   isConsentChecked,
   onConsentChange,
-}: DeleteWarningDialogConsentContentProps) => (
+}) => (
   <>
     <Text>{description}</Text>
 

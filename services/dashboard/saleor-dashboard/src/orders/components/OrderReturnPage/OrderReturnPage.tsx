@@ -13,7 +13,7 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { renderCollection } from "@dashboard/misc";
 import { orderHasTransactions } from "@dashboard/orders/types";
 import { orderUrl } from "@dashboard/orders/urls";
-import { Fragment } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { calculateCanRefundShipping } from "../OrderGrantRefundPage/utils";
@@ -30,7 +30,7 @@ import {
   getWaitingFulfillments,
 } from "./utils";
 
-interface OrderReturnPageProps {
+export interface OrderReturnPageProps {
   order: OrderDetailsFragment | undefined | null;
   loading: boolean;
   returnErrors?: OrderErrorFragment[];
@@ -40,7 +40,7 @@ interface OrderReturnPageProps {
   submitStatus: ConfirmButtonTransitionState;
 }
 
-const OrderRefundPage = (props: OrderReturnPageProps) => {
+const OrderRefundPage: React.FC<OrderReturnPageProps> = props => {
   const {
     order,
     loading,
@@ -82,7 +82,7 @@ const OrderRefundPage = (props: OrderReturnPageProps) => {
             {renderCollection(
               getWaitingFulfillments(order as OrderDetailsFragment),
               ({ id, lines }) => (
-                <Fragment key={id}>
+                <React.Fragment key={id}>
                   <ItemsCard
                     errors={returnErrors}
                     order={order}
@@ -95,13 +95,13 @@ const OrderRefundPage = (props: OrderReturnPageProps) => {
                     onChangeSelected={handlers.changeItemsToBeReplaced}
                   />
                   <CardSpacer />
-                </Fragment>
+                </React.Fragment>
               ),
             )}
             {renderCollection(
               getFulfilledFulfillemnts(order as OrderDetailsFragment),
               ({ id, lines }) => (
-                <Fragment key={id}>
+                <React.Fragment key={id}>
                   <ItemsCard
                     errors={returnErrors}
                     order={order}
@@ -114,7 +114,7 @@ const OrderRefundPage = (props: OrderReturnPageProps) => {
                     onChangeSelected={handlers.changeItemsToBeReplaced}
                   />
                   <CardSpacer />
-                </Fragment>
+                </React.Fragment>
               ),
             )}
           </DetailPageLayout.Content>
@@ -130,7 +130,6 @@ const OrderRefundPage = (props: OrderReturnPageProps) => {
                 refundShipmentCosts={data.refundShipmentCosts}
                 canRefundShipping={canRefundShipping}
                 shippingCosts={order?.shippingPrice?.gross}
-                transactionId={data.transactionId}
                 amountData={getReturnProductsAmountValues(order, data)}
                 onChange={change}
                 disabled={isSaveDisabled}
@@ -151,7 +150,6 @@ const OrderRefundPage = (props: OrderReturnPageProps) => {
                 errors={returnErrors}
                 onChange={change}
                 onRefund={submit}
-                loading={loading}
               />
             )}
           </DetailPageLayout.RightSidebar>

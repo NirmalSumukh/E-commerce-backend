@@ -1,18 +1,11 @@
 name: MacawUI migration
-
-on:
-  pull_request:
-    types:
-      - opened
-      - labeled
-      - edited
-      - synchronize
+on: [pull_request]
 
 jobs:
   current_state:
     runs-on: ubuntu-latest
     name: "Calculate current state"
-    outputs:
+    outputs: 
       main_statistics: ${{ steps.store_import_stats.outputs.MAIN_STATISTICS }}
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +13,7 @@ jobs:
           ref: ${{ github.base_ref }}
       - uses: actions/setup-node@v3
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
       - name: Install deps
         run: |
           npm ci
@@ -35,12 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     name: "Migration check"
     needs: current_state
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'skip macaw migration check') }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version-file: ".nvmrc"
+          node-version-file: '.nvmrc'
       - name: Install deps
         run: |
           npm ci

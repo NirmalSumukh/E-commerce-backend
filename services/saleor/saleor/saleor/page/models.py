@@ -1,14 +1,13 @@
 from typing import TYPE_CHECKING, Union
 
-from django.contrib.postgres.indexes import BTreeIndex, GinIndex
-from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 from ..core.db.fields import SanitizedJSONField
 from ..core.models import ModelWithMetadata, PublishableModel, PublishedQuerySet
 from ..core.utils.editorjs import clean_editor_js
 from ..permission.enums import PagePermissions, PageTypePermissions
-from ..seo.models import SeoModel, SeoModelTranslationWithSlug
+from ..seo.models import SeoModel, SeoModelTranslation
 
 if TYPE_CHECKING:
     from ..account.models import User
@@ -33,28 +32,19 @@ class Page(ModelWithMetadata, SeoModel, PublishableModel):
     )
     content = SanitizedJSONField(blank=True, null=True, sanitizer=clean_editor_js)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    search_vector = SearchVectorField(blank=True, null=True)
-    search_index_dirty = models.BooleanField(default=True, db_default=True)
 
-    objects = PageManager()  # type: ignore[misc]
+    objects = PageManager()  # type: ignore[assignment,misc]
 
     class Meta(ModelWithMetadata.Meta):
         ordering = ("slug",)
         permissions = ((PagePermissions.MANAGE_PAGES.codename, "Manage pages."),)
-        indexes = [
-            *ModelWithMetadata.Meta.indexes,
-            GinIndex(
-                name="page_tsearch",
-                fields=["search_vector"],
-            ),
-            BTreeIndex(fields=["slug"], name="page_slug_btree_idx"),
-        ]
+        indexes = [*ModelWithMetadata.Meta.indexes, GinIndex(fields=["title", "slug"])]
 
     def __str__(self):
         return self.title
 
 
-class PageTranslation(SeoModelTranslationWithSlug):
+class PageTranslation(SeoModelTranslation):
     page = models.ForeignKey(
         Page, related_name="translations", on_delete=models.CASCADE
     )
@@ -62,12 +52,6 @@ class PageTranslation(SeoModelTranslationWithSlug):
     content = SanitizedJSONField(blank=True, null=True, sanitizer=clean_editor_js)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["language_code", "slug"],
-                name="uniq_lang_slug_pagetransl",
-            ),
-        ]
         ordering = ("language_code", "page", "pk")
         unique_together = (("language_code", "page"),)
 

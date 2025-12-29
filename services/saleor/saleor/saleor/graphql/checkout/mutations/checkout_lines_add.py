@@ -10,15 +10,12 @@ from ....checkout.fetch import (
 )
 from ....checkout.utils import add_variants_to_checkout, invalidate_checkout
 from ....core.exceptions import NonExistingCheckout
-from ....core.utils import metadata_manager
 from ....warehouse.reservations import get_reservation_length, is_reservation_enabled
 from ....webhook.event_types import WebhookEventAsyncType
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import ADDED_IN_34, DEPRECATED_IN_3X_INPUT
 from ...core.doc_category import DOC_CATEGORY_CHECKOUT
-from ...core.enums import MetadataErrorCode
 from ...core.mutations import MISSING_NODE_ERROR_MESSAGE_PREFIX, BaseMutation
 from ...core.scalars import UUID
 from ...core.types import CheckoutError, NonNullList
@@ -47,7 +44,7 @@ class CheckoutLinesAdd(BaseMutation):
 
     class Arguments:
         id = graphene.ID(
-            description="The checkout's ID.",
+            description="The checkout's ID." + ADDED_IN_34,
             required=False,
         )
         token = UUID(
@@ -177,13 +174,13 @@ class CheckoutLinesAdd(BaseMutation):
             checkout_lines_data,
             checkout.get_country(),
             channel_slug,
-            checkout_info.get_delivery_method_info(),
+            checkout_info.delivery_method_info,
             lines=lines,
         )
 
         variants_ids_to_validate = {
             variant.id
-            for variant, line_data in zip(variants, checkout_lines_data, strict=False)
+            for variant, line_data in zip(variants, checkout_lines_data)
             if line_data.quantity_to_update and line_data.quantity != 0
         }
         # validate variant only when line quantity is bigger than 0
@@ -201,21 +198,6 @@ class CheckoutLinesAdd(BaseMutation):
             )
 
     @classmethod
-    def _validate_lines_metadata(cls, lines: list[CheckoutLineInput]):
-        try:
-            for line in lines:
-                metadata_manager.create_from_graphql_input(line.metadata)
-        except metadata_manager.MetadataEmptyKeyError:
-            raise ValidationError(
-                {
-                    "metadata": ValidationError(
-                        "Metadata key cannot be empty.",
-                        code=MetadataErrorCode.REQUIRED.value,
-                    )
-                }
-            ) from None
-
-    @classmethod
     def perform_mutation(  # type: ignore[override]
         cls,
         _root,
@@ -229,11 +211,6 @@ class CheckoutLinesAdd(BaseMutation):
     ):
         app = get_app_promise(info.context).get()
         check_permissions_for_custom_prices(app, lines)
-
-        # Validate lines early, before clean input. This class pass to clean_input already modified payload
-        # Hence common logic for validation pure input doesn't work.
-        # At this point lines are raw so validation like checking metadata can be performed early
-        cls._validate_lines_metadata(lines)
 
         checkout = get_checkout(cls, info, checkout_id=checkout_id, token=token, id=id)
         manager = get_plugin_manager_promise(info.context).get()
@@ -277,7 +254,7 @@ class CheckoutLinesAdd(BaseMutation):
             lines=lines,
         )
 
-        return CheckoutLinesAdd(checkout=SyncWebhookControlContext(node=checkout))
+        return CheckoutLinesAdd(checkout=checkout)
 
     @classmethod
     def _get_variants_from_lines_input(cls, lines: list[dict]) -> list[ProductVariant]:

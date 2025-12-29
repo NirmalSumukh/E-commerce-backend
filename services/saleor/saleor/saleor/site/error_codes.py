@@ -14,9 +14,3 @@ class GiftCardSettingsErrorCode(Enum):
     INVALID = "invalid"
     REQUIRED = "required"
     GRAPHQL_ERROR = "graphql_error"
-
-
-class RefundSettingsErrorCode(Enum):
-    INVALID = "invalid"
-    REQUIRED = "required"
-    GRAPHQL_ERROR = "graphql_error"

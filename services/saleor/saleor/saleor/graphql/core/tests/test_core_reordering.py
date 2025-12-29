@@ -111,7 +111,7 @@ def test_inserting_at_the_edges(sorted_entries_seq, operation, expected_operatio
     expected = _sorted_by_order(
         [
             (node.pk, node.sort_order + op)
-            for node, op in zip(nodes, expected_operations, strict=False)
+            for node, op in zip(nodes, expected_operations)
         ]
     )
 
@@ -225,10 +225,11 @@ def test_reordering_concurrently(dummy_attribute, assert_num_queries):
         perform_reordering(qs, operations)
 
     assert ctx[0]["sql"] == (
-        'SELECT "attribute_attributevalue"."id" AS "pk", '
-        '"attribute_attributevalue"."sort_order" AS "sort_order" '
+        'SELECT "attribute_attributevalue"."id", '
+        '"attribute_attributevalue"."sort_order" '
         'FROM "attribute_attributevalue" '
-        "ORDER BY 2 ASC NULLS LAST, "
+        "ORDER BY "
+        '"attribute_attributevalue"."sort_order" ASC NULLS LAST, '
         '"attribute_attributevalue"."id" ASC FOR UPDATE'
     )
     assert ctx[1]["sql"] == (

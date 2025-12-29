@@ -3,6 +3,7 @@ import { DashboardCard } from "@dashboard/components/Card";
 import RequirePermissions from "@dashboard/components/RequirePermissions";
 import { ChannelFragment, PermissionEnum } from "@dashboard/graphql";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { WelcomePageActivities } from "./components/WelcomePageActivities";

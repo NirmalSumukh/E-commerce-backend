@@ -82,7 +82,7 @@ class PluginUpdate(BaseMutation):
                     )
                 }
             )
-        if plugin not in manager.global_plugins and not channel_id:
+        elif plugin not in manager.global_plugins and not channel_id:
             raise ValidationError(
                 {
                     "id": ValidationError(

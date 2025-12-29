@@ -1,8 +1,9 @@
 import ActionDialog from "@dashboard/components/ActionDialog";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface UnassignMembersDialogProps {
+export interface UnassignMembersDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   quantity: number;
   open: boolean;
@@ -10,13 +11,13 @@ interface UnassignMembersDialogProps {
   onClose: () => void;
 }
 
-const UnassignMembersDialog = ({
+const UnassignMembersDialog: React.FC<UnassignMembersDialogProps> = ({
   confirmButtonState,
   quantity,
   onClose,
   onConfirm,
   open,
-}: UnassignMembersDialogProps) => {
+}) => {
   const intl = useIntl();
 
   return (

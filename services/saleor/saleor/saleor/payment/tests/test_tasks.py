@@ -1,7 +1,8 @@
-import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest import mock
 
+import pytz
 from freezegun import freeze_time
 
 from ...checkout import CheckoutAuthorizeStatus, CheckoutChargeStatus
@@ -25,9 +26,9 @@ def test_transaction_release_funds_for_checkout_task_checkout_with_new_last_chan
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_before_ttl = ttl_time + datetime.timedelta(seconds=1)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_before_ttl = ttl_time + timedelta(seconds=1)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -63,8 +64,8 @@ def test_transaction_release_funds_for_checkout_task_checkout_not_refundable(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -98,9 +99,9 @@ def test_transaction_release_funds_for_checkout_task_checkout_with_new_tr_modifi
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_before_ttl = ttl_time + datetime.timedelta(seconds=1)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_before_ttl = ttl_time + timedelta(seconds=1)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_before_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -136,8 +137,8 @@ def test_transaction_release_funds_for_checkout_task_checkout_with_none_status(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -172,8 +173,8 @@ def test_transaction_release_funds_for_checkout_task_not_valid_checkout(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item_generator(
             charged_value=Decimal(100),
@@ -199,8 +200,8 @@ def test_transaction_release_funds_for_checkout_task_transaction_for_order(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item_generator(
             order_id=order.pk,
@@ -227,8 +228,8 @@ def test_transaction_release_funds_for_checkout_task_without_transaction(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         checkout.authorize_status = CheckoutAuthorizeStatus.FULL
         checkout.charge_status = CheckoutChargeStatus.FULL
@@ -262,8 +263,8 @@ def test_transaction_release_funds_for_checkout_task_refund_already_requested(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -299,8 +300,8 @@ def test_transaction_release_funds_for_checkout_task_cancel_already_requested(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -336,8 +337,8 @@ def test_transaction_release_funds_for_checkout_task_transaction_with_authorizat
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -384,8 +385,8 @@ def test_transaction_release_funds_for_checkout_task_transaction_with_charge(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -435,24 +436,22 @@ def test_transactions_to_release_funds_setting_toogle(
     channel_JPY.release_funds_for_expired_checkouts = True
     channel_JPY.save()
 
-    ttl_time = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(hours=6)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc) - timedelta(hours=6)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
-        transactions_for_checkout = {}
-        for current_checkout in (checkout, checkout_JPY):
+        transactions_for_checkout = dict()
+        for checkout in (checkout, checkout_JPY):
             transaction_item = transaction_item_generator(
-                checkout_id=current_checkout.pk,
+                checkout_id=checkout.pk,
                 charged_value=Decimal(100),
-                currency=current_checkout.channel.currency_code,
+                currency=checkout.channel.currency_code,
             )
             transaction_amounts_for_checkout_updated(
                 transaction_item, plugins_manager, user=None, app=None
             )
-            current_checkout.automatically_refundable = True
-            current_checkout.save(
-                update_fields=["automatically_refundable", "last_change"]
-            )
-            transactions_for_checkout[current_checkout.pk] = transaction_item
+            checkout.automatically_refundable = True
+            checkout.save(update_fields=["automatically_refundable", "last_change"])
+            transactions_for_checkout[checkout.pk] = transaction_item
 
     # when
     transactions = transactions_to_release_funds()
@@ -472,8 +471,8 @@ def test_transactions_to_release_funds_after_year(
     plugins_manager,
 ):
     # given
-    ttl_time = datetime.datetime.now(tz=datetime.UTC)
-    time_after_ttl = ttl_time - datetime.timedelta(seconds=1)
+    ttl_time = datetime.now(tz=pytz.utc)
+    time_after_ttl = ttl_time - timedelta(seconds=1)
     with freeze_time(time_after_ttl):
         transaction_item = transaction_item_generator(
             checkout_id=checkout.pk,
@@ -483,7 +482,7 @@ def test_transactions_to_release_funds_after_year(
             transaction_item, plugins_manager, user=None, app=None
         )
         checkout.automatically_refundable = True
-        checkout.created_at = ttl_time - datetime.timedelta(days=366)
+        checkout.created_at = ttl_time - timedelta(days=366)
         checkout.save(update_fields=["automatically_refundable", "last_change"])
 
     # when

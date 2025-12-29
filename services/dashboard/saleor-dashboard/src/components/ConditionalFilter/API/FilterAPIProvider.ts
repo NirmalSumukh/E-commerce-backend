@@ -8,5 +8,5 @@ export interface FilterAPIProvider {
     value: FilterContainer,
     inputValue: string,
   ) => Promise<ItemOption[]>;
-  fetchAttributeOptions: (inputValue: string) => Promise<LeftOperand[]>;
+  fetchLeftOptions: (inputValue: string) => Promise<LeftOperand[]>;
 }

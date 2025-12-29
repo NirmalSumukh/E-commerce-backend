@@ -1,6 +1,6 @@
 import { Option, RangeValue } from "@saleor/macaw-ui-next";
 
-type DisabledScope = "left" | "right" | "condition";
+export type DisabledScope = "left" | "right" | "condition";
 
 export type RightOperatorOption = Option & {
   slug: string;
@@ -10,7 +10,7 @@ export type LeftOperatorOption = Option & {
   type: string;
 };
 
-type ConditionOption<T extends string> = Option & {
+export type ConditionOption<T extends string> = Option & {
   type: T;
 };
 
@@ -39,10 +39,6 @@ type ConditionOptionTypes = ConditionOption<
 export interface Row {
   value: { label: string; value: string; type: string } | null;
   loading?: boolean;
-  isAttribute: boolean;
-  selectedAttribute?: { label: string; value: string; type: string } | null;
-  availableAttributesList?: LeftOperatorOption[];
-  attributeLoading?: boolean;
   constraint?: {
     dependsOn: string[];
     disabled?: DisabledScope[];
@@ -115,12 +111,12 @@ export interface DateTimeOperator {
   conditionValue: ConditionOption<"datetime"> | null;
 }
 
-interface DateRangeOperator {
+export interface DateRangeOperator {
   value: RangeValue;
   conditionValue: ConditionOption<"date.range"> | null;
 }
 
-interface DateTimeRangeOperator {
+export interface DateTimeRangeOperator {
   value: RangeValue;
   conditionValue: ConditionOption<"datetime.range"> | null;
 }
@@ -144,11 +140,7 @@ export interface FilterEvent extends Event {
     | RightOperatorChangeData
     | RightOperatorFocusData
     | RightOperatorBlurData
-    | RightOperatorInputValueChangeData
-    | AttributeChangeData
-    | AttributeFocusData
-    | AttributeBlurData
-    | AttributeInputValueChangeData;
+    | RightOperatorInputValueChangeData;
 }
 
 export interface RowAddData {
@@ -230,32 +222,6 @@ export interface RightOperatorBlurData {
 export interface RightOperatorInputValueChangeData {
   type: "rightOperator.onInputValueChange";
   path: `${number}.condition.selected.value`;
-  index: number;
-  value: string;
-}
-
-export interface AttributeChangeData {
-  type: "attribute.onChange";
-  path: `${number}`;
-  index: number;
-  value: LeftOperatorOption;
-}
-
-export interface AttributeFocusData {
-  type: "attribute.onFocus";
-  path: `${number}`;
-  index: number;
-}
-
-export interface AttributeBlurData {
-  type: "attribute.onBlur";
-  path: `${number}`;
-  index: number;
-}
-
-export interface AttributeInputValueChangeData {
-  type: "attribute.onInputValueChange";
-  path: `${number}`;
   index: number;
   value: string;
 }

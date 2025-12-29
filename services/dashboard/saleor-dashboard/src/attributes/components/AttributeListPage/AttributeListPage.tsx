@@ -5,18 +5,19 @@ import { BulkDeleteButton } from "@dashboard/components/BulkDeleteButton";
 import { DashboardCard } from "@dashboard/components/Card";
 import { FilterPresetsSelect } from "@dashboard/components/FilterPresetsSelect";
 import { configurationMenuUrl } from "@dashboard/configuration";
+import { useFlag } from "@dashboard/featureFlags";
 import { AttributeFragment } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { sectionNames } from "@dashboard/intl";
 import { Box, Button, ChevronRightIcon } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FilterPagePropsWithPresets, PageListProps, SortPage } from "../../../types";
 import { AttributeListDatagrid } from "../AttributeListDatagrid";
-import { AttributeFilterKeys, AttributeListFilterOpts } from "./filters";
+import { AttributeFilterKeys, AttributeListFilterOpts, createFilterStructure } from "./filters";
 
-interface AttributeListPageProps
+export interface AttributeListPageProps
   extends PageListProps,
     FilterPagePropsWithPresets<AttributeFilterKeys, AttributeListFilterOpts>,
     SortPage<AttributeListUrlSortField> {
@@ -26,8 +27,10 @@ interface AttributeListPageProps
   onSelectAttributesIds: (rows: number[], clearSelection: () => void) => void;
 }
 
-const AttributeListPage = ({
+const AttributeListPage: React.FC<AttributeListPageProps> = ({
+  filterOpts,
   initialSearch,
+  onFilterChange,
   onSearchChange,
   hasPresetsChanged,
   onFilterPresetChange,
@@ -39,11 +42,14 @@ const AttributeListPage = ({
   selectedFilterPreset,
   onAttributesDelete,
   selectedAttributesIds,
+  currencySymbol,
   ...listProps
-}: AttributeListPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
+  const structure = createFilterStructure(intl, filterOpts);
   const [isFilterPresetOpen, setFilterPresetOpen] = useState(false);
+  const { enabled: isAttributesFilteringEnabled } = useFlag("new_filters");
 
   return (
     <>
@@ -93,24 +99,47 @@ const AttributeListPage = ({
         </Box>
       </TopNav>
       <DashboardCard>
-        <ListFilters<AttributeFilterKeys>
-          type="expression-filter"
-          initialSearch={initialSearch}
-          onSearchChange={onSearchChange}
-          searchPlaceholder={intl.formatMessage({
-            id: "9ScmSs",
-            defaultMessage: "Search attributes...",
-          })}
-          actions={
-            <Box display="flex" gap={4}>
-              {selectedAttributesIds.length > 0 && (
-                <BulkDeleteButton onClick={onAttributesDelete}>
-                  <FormattedMessage defaultMessage="Delete attributes" id="g0GAdN" />
-                </BulkDeleteButton>
-              )}
-            </Box>
-          }
-        />
+        {isAttributesFilteringEnabled ? (
+          <ListFilters<AttributeFilterKeys>
+            type="expression-filter"
+            initialSearch={initialSearch}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={intl.formatMessage({
+              id: "9ScmSs",
+              defaultMessage: "Search attributes...",
+            })}
+            actions={
+              <Box display="flex" gap={4}>
+                {selectedAttributesIds.length > 0 && (
+                  <BulkDeleteButton onClick={onAttributesDelete}>
+                    <FormattedMessage defaultMessage="Delete attributes" id="g0GAdN" />
+                  </BulkDeleteButton>
+                )}
+              </Box>
+            }
+          />
+        ) : (
+          <ListFilters<AttributeFilterKeys>
+            currencySymbol={currencySymbol}
+            initialSearch={initialSearch}
+            onFilterChange={onFilterChange}
+            onSearchChange={onSearchChange}
+            filterStructure={structure}
+            searchPlaceholder={intl.formatMessage({
+              id: "9ScmSs",
+              defaultMessage: "Search attributes...",
+            })}
+            actions={
+              <Box display="flex" gap={4}>
+                {selectedAttributesIds.length > 0 && (
+                  <BulkDeleteButton onClick={onAttributesDelete}>
+                    <FormattedMessage defaultMessage="Delete attributes" id="g0GAdN" />
+                  </BulkDeleteButton>
+                )}
+              </Box>
+            }
+          />
+        )}
 
         <AttributeListDatagrid {...listProps} />
       </DashboardCard>

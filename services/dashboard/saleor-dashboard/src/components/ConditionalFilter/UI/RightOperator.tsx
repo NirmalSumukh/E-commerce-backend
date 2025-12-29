@@ -5,6 +5,7 @@ import {
   RangeInput,
   Select,
 } from "@saleor/macaw-ui-next";
+import React from "react";
 
 import BulkSelect from "./BulkSelect";
 import { FilterEventEmitter } from "./EventEmitter";

@@ -1,13 +1,13 @@
 // @ts-strict-ignore
 import useForm, { SubmitPromise, UseFormResult } from "@dashboard/hooks/useForm";
-import * as React from "react";
+import React from "react";
 
 import { FormId } from "./types";
 
 export type CheckIfSaveIsDisabledFnType<T> = (data: T) => boolean;
 
-interface FormProps<TData, TErrors>
-  extends Omit<React.HTMLProps<HTMLFormElement>, "onSubmit" | "children"> {
+export interface FormProps<TData, TErrors>
+  extends Omit<React.HTMLProps<HTMLFormElement>, "onSubmit"> {
   children: (props: UseFormResult<TData>) => React.ReactNode;
   confirmLeave?: boolean;
   initial?: TData;
@@ -18,7 +18,6 @@ interface FormProps<TData, TErrors>
   mergeData?: boolean;
 }
 
-/** @deprecated Use react-hook-form instead */
 function Form<TData, Terrors>({
   children,
   initial,

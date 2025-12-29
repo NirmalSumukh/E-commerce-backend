@@ -4,7 +4,7 @@ from ....app.models import AppToken
 from ...core.dataloaders import DataLoader
 
 
-class AppTokensByAppIdLoader(DataLoader[str, AppToken]):
+class AppTokensByAppIdLoader(DataLoader):
     context_key = "app_tokens_by_app_id"
 
     def batch_load(self, keys):

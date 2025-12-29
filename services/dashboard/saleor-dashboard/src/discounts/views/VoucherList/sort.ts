@@ -21,7 +21,7 @@ export function canBeSorted(sort: VoucherListUrlSortField, isChannelSelected: bo
   }
 }
 
-function getSortQueryField(sort: VoucherListUrlSortField): VoucherSortField {
+export function getSortQueryField(sort: VoucherListUrlSortField): VoucherSortField {
   switch (sort) {
     case VoucherListUrlSortField.code:
       return VoucherSortField.CODE;

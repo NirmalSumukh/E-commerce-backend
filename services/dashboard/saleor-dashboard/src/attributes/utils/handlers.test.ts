@@ -1,8 +1,6 @@
 import {
   createAttributeChangeHandler,
   createAttributeMultiChangeHandler,
-  createAttributeReferenceAdditionalDataHandler,
-  createAttributeReferenceChangeHandler,
   handleDeleteMultipleAttributeValues,
   prepareAttributesInput,
 } from "@dashboard/attributes/utils/handlers";
@@ -129,7 +127,7 @@ interface CreateAttribute {
   inputType: AttributeInputTypeEnum;
   initialValue?: AttributeValueDetailsFragment[];
   availableValues?: AttributeValueDetailsFragment[];
-  value?: string | null;
+  value?: string;
   isRequired?: boolean;
 }
 
@@ -191,8 +189,6 @@ const createNumericAttribute = (value: string, isRequired?: boolean) =>
   createAttribute({ inputType: AttributeInputTypeEnum.NUMERIC, value, isRequired });
 const createFileAttribute = (value: string, isRequired?: boolean) =>
   createAttribute({ inputType: AttributeInputTypeEnum.FILE, value, isRequired });
-const createDropdownAttribute = (value: string | null, isRequired?: boolean) =>
-  createAttribute({ inputType: AttributeInputTypeEnum.DROPDOWN, value, isRequired });
 
 describe("Multiple select change handler", () => {
   it("is able to select value", () => {
@@ -910,144 +906,5 @@ describe("handleDeleteMultipleAttributeValues", () => {
     // Assert
     expect(result).toEqual(["val-1"]);
     expect(deleteAttributeValue).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("prepareAttributesInput", () => {
-  it("should create input with desired values for dropdowns", () => {
-    // Arrange & Act
-    const attribute = createDropdownAttribute("val-1");
-    const prevAttribute = createDropdownAttribute("val-2");
-    const result = prepareAttributesInput({
-      attributes: [attribute],
-      prevAttributes: [prevAttribute],
-      updatedFileAttributes: [],
-    });
-
-    // Assert
-    expect(result).toEqual([{ id: ATTR_ID, values: ["val-1"] }]);
-  });
-
-  it("should create input without null values for dropdowns", () => {
-    // Arrange & Act
-    const attribute = createDropdownAttribute(null);
-    const prevAttribute = createDropdownAttribute("val-1");
-    const result = prepareAttributesInput({
-      attributes: [attribute],
-      prevAttributes: [prevAttribute],
-      updatedFileAttributes: [],
-    });
-
-    // Assert
-    expect(result).toEqual([{ id: ATTR_ID, values: [] }]);
-  });
-});
-
-describe("createAttributeReferenceChangeHandler", () => {
-  it("should update attribute value and sync metadata using useFormset methods", () => {
-    // Arrange
-    const mockAttributes = {
-      data: [
-        {
-          id: "attr-1",
-          value: ["ref-1", "ref-2"],
-          label: "Test",
-          data: { inputType: AttributeInputTypeEnum.REFERENCE },
-          additionalData: [
-            { value: "ref-1", label: "Reference 1" },
-            { value: "ref-2", label: "Reference 2" },
-            { value: "ref-3", label: "Reference 3" },
-          ],
-        },
-      ],
-      change: jest.fn(),
-      setAdditionalData: jest.fn(),
-    } as unknown as UseFormsetOutput<AttributeInputData>;
-
-    const triggerChange = jest.fn();
-    const handler = createAttributeReferenceChangeHandler(mockAttributes, triggerChange);
-
-    // Act
-    handler("attr-1", ["ref-1", "ref-3"]);
-
-    // Assert
-    expect(mockAttributes.change).toHaveBeenCalledWith("attr-1", ["ref-1", "ref-3"]);
-    expect(mockAttributes.setAdditionalData).toHaveBeenCalledWith("attr-1", [
-      { value: "ref-1", label: "Reference 1" },
-      { value: "ref-3", label: "Reference 3" },
-    ]);
-    expect(triggerChange).toHaveBeenCalled();
-  });
-
-  it("should handle empty values", () => {
-    // Arrange
-    const mockAttributes = {
-      data: [
-        {
-          id: "attr-1",
-          value: ["ref-1"],
-          label: "Test",
-          data: { inputType: AttributeInputTypeEnum.REFERENCE },
-          additionalData: [{ value: "ref-1", label: "Reference 1" }],
-        },
-      ],
-      change: jest.fn(),
-      setAdditionalData: jest.fn(),
-    } as unknown as UseFormsetOutput<AttributeInputData>;
-
-    const triggerChange = jest.fn();
-    const handler = createAttributeReferenceChangeHandler(mockAttributes, triggerChange);
-
-    // Act
-    handler("attr-1", []);
-
-    // Assert
-    expect(mockAttributes.change).toHaveBeenCalledWith("attr-1", []);
-    expect(mockAttributes.setAdditionalData).toHaveBeenCalledWith("attr-1", []);
-    expect(triggerChange).toHaveBeenCalled();
-  });
-});
-
-describe("createAttributeReferenceMetadataHandler", () => {
-  it("should filter out metadata for removed references", () => {
-    // Arrange
-    const setAdditionalDataMock = jest.fn();
-    const mockAttributes = {
-      data: [
-        {
-          id: "attr-1",
-          value: ["ref-1"],
-          label: "Test",
-          data: { inputType: AttributeInputTypeEnum.REFERENCE },
-        },
-      ],
-      setAdditionalData: setAdditionalDataMock,
-    } as unknown as UseFormsetOutput<AttributeInputData>;
-
-    // Mock the merge function behavior
-    setAdditionalDataMock.mockImplementation((_id, _values, mergeFn) => {
-      const prev = [{ value: "ref-1", label: "Reference 1" }];
-      const next = [
-        { value: "ref-2", label: "Reference 2" },
-        { value: "ref-3", label: "Reference 3" },
-      ];
-      const merged = mergeFn(prev, next);
-
-      // Should only return ref-1 since that's the only one in current values
-      expect(merged).toEqual([{ value: "ref-1", label: "Reference 1" }]);
-    });
-
-    const triggerChange = jest.fn();
-    const handler = createAttributeReferenceAdditionalDataHandler(mockAttributes, triggerChange);
-
-    // Act
-    handler("attr-1", [
-      { value: "ref-2", label: "Reference 2" },
-      { value: "ref-3", label: "Reference 3" },
-    ]);
-
-    // Assert
-    expect(setAdditionalDataMock).toHaveBeenCalled();
-    expect(triggerChange).toHaveBeenCalled();
   });
 });

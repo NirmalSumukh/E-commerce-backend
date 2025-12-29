@@ -1,5 +1,6 @@
 import { DashboardCard } from "@dashboard/components/Card";
 import Link from "@dashboard/components/Link";
+import PreviewPill from "@dashboard/components/PreviewPill";
 import { NewRadioGroupField as RadioGroupField } from "@dashboard/components/RadioGroupField";
 import {
   WarehouseClickAndCollectOptionEnum,
@@ -13,7 +14,7 @@ import { RelayToFlat } from "@dashboard/types";
 import { Divider } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Skeleton, Text } from "@saleor/macaw-ui-next";
-import { ReactNode, useEffect } from "react";
+import React, { ReactNode } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { WarehouseDetailsPageFormData } from "../WarehouseDetailsPage";
@@ -25,7 +26,7 @@ const WarehouseRadioSubtitle = ({ children }: { children: ReactNode }) => (
   </Text>
 );
 
-interface WarehouseSettingsProps {
+export interface WarehouseSettingsProps {
   zones: RelayToFlat<WarehouseWithShippingFragment["shippingZones"]>;
   disabled: boolean;
   data: WarehouseDetailsPageFormData;
@@ -40,19 +41,22 @@ const useStyles = makeStyles(
         marginBottom: theme.spacing(),
       },
     },
+    preview: {
+      marginLeft: theme.spacing(1),
+    },
   }),
   {
     name: "WarehouseInfoProps",
   },
 );
-const WarehouseSettings = ({
+const WarehouseSettings: React.FC<WarehouseSettingsProps> = ({
   zones,
   disabled,
   data,
   onChange,
   setData,
-}: WarehouseSettingsProps) => {
-  useEffect(() => {
+}) => {
+  React.useEffect(() => {
     if (data.isPrivate && data.clickAndCollectOption === WarehouseClickAndCollectOptionEnum.LOCAL) {
       setData({
         clickAndCollectOption: WarehouseClickAndCollectOptionEnum.DISABLED,
@@ -179,6 +183,7 @@ const WarehouseSettings = ({
       <DashboardCard.Header>
         <DashboardCard.Title>
           <FormattedMessage {...messages.warehouseSettingsPickupTitle} />
+          <PreviewPill className={classes.preview} />
         </DashboardCard.Title>
       </DashboardCard.Header>
       <DashboardCard.Content>

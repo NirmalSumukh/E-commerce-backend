@@ -5,10 +5,10 @@ from ....product import models as product_models
 from ...core.enums import LanguageCodeEnum
 from ...core.types import TranslationError
 from ...product.types import Category
-from .utils import BaseTranslateMutationWithSlug, TranslationInput
+from .utils import BaseTranslateMutation, TranslationInput
 
 
-class CategoryTranslate(BaseTranslateMutationWithSlug):
+class CategoryTranslate(BaseTranslateMutation):
     class Arguments:
         id = graphene.ID(
             required=True,

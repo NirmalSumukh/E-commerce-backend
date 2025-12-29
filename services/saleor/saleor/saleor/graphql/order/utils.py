@@ -35,12 +35,12 @@ T_ERRORS = dict[str, list[ValidationError]]
 
 @dataclass
 class OrderLineData:
-    variant_id: str | None = None
-    variant: ProductVariant | None = None
-    line_id: str | None = None
-    price_override: Decimal | None = None
+    variant_id: Optional[str] = None
+    variant: Optional[ProductVariant] = None
+    line_id: Optional[str] = None
+    price_override: Optional[Decimal] = None
     quantity: int = 0
-    rules_info: Iterable[VariantPromotionRuleInfo] | None = None
+    rules_info: Optional[Iterable[VariantPromotionRuleInfo]] = None
 
 
 def validate_total_quantity(lines: Iterable["OrderLine"], errors: T_ERRORS):
@@ -59,7 +59,6 @@ def get_shipping_method_availability_error(
     method: Optional["ShippingMethodData"],
     manager: "PluginsManager",
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ):
     """Validate whether shipping method is still available for the order."""
     is_valid = False
@@ -71,7 +70,6 @@ def get_shipping_method_availability_error(
                 order.channel.shipping_method_listings.all(),
                 manager,
                 database_connection_name=database_connection_name,
-                allow_sync_webhooks=allow_sync_webhooks,
             )
             if m.active
         }
@@ -82,7 +80,6 @@ def get_shipping_method_availability_error(
             "Shipping method cannot be used with this order.",
             code=OrderErrorCode.SHIPPING_METHOD_NOT_APPLICABLE.value,
         )
-    return None
 
 
 def validate_shipping_method(
@@ -91,7 +88,6 @@ def validate_shipping_method(
     errors: T_ERRORS,
     manager: "PluginsManager",
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ):
     if not order.shipping_method:
         error = ValidationError(
@@ -127,7 +123,6 @@ def validate_shipping_method(
                 convert_to_shipping_method_data(order.shipping_method, listing),
                 manager,
                 database_connection_name=database_connection_name,
-                allow_sync_webhooks=allow_sync_webhooks,
             )
 
     if error:
@@ -348,7 +343,6 @@ def validate_draft_order(
     country: str,
     manager: "PluginsManager",
     database_connection_name: str = settings.DATABASE_CONNECTION_DEFAULT_NAME,
-    allow_sync_webhooks: bool = True,
 ):
     """Check if the given order contains the proper data.
 
@@ -368,12 +362,7 @@ def validate_draft_order(
     if is_shipping_required(lines):
         validate_shipping_address(order, errors)
         validate_shipping_method(
-            order,
-            channel,
-            errors,
-            manager,
-            database_connection_name,
-            allow_sync_webhooks=allow_sync_webhooks,
+            order, channel, errors, manager, database_connection_name
         )
     validate_total_quantity(lines, errors)
     validate_order_lines(

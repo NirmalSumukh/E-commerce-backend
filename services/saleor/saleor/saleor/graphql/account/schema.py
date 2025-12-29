@@ -1,16 +1,15 @@
 import graphene
 
-from ...account.search import search_users
 from ...permission.auth_filters import AuthorizationFilters
 from ...permission.enums import AccountPermissions, OrderPermissions
 from ...permission.utils import message_one_of_permissions_required
 from ..app.dataloaders import app_promise_callback
 from ..core import ResolveInfo
 from ..core.connection import create_connection_slice, filter_connection_queryset
-from ..core.descriptions import ADDED_IN_322, DEPRECATED_IN_3X_INPUT
+from ..core.descriptions import ADDED_IN_310
 from ..core.doc_category import DOC_CATEGORY_USERS
 from ..core.fields import BaseField, FilterConnectionField, PermissionsField
-from ..core.filters import FilterInputObjectType
+from ..core.types import FilterInputObjectType
 from ..core.utils import from_global_id_or_error
 from ..core.validators import validate_one_of_args_is_in_query
 from .bulk_mutations import (
@@ -20,12 +19,7 @@ from .bulk_mutations import (
     UserBulkSetActive,
 )
 from .enums import CountryCodeEnum
-from .filters import (
-    CustomerFilter,
-    CustomerWhereInput,
-    PermissionGroupFilter,
-    StaffUserFilter,
-)
+from .filters import CustomerFilter, PermissionGroupFilter, StaffUserFilter
 from .mutations.account import (
     AccountAddressCreate,
     AccountAddressDelete,
@@ -142,17 +136,8 @@ class AccountQueries(graphene.ObjectType):
     )
     customers = FilterConnectionField(
         UserCountableConnection,
-        filter=CustomerFilterInput(
-            description=(
-                f"Filtering options for customers. {DEPRECATED_IN_3X_INPUT} "
-                "Use `where` filter instead."
-            )
-        ),
-        where=CustomerWhereInput(
-            description="Where filtering options for customers." + ADDED_IN_322
-        ),
+        filter=CustomerFilterInput(description="Filtering options for customers."),
         sort_by=UserSortingInput(description="Sort customers."),
-        search=graphene.String(description="Search customers." + ADDED_IN_322),
         description="List of the shop's customers. This list includes all users who registered through the accountRegister mutation. Additionally, staff users who have placed an order using their account will also appear in this list.",
         permissions=[OrderPermissions.MANAGE_ORDERS, AccountPermissions.MANAGE_USERS],
         doc_category=DOC_CATEGORY_USERS,
@@ -196,7 +181,7 @@ class AccountQueries(graphene.ObjectType):
             graphene.String, description="Email address of the user."
         ),
         external_reference=graphene.Argument(
-            graphene.String, description="External ID of the user."
+            graphene.String, description=f"External ID of the user. {ADDED_IN_310}"
         ),
         permissions=[
             AccountPermissions.MANAGE_STAFF,
@@ -227,10 +212,7 @@ class AccountQueries(graphene.ObjectType):
 
     @staticmethod
     def resolve_customers(_root, info: ResolveInfo, **kwargs):
-        search = kwargs.get("search")
         qs = resolve_customers(info)
-        if search:
-            qs = search_users(qs, search)
         qs = filter_connection_queryset(
             qs, kwargs, allow_replica=info.context.allow_replica
         )

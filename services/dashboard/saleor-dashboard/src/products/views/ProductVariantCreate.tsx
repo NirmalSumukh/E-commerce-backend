@@ -20,22 +20,19 @@ import {
 import useNavigator from "@dashboard/hooks/useNavigator";
 import useNotifier from "@dashboard/hooks/useNotifier";
 import useShop from "@dashboard/hooks/useShop";
-import useCategorySearch from "@dashboard/searches/useCategorySearch";
-import useCollectionSearch from "@dashboard/searches/useCollectionSearch";
-import {
-  useReferencePageSearch,
-  useReferenceProductSearch,
-} from "@dashboard/searches/useReferenceSearch";
+import usePageSearch from "@dashboard/searches/usePageSearch";
+import useProductSearch from "@dashboard/searches/useProductSearch";
 import useWarehouseSearch from "@dashboard/searches/useWarehouseSearch";
 import useAttributeValueSearchHandler from "@dashboard/utils/handlers/attributeValueSearchHandler";
 import createMetadataCreateHandler from "@dashboard/utils/handlers/metadataCreateHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { warehouseAddPath } from "@dashboard/warehouses/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { getMutationErrors, weight } from "../../misc";
+import ProductVariantCreatePage from "../components/ProductVariantCreatePage";
 import { ProductVariantCreateData } from "../components/ProductVariantCreatePage/form";
-import { ProductVariantCreatePage } from "../components/ProductVariantCreatePage/ProductVariantCreatePage";
 import {
   productListUrl,
   productVariantAddUrl,
@@ -50,17 +47,13 @@ interface ProductVariantCreateProps {
   params: ProductVariantAddUrlQueryParams;
 }
 
-const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
+export const ProductVariant: React.FC<ProductVariantCreateProps> = ({ productId, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();
   const intl = useIntl();
 
-  const {
-    loadMore: fetchMoreWarehouses,
-    search: searchWarehouses,
-    result: searchWarehousesResult,
-  } = useWarehouseSearch({
+  const { loadMore: fetchMoreWarehouses, result: searchWarehousesResult } = useWarehouseSearch({
     variables: {
       first: 100,
       channnelsId: [],
@@ -95,7 +88,7 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
         status: "success",
         text: intl.formatMessage(messages.variantCreatedSuccess),
       });
-      navigate(productVariantEditUrl(variantId), {
+      navigate(productVariantEditUrl(productId, variantId), {
         resetScroll: true,
       });
     },
@@ -179,7 +172,7 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
     updateMetadata,
     updatePrivateMetadata,
   );
-  const handleVariantClick = (id: string) => navigate(productVariantEditUrl(id));
+  const handleVariantClick = (id: string) => navigate(productVariantEditUrl(productId, id));
   const handleAssignAttributeReferenceClick = (attribute: AttributeInput) =>
     navigate(
       productVariantAddUrl(productId, {
@@ -188,32 +181,18 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
         id: attribute.id,
       }),
     );
-  const refAttr =
-    params.action === "assign-attribute-value" && params.id
-      ? product?.productType.nonSelectionVariantAttributes?.find(a => a.id === params.id)
-      : undefined;
-  const {
-    loadMore: loadMoreProducts,
-    search: searchProducts,
-    result: searchProductsOpts,
-  } = useReferenceProductSearch(refAttr);
   const {
     loadMore: loadMorePages,
     search: searchPages,
     result: searchPagesOpts,
-  } = useReferencePageSearch(refAttr);
-  const {
-    loadMore: loadMoreCategories,
-    search: searchCategories,
-    result: searchCategoriesOpts,
-  } = useCategorySearch({
+  } = usePageSearch({
     variables: DEFAULT_INITIAL_SEARCH_DATA,
   });
   const {
-    loadMore: loadMoreCollections,
-    search: searchCollections,
-    result: searchCollectionsOpts,
-  } = useCollectionSearch({
+    loadMore: loadMoreProducts,
+    search: searchProducts,
+    result: searchProductsOpts,
+  } = useProductSearch({
     variables: DEFAULT_INITIAL_SEARCH_DATA,
   });
   const {
@@ -231,16 +210,6 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
     hasMore: searchProductsOpts.data?.search?.pageInfo?.hasNextPage,
     loading: searchProductsOpts.loading,
     onFetchMore: loadMoreProducts,
-  };
-  const fetchMoreReferenceCategories = {
-    hasMore: searchCategoriesOpts.data?.search?.pageInfo?.hasNextPage,
-    loading: searchCategoriesOpts.loading,
-    onFetchMore: loadMoreCategories,
-  };
-  const fetchMoreReferenceCollections = {
-    hasMore: searchCollectionsOpts.data?.search?.pageInfo?.hasNextPage,
-    loading: searchCollectionsOpts.loading,
-    onFetchMore: loadMoreCollections,
   };
   const fetchMoreAttributeValues = {
     hasMore: !!searchAttributeValuesOpts.data?.attribute?.choices?.pageInfo?.hasNextPage,
@@ -271,7 +240,6 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
         productId={productId}
         defaultVariantId={data?.product.defaultVariant?.id}
         disabled={disableForm}
-        searchWarehouses={searchWarehouses}
         errors={variantCreateResult.data?.productVariantCreate.errors || []}
         header={intl.formatMessage({
           id: "T6dXGG",
@@ -292,16 +260,10 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
         onAssignReferencesClick={handleAssignAttributeReferenceClick}
         referencePages={mapEdgesToItems(searchPagesOpts?.data?.search) || []}
         referenceProducts={mapEdgesToItems(searchProductsOpts?.data?.search) || []}
-        referenceCategories={mapEdgesToItems(searchCategoriesOpts?.data?.search) || []}
-        referenceCollections={mapEdgesToItems(searchCollectionsOpts?.data?.search) || []}
         fetchReferencePages={searchPages}
         fetchMoreReferencePages={fetchMoreReferencePages}
         fetchReferenceProducts={searchProducts}
         fetchMoreReferenceProducts={fetchMoreReferenceProducts}
-        fetchReferenceCategories={searchCategories}
-        fetchMoreReferenceCategories={fetchMoreReferenceCategories}
-        fetchReferenceCollections={searchCollections}
-        fetchMoreReferenceCollections={fetchMoreReferenceCollections}
         fetchAttributeValues={searchAttributeValues}
         fetchMoreAttributeValues={fetchMoreAttributeValues}
         onCloseDialog={() => navigate(productVariantAddUrl(productId))}
@@ -310,5 +272,4 @@ const ProductVariant = ({ productId, params }: ProductVariantCreateProps) => {
     </>
   );
 };
-
 export default ProductVariant;

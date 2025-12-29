@@ -14,7 +14,7 @@ import { getFormErrors } from "@dashboard/utils/errors";
 import getDiscountErrorMessage from "@dashboard/utils/errors/discounts";
 import { TableBody, TableCell } from "@material-ui/core";
 import { Input, Skeleton, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { translateVoucherTypes } from "../../translations";
@@ -29,13 +29,13 @@ interface VoucherValueProps {
   onChannelChange: (channelId: string, input: ChannelInput) => void;
 }
 
-enum VoucherType {
+export enum VoucherType {
   ENTIRE_ORDER = "ENTIRE_ORDER",
   SPECIFIC_PRODUCT = "SPECIFIC_PRODUCT",
 }
 
 const numberOfColumns = 2;
-const VoucherValue = (props: VoucherValueProps) => {
+const VoucherValue: React.FC<VoucherValueProps> = props => {
   const { data, disabled, errors, onChange, onChannelChange } = props;
   const classes = useStyles(props);
   const intl = useIntl();

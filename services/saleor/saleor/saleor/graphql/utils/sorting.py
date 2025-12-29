@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.db.models import QuerySet
 from graphql.error import GraphQLError
 
@@ -45,7 +47,7 @@ def sort_queryset(
     queryset: QuerySet,
     sort_by: SortInputObjectType,
     reversed: bool,
-    channel_slug: str | None,
+    channel_slug: Optional[str],
 ) -> QuerySet:
     """Sort queryset according to given parameters.
 
@@ -73,7 +75,7 @@ def sort_queryset(
         raise GraphQLError(
             "You must provide either `field` or `attributeId` to sort the products."
         )
-    if sorting_attribute is not None:  # empty string as sorting_attribute is valid
+    elif sorting_attribute is not None:  # empty string as sorting_attribute is valid
         return _sort_queryset_by_attribute(
             queryset, sorting_attribute, sorting_direction
         )

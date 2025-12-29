@@ -14,6 +14,7 @@ from .....payment.gateway import request_refund_action
 from .....permission.enums import PaymentPermissions
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_315, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_PAYMENTS
 from ....core.enums import TransactionRequestRefundForGrantedRefundErrorCode
 from ....core.mutations import BaseMutation
@@ -58,6 +59,8 @@ class TransactionRequestRefundForGrantedRefund(BaseMutation):
     class Meta:
         description = (
             "Request a refund for payment transaction based on granted refund."
+            + ADDED_IN_315
+            + PREVIEW_FEATURE
         )
         doc_category = DOC_CATEGORY_PAYMENTS
         error_type_class = common_types.TransactionRequestRefundForGrantedRefundError
@@ -193,7 +196,7 @@ class TransactionRequestRefundForGrantedRefund(BaseMutation):
         except PaymentError as e:
             error_enum = TransactionRequestActionErrorCode
             code = error_enum.MISSING_TRANSACTION_ACTION_REQUEST_WEBHOOK.value
-            raise ValidationError(str(e), code=code) from e
+            raise ValidationError(str(e), code=code)
         finally:
             if assigned_granted_refund:
                 calculate_order_granted_refund_status(assigned_granted_refund)

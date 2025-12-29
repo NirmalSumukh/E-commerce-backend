@@ -1,5 +1,5 @@
-import datetime
 import json
+from datetime import date, timedelta
 from unittest import mock
 
 import graphene
@@ -107,9 +107,7 @@ def test_update_gift_card(
 
     initial_balance = 100.0
     currency = gift_card.currency
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     old_tag = gift_card.tags.first().name
     new_tag = "new-gift-card-tag"
     tags_count = GiftCardTag.objects.count()
@@ -230,9 +228,7 @@ def test_update_gift_card_by_app(
 
     initial_balance = 100.0
     currency = gift_card.currency
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     new_tag = gift_card_tag_list[0].name
     tags_count = GiftCardTag.objects.count()
     variables = {
@@ -500,9 +496,7 @@ def test_update_used_gift_card_to_expiry_date(
 ):
     # given
     gift_card = gift_card_used
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
 
     variables = {
         "id": graphene.Node.to_global_id("GiftCard", gift_card.pk),
@@ -582,9 +576,7 @@ def test_update_gift_card_date_in_past(
     permission_manage_apps,
 ):
     # given
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() - datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() - timedelta(days=365)
     variables = {
         "id": graphene.Node.to_global_id("GiftCard", gift_card.pk),
         "input": {
@@ -622,9 +614,7 @@ def test_update_gift_card_expired_card(
     permission_manage_apps,
 ):
     # given
-    gift_card.expiry_date = datetime.datetime.now(
-        tz=datetime.UTC
-    ).date() - datetime.timedelta(days=1)
+    gift_card.expiry_date = date.today() - timedelta(days=1)
     gift_card.save(update_fields=["expiry_date"])
 
     variables = {
@@ -763,9 +753,7 @@ def test_update_gift_card_trigger_webhook(
     settings.PLUGINS = ["saleor.plugins.webhook.plugin.WebhookPlugin"]
 
     initial_balance = 100.0
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     new_tag = "new-gift-card-tag"
     variables = {
         "id": graphene.Node.to_global_id("GiftCard", gift_card.pk),
@@ -814,120 +802,3 @@ def test_update_gift_card_trigger_webhook(
         SimpleLazyObject(lambda: staff_api_client.user),
         allow_replica=False,
     )
-
-
-UPDATE_GIFT_CARD_MUTATION_METADATA = """
-    mutation giftCardUpdate(
-        $id: ID!, $input: GiftCardUpdateInput!
-    ){
-        giftCardUpdate(id: $id, input: $input) {
-            giftCard {
-                id
-                metadata { key value }
-                privateMetadata { key value }
-            }
-            errors {
-                field
-                message
-                code
-            }
-        }
-    }
-"""
-
-
-def test_update_gift_card_metadata_empty(
-    staff_api_client,
-    gift_card,
-    permission_manage_gift_card,
-):
-    # given
-    metadata_key = "metadata_key"
-    metadata_value = "metadata_value"
-
-    gift_card.clear_private_metadata()
-    gift_card.clear_metadata()
-
-    gift_card.save()
-
-    variables = {
-        "id": graphene.Node.to_global_id("GiftCard", gift_card.pk),
-        "input": {
-            "metadata": [{"key": metadata_key, "value": metadata_value}],
-            "privateMetadata": [{"key": metadata_key, "value": metadata_value}],
-        },
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        UPDATE_GIFT_CARD_MUTATION_METADATA,
-        variables,
-        permissions=[
-            permission_manage_gift_card,
-        ],
-    )
-
-    # then
-    content = get_graphql_content(response)
-    errors = content["data"]["giftCardUpdate"]["errors"]
-    data = content["data"]["giftCardUpdate"]["giftCard"]
-
-    assert not errors
-
-    assert data["metadata"][0]["key"] == metadata_key
-    assert data["metadata"][0]["value"] == metadata_value
-    assert data["privateMetadata"][0]["key"] == metadata_key
-    assert data["privateMetadata"][0]["value"] == metadata_value
-
-
-def test_update_gift_card_metadata_existed(
-    staff_api_client,
-    gift_card,
-    permission_manage_gift_card,
-):
-    # given
-    metadata_key = "metadata_key"
-    metadata_value = "metadata_value"
-
-    gift_card.store_value_in_private_metadata(
-        {"existed": "existed", metadata_key: "old"}
-    )
-    gift_card.store_value_in_metadata({"existed": "existed", metadata_key: "old"})
-
-    gift_card.save()
-
-    variables = {
-        "id": graphene.Node.to_global_id("GiftCard", gift_card.pk),
-        "input": {
-            "metadata": [{"key": metadata_key, "value": metadata_value}],
-            "privateMetadata": [{"key": metadata_key, "value": metadata_value}],
-        },
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        UPDATE_GIFT_CARD_MUTATION_METADATA,
-        variables,
-        permissions=[
-            permission_manage_gift_card,
-        ],
-    )
-
-    # then
-    content = get_graphql_content(response)
-    errors = content["data"]["giftCardUpdate"]["errors"]
-    data = content["data"]["giftCardUpdate"]["giftCard"]
-
-    assert not errors
-
-    # Old keys preserved
-    assert data["metadata"][0]["key"] == "existed"
-    assert data["metadata"][0]["value"] == "existed"
-    assert data["privateMetadata"][0]["key"] == "existed"
-    assert data["privateMetadata"][0]["value"] == "existed"
-
-    # New keys written
-    assert data["metadata"][1]["key"] == metadata_key
-    assert data["metadata"][1]["value"] == metadata_value
-    assert data["privateMetadata"][1]["key"] == metadata_key
-    assert data["privateMetadata"][1]["value"] == metadata_value

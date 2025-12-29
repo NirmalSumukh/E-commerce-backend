@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -21,11 +21,11 @@ from ..validators import (
     [
         (Decimal("1.1200"), "USD"),
         (Decimal("1.12"), "USD"),
-        (Decimal(1), "USD"),
-        (Decimal(1), "ISK"),
+        (Decimal("1"), "USD"),
+        (Decimal("1"), "ISK"),
         (Decimal("1.00"), "ISK"),
         (Decimal("5.12"), None),
-        (Decimal(1000), "USD"),
+        (Decimal("1000"), "USD"),
     ],
 )
 def test_validate_price_precision(value, currency):
@@ -52,8 +52,8 @@ def test_validate_price_precision_raise_error(value, currency):
 
 
 def test_validate_end_is_after_start_raise_error():
-    start_date = timezone.now() + datetime.timedelta(days=365)
-    end_date = timezone.now() - datetime.timedelta(days=365)
+    start_date = timezone.now() + timedelta(days=365)
+    end_date = timezone.now() - timedelta(days=365)
 
     with pytest.raises(ValidationError) as error:
         validate_end_is_after_start(start_date, end_date)
@@ -63,11 +63,8 @@ def test_validate_end_is_after_start_raise_error():
 @pytest.mark.parametrize(
     ("start_date", "end_date"),
     [
-        (
-            timezone.now() - datetime.timedelta(days=365),
-            timezone.now() + datetime.timedelta(days=365),
-        ),
-        (timezone.now() + datetime.timedelta(days=365), None),
+        (timezone.now() - timedelta(days=365), timezone.now() + timedelta(days=365)),
+        (timezone.now() + timedelta(days=365), None),
     ],
 )
 def test_validate_end_is_after_start(start_date, end_date):
@@ -102,7 +99,7 @@ def test_validate_one_of_args_is_in_query_single_arg():
 
 def test_validate_one_of_args_is_in_query_single_arg_absent():
     with pytest.raises(GraphQLError) as error:
-        assert validate_one_of_args_is_in_query("arg1", None) is None
+        validate_one_of_args_is_in_query("arg1", None) is None
     assert error.value.message == "At least one of arguments is required: 'arg1'."
 
 

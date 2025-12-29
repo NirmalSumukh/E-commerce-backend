@@ -1,5 +1,4 @@
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from ..email_common import get_email_subject, get_email_template_or_default
 from . import constants

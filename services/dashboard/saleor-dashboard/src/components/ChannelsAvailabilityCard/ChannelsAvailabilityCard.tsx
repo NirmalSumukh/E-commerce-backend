@@ -4,7 +4,7 @@ import { PermissionEnum } from "@dashboard/graphql";
 import useDateLocalize from "@dashboard/hooks/useDateLocalize";
 import { RequireOnlyOne } from "@dashboard/misc";
 import { Box, Divider, Text } from "@saleor/macaw-ui-next";
-import { Fragment } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ChannelAvailabilityItemContent, ChannelAvailabilityItemWrapper } from "./Channel";
@@ -15,7 +15,7 @@ import {
 import { ChannelOpts, ChannelsAvailabilityError, Messages } from "./types";
 import { getChannelsAvailabilityMessages } from "./utils";
 
-interface ChannelsAvailability
+export interface ChannelsAvailability
   extends Omit<ChannelsAvailabilityWrapperProps, "children" | "selectedChannelsCount"> {
   channels: ChannelData[];
   /** Channels that have no settings */
@@ -27,12 +27,12 @@ interface ChannelsAvailability
   onChange?: (id: string, data: ChannelOpts) => void;
 }
 
-type ChannelsAvailabilityCardProps = RequireOnlyOne<
+export type ChannelsAvailabilityCardProps = RequireOnlyOne<
   ChannelsAvailability,
   "channels" | "channelsList"
 >;
 
-const ChannelsAvailability = (props: ChannelsAvailabilityCardProps) => {
+const ChannelsAvailability: React.FC<ChannelsAvailabilityCardProps> = props => {
   const {
     channelsList,
     errors = [],
@@ -76,12 +76,12 @@ const ChannelsAvailability = (props: ChannelsAvailabilityCardProps) => {
           })
         : channelsList
           ? channelsList.map(data => (
-              <Fragment key={data.id}>
+              <React.Fragment key={data.id}>
                 <Box>
                   <Text>{data.name}</Text>
                 </Box>
                 <Divider />
-              </Fragment>
+              </React.Fragment>
             ))
           : null}
     </ChannelsAvailabilityCardWrapper>

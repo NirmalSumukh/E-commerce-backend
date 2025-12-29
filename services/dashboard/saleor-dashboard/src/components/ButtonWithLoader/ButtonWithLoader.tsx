@@ -1,5 +1,6 @@
 import { buttonMessages } from "@dashboard/intl";
 import { Box, Button, ButtonProps, Spinner, sprinkles } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { ConfirmButtonTransitionState } from "../ConfirmButton";

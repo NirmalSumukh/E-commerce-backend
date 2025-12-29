@@ -26,6 +26,10 @@ jest.mock("@dashboard/misc", () => ({
 jest.mock("@dashboard/extensions/utils", () => ({
   getAppInstallErrorMessage: jest.fn().mockReturnValue("Test error message"),
 }));
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(),
+  defineMessages: jest.fn(),
+}));
 
 describe("useInstallApp", () => {
   const mockGetValues = jest.fn().mockReturnValue("https://example.com/manifest");

@@ -5,7 +5,6 @@ from django.db.models import QuerySet
 
 from .....account import events as account_events
 from .....account import models
-from .....account.search import prepare_user_search_document_value
 from .....core.tracing import traced_atomic_transaction
 from .....giftcard.search import mark_gift_cards_search_index_as_dirty
 from .....giftcard.utils import assign_user_gift_cards, get_user_gift_cards
@@ -15,21 +14,22 @@ from .....webhook.event_types import WebhookEventAsyncType
 from ....account.types import User
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_310
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.mutations import ModelWithExtRefMutation
 from ....core.types import AccountError
 from ....core.utils import WebhookEventInfo
-from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
-from ..base import BaseCustomerCreate, CustomerInput
+from ..base import CustomerInput
+from .customer_create import CustomerCreate
 
 
-class CustomerUpdate(BaseCustomerCreate, ModelWithExtRefMutation):
+class CustomerUpdate(CustomerCreate, ModelWithExtRefMutation):
     class Arguments:
         id = graphene.ID(description="ID of a customer to update.", required=False)
         external_reference = graphene.String(
             required=False,
-            description="External ID of a customer to update.",
+            description=f"External ID of a customer to update. {ADDED_IN_310}",
         )
         input = CustomerInput(
             description="Fields required to update a customer.", required=True
@@ -120,37 +120,30 @@ class CustomerUpdate(BaseCustomerCreate, ModelWithExtRefMutation):
 
         It overrides the `perform_mutation` base method of ModelMutation.
         """
+        with traced_atomic_transaction():
+            # Retrieve the data
+            original_instance = cls.get_instance(info, **data)
+            input_data = data.get("input")
 
-        # Retrieve the data
-        original_instance = cls.get_instance(info, **data)
-        data = data.get("input")
+            # Clean the input and generate a new instance from the new data
+            cleaned_input = cls.clean_input(info, original_instance, input_data)
+            metadata_list = cleaned_input.pop("metadata", None)
+            private_metadata_list = cleaned_input.pop("private_metadata", None)
 
-        # Clean the input and generate a new instance from the new data
-        cleaned_input = cls.clean_input(info, original_instance, data)
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
+            new_instance = cls.construct_instance(
+                copy(original_instance), cleaned_input
+            )
+            cls.validate_and_update_metadata(
+                new_instance, metadata_list, private_metadata_list
+            )
 
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
+            # Save the new instance data
+            cls.clean_instance(info, new_instance)
+            cls.save(info, new_instance, cleaned_input)
+            cls._save_m2m(info, new_instance, cleaned_input)
 
-        new_instance = cls.construct_instance(copy(original_instance), cleaned_input)
-        cls.validate_and_update_metadata(
-            new_instance, metadata_collection, private_metadata_collection
-        )
-
-        # Save the new instance data
-        cls.clean_instance(info, new_instance)
-        cls.save(info, new_instance, cleaned_input)
-        cls._save_m2m(info, new_instance, cleaned_input)
-
-        # Generate events by comparing the instances
-        cls.generate_events(info, original_instance, new_instance)
+            # Generate events by comparing the instances
+            cls.generate_events(info, original_instance, new_instance)
 
         if metadata_list:
             manager = get_plugin_manager_promise(info.context).get()
@@ -165,16 +158,15 @@ class CustomerUpdate(BaseCustomerCreate, ModelWithExtRefMutation):
         return cls.success_response(new_instance)
 
     @classmethod
-    @traced_atomic_transaction()
-    def save(cls, info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
-        manager = get_plugin_manager_promise(info.context).get()
+    def get_instance(cls, info, **data):
+        """Retrieve an instance from the supplied global id.
 
-        cls.save_default_addresses(
-            cleaned_input=cleaned_input,
-            user_instance=instance,
-        )
+        Ensure that `User` object will be locked in order to prevent simultaneous updates
+        mutually overwriting each other's changes.
+        """
+        object_id = cls.get_object_id(**data)
+        qs = models.User.objects.all().select_for_update()
 
-        instance.search_document = prepare_user_search_document_value(instance)
-        instance.save()
-
-        cls.call_event(manager.customer_updated, instance)
+        if object_id:
+            return cls.get_node_or_error(info, object_id, only_type=User, qs=qs)
+        return None

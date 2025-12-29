@@ -1,3 +1,5 @@
+import React from "react";
+
 export const MarketplaceIcon = () => (
   <svg
     width="20"

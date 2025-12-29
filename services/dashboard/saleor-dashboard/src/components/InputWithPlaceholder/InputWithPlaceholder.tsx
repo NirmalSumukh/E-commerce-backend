@@ -1,5 +1,5 @@
 import { Input as MacawInput } from "@saleor/macaw-ui-next";
-import { ComponentProps, forwardRef } from "react";
+import React, { ComponentProps, forwardRef } from "react";
 
 import styles from "./InputWithPlaceholder.module.css";
 

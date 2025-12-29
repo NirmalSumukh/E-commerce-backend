@@ -24,7 +24,7 @@ def test_update_rule_variant_relation(
         ]
         new_variant_ids = [variant.id for variant in new_variants]
 
-        percentage_reward_value = Decimal(10)
+        percentage_reward_value = Decimal("10")
         rule = promotion.rules.create(
             name="Percentage promotion rule",
             catalogue_predicate={"variantPredicate": {"ids": new_variant_global_ids}},
@@ -48,5 +48,5 @@ def test_update_rule_variant_relation(
         related_variants = PromotionRuleVariant.objects.filter(
             promotionrule_id=rule.id
         ).values_list("productvariant_id", flat=True)
-        assert all(variant in new_variant_ids for variant in related_variants)
+        assert all([variant in new_variant_ids for variant in related_variants])
         assert len(related_variants) == len(new_variants)

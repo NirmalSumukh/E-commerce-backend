@@ -1,12 +1,13 @@
 import VerticalSpacer from "@dashboard/components/VerticalSpacer";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 
 interface PageSectionHeaderProps {
   title?: string;
   description?: string;
 }
 
-const PageSectionHeader = (props: PageSectionHeaderProps) => {
+const PageSectionHeader: React.FC<PageSectionHeaderProps> = props => {
   const { title, description } = props;
 
   return (

@@ -18,9 +18,19 @@ export const commonMessages = defineMessages({
     id: "KeO51o",
     defaultMessage: "Channel",
   },
+  customApps: {
+    id: "+iV0gu",
+    defaultMessage: "Internal Apps",
+  },
   dashboard: {
     id: "hzSNj4",
     defaultMessage: "Dashboard",
+  },
+  demo: {
+    id: "i0AcKY",
+    defaultMessage:
+      "Just to let you know... You're in demo mode. You can play around with the dashboard but can't save changes.",
+    description: "notification message after log in",
   },
   description: {
     id: "Q8Qw5B",
@@ -228,9 +238,9 @@ export const errorMessages = defineMessages({
     defaultMessage: "Couldn't process image",
   },
   imageUploadErrorText: {
-    id: "JiVwOU",
+    id: "26+K4N",
     defaultMessage:
-      "There was a problem with the file you uploaded as an image and it couldn't be used. Please try a different file.",
+      "There was a poblem with the file you uploaded as an image and it couldn't be used. Please try a different file.",
   },
   preorderEndDateInFutureErrorText: {
     id: "6QjMei",
@@ -420,16 +430,6 @@ export const sectionNames = defineMessages({
     defaultMessage: "Catalog",
     description: "catalog section name",
   },
-  search: {
-    id: "PeMebc",
-    defaultMessage: "Search",
-    description: "search section name",
-  },
-  allSearchResults: {
-    id: "a0TDWs",
-    defaultMessage: "All Search Results",
-    description: "search section name",
-  },
   modeling: {
     id: "NVp0fa",
     defaultMessage: "Modeling",
@@ -520,10 +520,15 @@ export const sectionNames = defineMessages({
     defaultMessage: "Fulfillment",
     description: "fulfillment section name",
   },
-  modelTypes: {
-    id: "Gbhrqd",
-    defaultMessage: "Model Types",
-    description: "model types section name",
+  pageTypes: {
+    id: "a9S9Je",
+    defaultMessage: "Page Types",
+    description: "page types section name",
+  },
+  pages: {
+    id: "H6NsC1",
+    defaultMessage: "Pages",
+    description: "pages section name",
   },
   content: {
     id: "NelCIl",
@@ -630,11 +635,6 @@ export const sectionNames = defineMessages({
     defaultMessage: "Installed",
     description: "installed extensions section name",
   },
-  refundsSettings: {
-    id: "mFr9YY",
-    defaultMessage: "Refunds Settings",
-    description: "configuration section name for refund settings",
-  },
 });
 
 export const commonStatusMessages = defineMessages({
@@ -708,11 +708,6 @@ export const orderStatusMessages = defineMessages({
   unfulfilled: {
     id: "oB0y5Y",
     defaultMessage: "Unfulfilled",
-    description: "order status",
-  },
-  expired: {
-    id: "z45PdE",
-    defaultMessage: "Expired",
     description: "order status",
   },
 });

@@ -1,6 +1,7 @@
+// @ts-strict-ignore
 import { Dispatch, SetStateAction, useState } from "react";
 
-type UseLocalStorage<T> = [T, Dispatch<SetStateAction<T>>];
+export type UseLocalStorage<T> = [T, Dispatch<SetStateAction<T>>];
 export default function useLocalStorage<T>(
   key: string,
   initialValue: SetStateAction<T>,
@@ -36,7 +37,7 @@ export default function useLocalStorage<T>(
     const item = localStorage.getItem(key);
 
     if (item === null) {
-      return getValue(null as T, initialValue);
+      return getValue(null, initialValue);
     }
 
     try {
@@ -54,7 +55,7 @@ export default function useLocalStorage<T>(
       result = item as unknown as T;
     }
 
-    return getValue(result as T, initialValue);
+    return getValue(result, initialValue);
   });
   const setValue = (value: SetStateAction<T>) => {
     const valueToStore = value instanceof Function ? value(storedValue) : value;

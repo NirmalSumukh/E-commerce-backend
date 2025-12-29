@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from decimal import Decimal
 
 import graphene
@@ -43,13 +43,13 @@ def test_promotion_create(
 ):
     # given
     staff_api_client.user.groups.add(permission_group_manage_discounts)
-    start_date = timezone.now() - datetime.timedelta(days=30)
-    end_date = timezone.now() + datetime.timedelta(days=30)
+    start_date = timezone.now() - timedelta(days=30)
+    end_date = timezone.now() + timedelta(days=30)
 
     rule_1_channel_ids = [graphene.Node.to_global_id("Channel", channel_USD.pk)]
     rule_2_channel_ids = [graphene.Node.to_global_id("Channel", channel_PLN.pk)]
 
-    reward_value = Decimal(10)
+    reward_value = Decimal("10")
 
     catalogue_predicate = {
         "OR": [
@@ -166,7 +166,7 @@ def test_promotion_create_order_promotion(
                     "channels": channel_ids,
                     "rewardType": RewardTypeEnum.SUBTOTAL_DISCOUNT.name,
                     "rewardValueType": RewardValueTypeEnum.FIXED.name,
-                    "rewardValue": Decimal(1),
+                    "rewardValue": Decimal("1"),
                     "orderPredicate": order_predicate_0,
                 },
                 {
@@ -174,7 +174,7 @@ def test_promotion_create_order_promotion(
                     "channels": channel_ids,
                     "rewardType": RewardTypeEnum.SUBTOTAL_DISCOUNT.name,
                     "rewardValueType": RewardValueTypeEnum.PERCENTAGE.name,
-                    "rewardValue": Decimal(10),
+                    "rewardValue": Decimal("10"),
                     "orderPredicate": order_predicate_0,
                 },
                 {
@@ -196,7 +196,6 @@ def test_promotion_create_order_promotion(
     }
 
     # when
-    staff_api_client.ensure_access_token()
     with django_assert_num_queries(36):
         response = staff_api_client.post_graphql(PROMOTION_CREATE_MUTATION, variables)
 

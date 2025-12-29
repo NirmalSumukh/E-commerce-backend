@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { stringify } from "qs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import useRouter from "use-react-router";
 
 import { InitialAttributesAPIState } from "../API/initialState/attributes/useInitialAttributesState";
@@ -50,7 +50,7 @@ export const useUrlValueProvider = (
   params.delete("before");
   params.delete("after");
 
-  const tokenizedUrl = useMemo(() => new TokenArray(params.toString()), [params.toString()]);
+  const tokenizedUrl = new TokenArray(params.toString());
   const paramsFromType = getEmptyFetchingPrams(type);
   const fetchingParams = paramsFromType
     ? tokenizedUrl.getFetchingParams(paramsFromType, type)
@@ -112,14 +112,13 @@ export const useUrlValueProvider = (
     if (loading) return;
 
     setValue(tokenizedUrl.asFilterValuesFromResponse(data));
-    // Only run after fetching the initial data; otherwise, a race condition may occur.
   }, [initialState?.data, initialState?.loading]);
 
   useEffect(() => {
     if (initialState) return;
 
     setValue(tokenizedUrl.asFilterValueFromEmpty());
-  }, [locationSearch, tokenizedUrl, initialState]);
+  }, [locationSearch]);
 
   const persist = (filterValue: FilterContainer) => {
     router.history.replace({

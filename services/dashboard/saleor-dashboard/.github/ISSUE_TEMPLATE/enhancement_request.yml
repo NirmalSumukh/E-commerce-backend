@@ -22,3 +22,4 @@ body:
         Example: Currently we use old color values, we need to update it in the future
     validations:
       required: false
+

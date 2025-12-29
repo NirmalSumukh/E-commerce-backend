@@ -1,33 +1,33 @@
 import { SEPARATOR_CHARACTERS } from "./consts";
 
-const FALLBACK_MAX_FRACTION_DIGITS = 2;
-
-const resolveDigitsFromCurrencyOrFallback = (currency = "USD"): number => {
+const getNumberFormatting = (currency = "USD") => {
   try {
-    return (
-      new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency,
-      }).resolvedOptions().maximumFractionDigits ?? FALLBACK_MAX_FRACTION_DIGITS
-    );
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency,
+    });
   } catch (e) {
     try {
       // fallback to "USD" if currency wasn't recognised
-      return (
-        new Intl.NumberFormat("en-GB", {
-          style: "currency",
-          currency: "USD",
-        }).resolvedOptions().maximumFractionDigits ?? FALLBACK_MAX_FRACTION_DIGITS
-      );
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "USD",
+      });
     } catch {
       // everything is broken - try to return something that makes sense
-      return FALLBACK_MAX_FRACTION_DIGITS;
+      return {
+        resolvedOptions: () => ({
+          maximumFractionDigits: 2,
+        }),
+      };
     }
   }
 };
 
 export const getCurrencyDecimalPoints = (currency?: string) => {
-  return resolveDigitsFromCurrencyOrFallback(currency);
+  const options = getNumberFormatting(currency).resolvedOptions();
+
+  return options.maximumFractionDigits;
 };
 
 export const findPriceSeparator = (input: string) =>

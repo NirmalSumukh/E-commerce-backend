@@ -1,7 +1,6 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, NamedTuple
-from uuid import UUID
+from typing import TYPE_CHECKING, Optional
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -89,19 +88,18 @@ def create_stocks(
                     warehouse=warehouse,
                     quantity=stock_data["quantity"],
                 )
-                for stock_data, warehouse in zip(stocks_data, warehouses, strict=False)
+                for stock_data, warehouse in zip(stocks_data, warehouses)
             ]
         )
-    except IntegrityError as e:
+    except IntegrityError:
         msg = "Stock for one of warehouses already exists for this product variant."
-        raise ValidationError(msg) from e
+        raise ValidationError(msg)
     return new_stocks
 
 
-class DraftOrderLinesData(NamedTuple):
-    order_to_lines_mapping: dict
-    line_pks: set[UUID]
-    order_pks: set[UUID]
+DraftOrderLinesData = namedtuple(
+    "DraftOrderLinesData", ["order_to_lines_mapping", "line_pks", "order_pks"]
+)
 
 
 def get_draft_order_lines_data_for_variants(
@@ -123,7 +121,7 @@ def get_draft_order_lines_data_for_variants(
     return DraftOrderLinesData(order_to_lines_mapping, line_pks, order_pks)
 
 
-def clean_variant_sku(sku: str | None) -> str | None:
+def clean_variant_sku(sku: Optional[str]) -> Optional[str]:
     if sku:
         return sku.strip() or None
     return None
@@ -157,7 +155,7 @@ def search_string_in_kwargs(kwargs: dict) -> bool:
     return bool(filter_search.strip()) or bool(search.strip())
 
 
-def sort_field_from_kwargs(kwargs: dict) -> list[str] | None:
+def sort_field_from_kwargs(kwargs: dict) -> Optional[list[str]]:
     sort_by = kwargs.get("sort_by", {}) or {}
     return sort_by.get("field") or sort_by.get("attribute_id")
 

@@ -1,5 +1,6 @@
 from functools import wraps
 from json import JSONDecodeError
+from typing import Optional
 
 import graphene
 from django.conf import settings
@@ -12,9 +13,9 @@ from .utils import WebhookEventInfo, message_webhook_events
 
 
 class BaseField(graphene.Field):
-    description: str | None
-    doc_category: str | None
-    webhook_events_info: list[WebhookEventInfo] | None
+    description: Optional[str]
+    doc_category: Optional[str]
+    webhook_events_info: Optional[list[WebhookEventInfo]]
 
     def __init__(self, *args, **kwargs):
         auto_webhook_events_info_message = kwargs.pop(
@@ -38,7 +39,7 @@ class BaseField(graphene.Field):
 
 
 class PermissionsField(BaseField):
-    description: str | None
+    description: Optional[str]
 
     def __init__(self, *args, **kwargs):
         self.permissions = kwargs.pop("permissions", [])

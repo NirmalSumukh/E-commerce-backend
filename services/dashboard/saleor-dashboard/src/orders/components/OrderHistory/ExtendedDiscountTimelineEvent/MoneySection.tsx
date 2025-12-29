@@ -1,7 +1,9 @@
+// @ts-strict-ignore
 import HorizontalSpacer from "@dashboard/components/HorizontalSpacer";
 import { DiscountValueTypeEnum, MoneyFragment } from "@dashboard/graphql";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import Label from "../Label";
@@ -21,7 +23,7 @@ const useStyles = makeStyles(
   { name: "MoneySection" },
 );
 
-const messages = defineMessages({
+export const messages = defineMessages({
   discount: {
     id: "yJynYK",
     defaultMessage: "discount",
@@ -32,6 +34,7 @@ const messages = defineMessages({
     defaultMessage: "Fixed amount",
     description: "Fixed amount subtitle",
   },
+
   newDiscountSectionTitle: {
     id: "MTl5o6",
     defaultMessage: "New discount value",
@@ -62,12 +65,12 @@ interface MoneySectionProps {
   sectionType?: MoneySectionType;
 }
 
-const MoneySection = ({
+const MoneySection: React.FC<MoneySectionProps> = ({
   value,
   calculationMode,
   moneyData,
   sectionType = MoneySectionType.ONLY,
-}: MoneySectionProps) => {
+}) => {
   const classes = useStyles({});
   const intl = useIntl();
 
@@ -75,7 +78,7 @@ const MoneySection = ({
     return null;
   }
 
-  const getDiscountSubtitle = () => {
+  const getDiscountSubitle = () => {
     const isDiscountedByPercent = calculationMode === DiscountValueTypeEnum.PERCENTAGE;
 
     if (isDiscountedByPercent) {
@@ -84,18 +87,15 @@ const MoneySection = ({
 
     return intl.formatMessage(messages.fixedAmount);
   };
-
-  const sectionTitleMessageKey = `${sectionType}DiscountSectionTitle` as const;
-
-  const renderMoney = (money: MoneyFragment) => <Text>{`${money.amount} ${money.currency}`}</Text>;
+  const sectionTitleMessageKey = `${sectionType}DiscountSectionTitle`;
 
   return (
     <div className={classes.container}>
       <Label text={intl.formatMessage(messages[sectionTitleMessageKey])} />
       <div className={classes.horizontalContainer}>
-        <Text>{moneyData ? renderMoney(moneyData) : <Text>n/a</Text>}</Text>
+        <Text>{`${moneyData.amount} ${moneyData.currency}`}</Text>
         <HorizontalSpacer />
-        <Label text={getDiscountSubtitle()} />
+        <Label text={getDiscountSubitle()} />
       </div>
     </div>
   );

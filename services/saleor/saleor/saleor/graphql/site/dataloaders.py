@@ -1,6 +1,5 @@
-from collections.abc import Callable
 from functools import partial, reduce
-from typing import TypeVar
+from typing import Callable, TypeVar
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -20,12 +19,12 @@ class SiteByIdLoader(DataLoader[int, Site]):
         return [sites_mapped.get(site_id) for site_id in keys]
 
 
-class SiteByHostLoader(DataLoader[str, Site]):
+class SiteByHostLoader(DataLoader):
     context_key = "site_by_host"
 
     def batch_load(self, keys):
         # simulate non existing `domain__iexact__in`
-        q_list = (Q(domain__iexact=k) for k in keys)
+        q_list = map(lambda k: Q(domain__iexact=k), keys)
         q_list = reduce(lambda a, b: a | b, q_list)
         sites = Site.objects.using(self.database_connection_name).filter(q_list)
         sites_mapped = {s.domain.lower(): s for s in sites}
@@ -71,7 +70,7 @@ def ensure_that_site_is_not_none(request, host, site):
 T = TypeVar("T")
 
 
-def load_site_callback[T](func: Callable[..., T]) -> Callable[..., Promise[T]]:
+def load_site_callback(func: Callable[..., T]) -> Callable[..., Promise[T]]:
     def _wrapper(root, info, *args, **kwargs):
         return get_site_promise(info.context).then(
             partial(func, root, info, *args, **kwargs)

@@ -59,25 +59,14 @@ def create_channel(
     country="US",
     shipping_zones=None,
     is_active=True,
-    order_settings=None,
-    checkout_settings=None,
+    order_settings={},
+    checkout_settings={},
 ):
     if not warehouse_ids:
         warehouse_ids = []
+
     if slug is None:
         slug = f"channel_slug_{uuid.uuid4()}"
-    if checkout_settings is None:
-        checkout_settings = {}
-
-    order_settings = {
-        "markAsPaidStrategy": "PAYMENT_FLOW",
-        "automaticallyFulfillNonShippableGiftCard": False,
-        "allowUnpaidOrders": False,
-        "automaticallyConfirmAllNewOrders": True,
-        "expireOrdersAfter": 60,
-        "deleteExpiredOrdersAfter": 1,
-        **(order_settings or {}),
-    }
 
     variables = {
         "input": {
@@ -89,6 +78,12 @@ def create_channel(
             "addWarehouses": warehouse_ids,
             "addShippingZones": shipping_zones,
             "orderSettings": {
+                "markAsPaidStrategy": "PAYMENT_FLOW",
+                "automaticallyFulfillNonShippableGiftCard": False,
+                "allowUnpaidOrders": False,
+                "automaticallyConfirmAllNewOrders": True,
+                "expireOrdersAfter": 60,
+                "deleteExpiredOrdersAfter": 1,
                 **order_settings,
             },
             "checkoutSettings": {
@@ -108,10 +103,7 @@ def create_channel(
     assert data["slug"] == slug
     assert data["currencyCode"] == currency
     assert data["defaultCountry"]["code"] == country
-    assert (
-        data["orderSettings"]["automaticallyConfirmAllNewOrders"]
-        == order_settings["automaticallyConfirmAllNewOrders"]
-    )
+    assert data["orderSettings"]["automaticallyConfirmAllNewOrders"] is True
     assert data["isActive"] is is_active
 
     return data

@@ -1,8 +1,7 @@
 import { ErrorCircle } from "@dashboard/icons/ErrorCircle";
 import { fixedForwardRef } from "@dashboard/utils/ref";
 import { Box } from "@saleor/macaw-ui-next";
-import { ComponentProps } from "react";
-import * as React from "react";
+import React, { ComponentProps } from "react";
 import { FieldValues, useController, UseControllerProps } from "react-hook-form";
 
 import { InputWithPlaceholder } from "../InputWithPlaceholder/InputWithPlaceholder";
@@ -40,7 +39,7 @@ const HookFormInputInner = <TFormValues extends FieldValues>(
       />
       {fieldState.error && (
         <Box color="default2" display="flex" alignItems="center" gap={2} aria-hidden="true">
-          <ErrorCircle __width="16px" __height="16px" flexShrink="0" />
+          <ErrorCircle width="16px" height="16px" />
           {fieldState.error.message}
         </Box>
       )}

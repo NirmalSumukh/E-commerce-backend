@@ -72,25 +72,25 @@ class Migration(migrations.Migration):
                 (
                     "captured_value",
                     models.DecimalField(
-                        decimal_places=3, default=Decimal(0), max_digits=12
+                        decimal_places=3, default=Decimal("0"), max_digits=12
                     ),
                 ),
                 (
                     "authorized_value",
                     models.DecimalField(
-                        decimal_places=3, default=Decimal(0), max_digits=12
+                        decimal_places=3, default=Decimal("0"), max_digits=12
                     ),
                 ),
                 (
                     "refunded_value",
                     models.DecimalField(
-                        decimal_places=3, default=Decimal(0), max_digits=12
+                        decimal_places=3, default=Decimal("0"), max_digits=12
                     ),
                 ),
                 (
                     "voided_value",
                     models.DecimalField(
-                        decimal_places=3, default=Decimal(0), max_digits=12
+                        decimal_places=3, default=Decimal("0"), max_digits=12
                     ),
                 ),
                 (
@@ -156,21 +156,18 @@ class Migration(migrations.Migration):
                 "ordering": ("pk",),
             },
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="transactionitem",
             index=django.contrib.postgres.indexes.GinIndex(
                 fields=["private_metadata"], name="transactionitem_p_meta_idx"
             ),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="transactionitem",
             index=django.contrib.postgres.indexes.GinIndex(
                 fields=["metadata"], name="transactionitem_meta_idx"
             ),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="transactionitem",
             index=django.contrib.postgres.indexes.GinIndex(

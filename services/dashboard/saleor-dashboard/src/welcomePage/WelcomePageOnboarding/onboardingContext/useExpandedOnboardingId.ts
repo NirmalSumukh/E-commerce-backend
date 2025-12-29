@@ -1,38 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 
-import { OnboardingState, OnboardingStep, OnboardingStepsIDs } from "./types";
+import { OnboardingState, OnboardingStepsIDs } from "./types";
 import {
   getFirstExpanderStepId,
   getFirstNotCompletedAndNotExpandedStep,
   getNextStepToExpand,
 } from "./utils";
 
-export const useExpandedOnboardingId = (
-  onboardingState: OnboardingState,
-  loaded: boolean,
-  visibleSteps: OnboardingStep[],
-) => {
-  const hasBeenCalled = useRef(false);
-  const [expandedStepId, setExpandedStepId] = useState<OnboardingStepsIDs | "">("");
+export const useExpandedOnboardingId = (onboardingState: OnboardingState, loaded: boolean) => {
+  const hasBeenCalled = React.useRef(false);
+  const [expandedStepId, setExpandedStepId] = React.useState<OnboardingStepsIDs | "">("");
 
   useEffect(() => {
     if (hasBeenCalled.current) {
       const firstExpandedStepId = getFirstExpanderStepId(onboardingState);
 
       if (firstExpandedStepId) {
-        setExpandedStepId(firstExpandedStepId);
+        setExpandedStepId(getFirstExpanderStepId(onboardingState));
       } else {
-        setExpandedStepId(getFirstNotCompletedAndNotExpandedStep(onboardingState, visibleSteps));
+        setExpandedStepId("");
       }
     }
-  }, [onboardingState.stepsExpanded, visibleSteps]);
+  }, [onboardingState.stepsExpanded]);
 
   useEffect(() => {
     // On every state change
     if (hasBeenCalled.current) {
-      setExpandedStepId(getNextStepToExpand(onboardingState, visibleSteps));
+      setExpandedStepId(getNextStepToExpand(onboardingState));
     }
-  }, [onboardingState.stepsCompleted, visibleSteps]);
+  }, [onboardingState.stepsCompleted]);
 
   useEffect(() => {
     // On context first load
@@ -44,10 +40,10 @@ export const useExpandedOnboardingId = (
       if (firstExpandedStep) {
         setExpandedStepId(firstExpandedStep);
       } else {
-        setExpandedStepId(getFirstNotCompletedAndNotExpandedStep(onboardingState, visibleSteps));
+        setExpandedStepId(getFirstNotCompletedAndNotExpandedStep(onboardingState));
       }
     }
-  }, [loaded, onboardingState, visibleSteps]);
+  }, [loaded, onboardingState]);
 
   return expandedStepId;
 };

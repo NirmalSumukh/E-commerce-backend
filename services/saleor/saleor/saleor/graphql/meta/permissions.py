@@ -1,5 +1,4 @@
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable, Union
 
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef
@@ -122,13 +121,13 @@ def public_address_permissions(
 
     if address.user_addresses.filter(Exists(staff_users.filter(id=OuterRef("id")))):
         return [AccountPermissions.MANAGE_STAFF]
-    if (
+    elif (
         warehouse_models.Warehouse.objects.using(database_connection_name)
         .filter(address_id=address.id)
         .exists()
     ):
         return [ProductPermissions.MANAGE_PRODUCTS]
-    if (
+    elif (
         site_models.SiteSettings.objects.using(database_connection_name)
         .filter(company_address_id=address.id)
         .exists()
@@ -186,7 +185,7 @@ def product_type_permissions(
 
 
 def order_permissions(_info: ResolveInfo, _object_pk: Any) -> list[BasePermissionEnum]:
-    return [OrderPermissions.MANAGE_ORDERS]
+    return [OrderPermissions.MANAGE_ORDERS, CheckoutPermissions.HANDLE_TAXES]
 
 
 def invoice_permissions(
@@ -202,7 +201,7 @@ def menu_permissions(_info: ResolveInfo, _object_pk: Any) -> list[BasePermission
 def app_permissions(info: ResolveInfo, object_pk: str) -> list[BasePermissionEnum]:
     auth_token = info.context.decoded_auth_token or {}
     app = get_app_promise(info.context).get()
-    app_id: str | int | None
+    app_id: Union[str, int, None]
     if auth_token.get("type") == JWT_THIRDPARTY_ACCESS_TYPE:
         _, app_id = from_global_id_or_error(auth_token["app"], "App")
     else:
@@ -230,7 +229,7 @@ def channel_permissions(
 def checkout_permissions(
     _info: ResolveInfo, _object_pk: Any
 ) -> list[BasePermissionEnum]:
-    return [CheckoutPermissions.MANAGE_CHECKOUTS]
+    return [CheckoutPermissions.MANAGE_CHECKOUTS, CheckoutPermissions.HANDLE_TAXES]
 
 
 def page_permissions(_info: ResolveInfo, _object_pk: Any) -> list[BasePermissionEnum]:
@@ -250,7 +249,8 @@ def attribute_permissions(info: ResolveInfo, attribute_pk: int):
     )
     if attribute.type == AttributeType.PAGE_TYPE:
         return page_type_permissions(info, attribute_pk)
-    return product_type_permissions(info, attribute_pk)
+    else:
+        return product_type_permissions(info, attribute_pk)
 
 
 def shipping_permissions(
@@ -321,8 +321,8 @@ PUBLIC_META_PERMISSION_MAP: dict[
     "Invoice": invoice_permissions,
     "Menu": menu_permissions,
     "MenuItem": menu_permissions,
-    "Order": order_permissions,
-    "OrderLine": order_permissions,
+    "Order": no_permissions,
+    "OrderLine": no_permissions,
     "Page": page_permissions,
     "PageType": page_type_permissions,
     "Payment": public_payment_permissions,

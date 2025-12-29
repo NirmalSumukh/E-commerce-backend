@@ -9,9 +9,6 @@ from ..observability.exceptions import (
     TruncationError,
 )
 from ..observability.payload_schema import ObservabilityEventTypes
-from ..transport.utils import (
-    generate_cache_key_for_webhook,
-)
 from ..utils import get_webhooks_for_event, get_webhooks_for_multiple_events
 
 
@@ -134,7 +131,7 @@ def test_truncation_error_extra_fields(
     error: type[TruncationError], event_type: ObservabilityEventTypes
 ):
     operation, bytes_limit, payload_size = "operation_name", 100, 102
-    kwargs = {"extra_kwarg_a": "a", "extra_kwarg_b": "b"}
+    kwargs = dict(extra_kwarg_a="a", extra_kwarg_b="b")
     err = error(operation, bytes_limit, payload_size, **kwargs)
     assert str(err)
     assert err.extra == {
@@ -214,96 +211,3 @@ def test_get_webhooks_for_multiple_events(
             shipping_filter_webhook
         },
     }
-
-
-def test_different_target_urls_produce_different_cache_key(checkout_with_item):
-    # given
-    target_url_1 = "http://example.com/1"
-    target_url_2 = "http://example.com/2"
-
-    payload = {"field": "1", "field2": "2"}
-
-    # when
-    cache_key_1 = generate_cache_key_for_webhook(
-        payload,
-        target_url_1,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        1,
-    )
-    cache_key_2 = generate_cache_key_for_webhook(
-        payload,
-        target_url_2,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        1,
-    )
-
-    # then
-    assert cache_key_1 != cache_key_2
-
-
-def test_different_payload_produce_different_cache_key(checkout_with_item):
-    # given
-    target_url = "http://example.com/1"
-
-    payload_1 = {"field": "1", "field2": "2"}
-    payload_2 = {"field": "1", "field2": "3"}
-
-    # when
-    cache_key_1 = generate_cache_key_for_webhook(
-        payload_1,
-        target_url,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        1,
-    )
-    cache_key_2 = generate_cache_key_for_webhook(
-        payload_2,
-        target_url,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        1,
-    )
-
-    # then
-    assert cache_key_1 != cache_key_2
-
-
-def test_different_event_produce_different_cache_key(checkout_with_item):
-    # given
-    target_url = "http://example.com/1"
-
-    payload = {"field": "1", "field2": "2"}
-
-    # when
-    cache_key_1 = generate_cache_key_for_webhook(
-        payload, target_url, WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT, 1
-    )
-    cache_key_2 = generate_cache_key_for_webhook(
-        payload, target_url, WebhookEventSyncType.LIST_STORED_PAYMENT_METHODS, 1
-    )
-
-    # then
-    assert cache_key_1 != cache_key_2
-
-
-def test_different_app_produce_different_cache_key():
-    # given
-    target_url = "http://example.com/1"
-    first_app_id = 1
-    second_app_id = 2
-    payload = {"field": "1", "field2": "2"}
-
-    # when
-    cache_key_1 = generate_cache_key_for_webhook(
-        payload,
-        target_url,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        first_app_id,
-    )
-    cache_key_2 = generate_cache_key_for_webhook(
-        payload,
-        target_url,
-        WebhookEventSyncType.SHIPPING_LIST_METHODS_FOR_CHECKOUT,
-        second_app_id,
-    )
-
-    # then
-    assert cache_key_1 != cache_key_2

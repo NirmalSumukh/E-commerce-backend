@@ -132,7 +132,7 @@ def test_buy_gift_card_in_the_checkout_CORE_1102(
         lines,
         channel_slug,
         email="testEmail@example.com",
-        shipping_address=None,
+        set_default_billing_address=True,
     )
     checkout_id = checkout_data["id"]
     total_gross_amount = checkout_data["totalPrice"]["gross"]["amount"]

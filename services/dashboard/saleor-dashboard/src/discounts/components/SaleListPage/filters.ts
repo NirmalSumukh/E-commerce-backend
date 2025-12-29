@@ -1,4 +1,4 @@
-import { IFilter } from "@dashboard/components/Filter/types";
+import { IFilter } from "@dashboard/components/Filter";
 import { DiscountStatusEnum, DiscountValueTypeEnum } from "@dashboard/graphql";
 import { FilterOpts, MinMax } from "@dashboard/types";
 import { createDateField, createOptionsField } from "@dashboard/utils/filters/fields";
@@ -12,7 +12,7 @@ export enum SaleFilterKeys {
   channel = "channel",
 }
 
-interface SaleListFilterOpts {
+export interface SaleListFilterOpts {
   saleType: FilterOpts<DiscountValueTypeEnum>;
   started: FilterOpts<MinMax>;
   status: FilterOpts<DiscountStatusEnum[]>;

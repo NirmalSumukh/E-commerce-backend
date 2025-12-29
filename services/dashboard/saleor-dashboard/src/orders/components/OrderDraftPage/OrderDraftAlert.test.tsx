@@ -2,6 +2,7 @@ import { channelsList } from "@dashboard/channels/fixtures";
 import { channelUsabilityData, order } from "@dashboard/orders/fixtures";
 import Wrapper from "@test/wrapper";
 import { render, screen } from "@testing-library/react";
+import * as React from "react";
 
 import OrderDraftAlert, { OrderDraftAlertProps } from "./OrderDraftAlert";
 
@@ -72,7 +73,11 @@ describe("OrderDraftAlert", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByText(/{country}/)).toBeInTheDocument();
-    expect(screen.getByText(/{configLink}/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Wyspy Salomona is not available as a shipping destination for this channel, check/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "shipping zones configuration" })).toBeInTheDocument();
   });
 });

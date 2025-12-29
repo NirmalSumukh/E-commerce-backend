@@ -1,11 +1,9 @@
 import { ApolloClient, useApolloClient } from "@apollo/client";
 import {
-  CountryCode,
-  FulfillmentStatus,
   OrderAuthorizeStatusEnum,
   OrderChargeStatusEnum,
-  OrderStatus,
-  PaymentMethodTypeEnum,
+  OrderStatusFilter,
+  PaymentChargeStatusEnum,
 } from "@dashboard/graphql";
 import { IntlShape, useIntl } from "react-intl";
 
@@ -19,20 +17,11 @@ import {
   LegacyChannelHandler,
   NoopValuesHandler,
   TextInputValuesHandler,
-  WarehouseHandler,
 } from "../Handler";
 import { getFilterElement } from "../utils";
 
 const isStaticBoolean = (rowType: RowType) => {
-  return [
-    "isClickAndCollect",
-    "isGiftCardBought",
-    "isGiftCardUsed",
-    "hasInvoices",
-    "isPreorder",
-    "giftCardUsed",
-    "hasFulfillments",
-  ].includes(rowType);
+  return ["isClickAndCollect", "isPreorder", "giftCardUsed", "giftCardBought"].includes(rowType);
 };
 
 const createAPIHandler = (
@@ -60,8 +49,12 @@ const createAPIHandler = (
     ]);
   }
 
+  if (rowType === "paymentStatus") {
+    return new EnumValuesHandler(PaymentChargeStatusEnum, rowType, intl);
+  }
+
   if (rowType === "status") {
-    return new EnumValuesHandler(OrderStatus, rowType, intl);
+    return new EnumValuesHandler(OrderStatusFilter, rowType, intl);
   }
 
   if (rowType === "authorizeStatus") {
@@ -72,22 +65,14 @@ const createAPIHandler = (
     return new EnumValuesHandler(OrderChargeStatusEnum, rowType, intl);
   }
 
-  if (rowType === "fulfillmentStatus") {
-    return new EnumValuesHandler(FulfillmentStatus, rowType, intl);
-  }
-
   if (rowType === "channels") {
     return new LegacyChannelHandler(client, inputValue);
-  }
-
-  if (rowType === "fulfillmentWarehouse") {
-    return new WarehouseHandler(client, inputValue);
   }
 
   if (rowType === "customer") {
     return new TextInputValuesHandler([
       {
-        label: "Customer ID",
+        label: "Customer",
         value: selectedRow.condition.selected.value as string,
         type: "customer",
         slug: "customer",
@@ -99,48 +84,8 @@ const createAPIHandler = (
     return new NoopValuesHandler([]);
   }
 
-  // Price/Amount fields
-  if (rowType === "totalGross" || rowType === "totalNet") {
+  if (rowType === "metadata") {
     return new NoopValuesHandler([]);
-  }
-
-  // Date/datetime fields
-  if (rowType === "invoicesCreatedAt") {
-    return new NoopValuesHandler([]);
-  }
-
-  // Text input fields
-  if (
-    rowType === "number" ||
-    rowType === "userEmail" ||
-    rowType === "voucherCode" ||
-    rowType === "linesCount" ||
-    rowType === "checkoutId" ||
-    rowType === "billingPhoneNumber" ||
-    rowType === "shippingPhoneNumber" ||
-    rowType === "transactionsCardBrand"
-  ) {
-    return new NoopValuesHandler([]);
-  }
-
-  // Metadata fields
-  if (
-    rowType === "linesMetadata" ||
-    rowType === "transactionsMetadata" ||
-    rowType === "fulfillmentsMetadata" ||
-    rowType === "metadata"
-  ) {
-    return new NoopValuesHandler([]);
-  }
-
-  // Payment type enum field
-  if (rowType === "transactionsPaymentType") {
-    return new EnumValuesHandler(PaymentMethodTypeEnum, rowType, intl);
-  }
-
-  // Country enum fields
-  if (rowType === "billingCountry" || rowType === "shippingCountry") {
-    return new EnumValuesHandler(CountryCode, rowType, intl);
   }
 
   throw new Error(`Unknown filter element: "${rowType}"`);
@@ -163,12 +108,12 @@ export const useOrderFilterAPIProvider = (): FilterAPIProvider => {
     return handler.fetch();
   };
 
-  const fetchAttributeOptions = async () => {
+  const fetchLeftOptions = async () => {
     return [];
   };
 
   return {
     fetchRightOptions,
-    fetchAttributeOptions,
+    fetchLeftOptions,
   };
 };

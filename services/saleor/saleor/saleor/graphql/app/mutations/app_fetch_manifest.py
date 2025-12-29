@@ -39,30 +39,22 @@ class AppFetchManifest(BaseMutation):
     def fetch_manifest(cls, manifest_url):
         try:
             return fetch_manifest(manifest_url)
-        except requests.Timeout as e:
+        except requests.Timeout:
             msg = "The request to fetch manifest data timed out."
             code = AppErrorCode.MANIFEST_URL_CANT_CONNECT.value
-            raise ValidationError(
-                {"manifest_url": ValidationError(msg, code=code)}
-            ) from e
-        except requests.HTTPError as e:
+            raise ValidationError({"manifest_url": ValidationError(msg, code=code)})
+        except requests.HTTPError:
             msg = "Unable to fetch manifest data."
             code = AppErrorCode.MANIFEST_URL_CANT_CONNECT.value
-            raise ValidationError(
-                {"manifest_url": ValidationError(msg, code=code)}
-            ) from e
-        except ValueError as e:
+            raise ValidationError({"manifest_url": ValidationError(msg, code=code)})
+        except ValueError:
             msg = "Incorrect structure of manifest."
             code = AppErrorCode.INVALID_MANIFEST_FORMAT.value
-            raise ValidationError(
-                {"manifest_url": ValidationError(msg, code=code)}
-            ) from e
-        except OSError as e:
+            raise ValidationError({"manifest_url": ValidationError(msg, code=code)})
+        except Exception:
             msg = "Can't fetch manifest data. Please try later."
             code = AppErrorCode.INVALID.value
-            raise ValidationError(
-                {"manifest_url": ValidationError(msg, code=code)}
-            ) from e
+            raise ValidationError({"manifest_url": ValidationError(msg, code=code)})
 
     @classmethod
     def construct_instance(cls, instance, cleaned_data):

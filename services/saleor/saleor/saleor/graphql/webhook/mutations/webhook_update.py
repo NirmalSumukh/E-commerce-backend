@@ -8,7 +8,12 @@ from ....webhook import models
 from ....webhook.validators import HEADERS_LENGTH_LIMIT, HEADERS_NUMBER_LIMIT
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import (
+    ADDED_IN_32,
+    ADDED_IN_312,
+    DEPRECATED_IN_3X_INPUT,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_WEBHOOKS
 from ...core.fields import JSONString
 from ...core.types import BaseInputObjectType, NonNullList, WebhookError
@@ -55,14 +60,17 @@ class WebhookUpdateInput(BaseInputObjectType):
         required=False,
     )
     query = graphene.String(
-        description="Subscription query used to define a webhook payload.",
+        description="Subscription query used to define a webhook payload."
+        + ADDED_IN_32,
         required=False,
     )
     custom_headers = JSONString(
         description=f"Custom headers, which will be added to HTTP request. "
         f"There is a limitation of {HEADERS_NUMBER_LIMIT} headers per webhook "
         f"and {HEADERS_LENGTH_LIMIT} characters per header."
-        f"Only `X-*`, `Authorization*`, and `BrokerProperties` keys are allowed.",
+        f"Only `X-*`, `Authorization*`, and `BrokerProperties` keys are allowed."
+        + ADDED_IN_312
+        + PREVIEW_FEATURE,
         required=False,
     )
 
@@ -89,7 +97,7 @@ class WebhookUpdate(WebhookCreate, NotifyUserEventValidationMixin):
         error_type_field = "webhook_errors"
 
     @classmethod
-    def save(cls, _info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
+    def save(cls, _info: ResolveInfo, instance, cleaned_input):
         instance.save()
         events = set(cleaned_input.get("events", []))
         cls.validate_events(events)

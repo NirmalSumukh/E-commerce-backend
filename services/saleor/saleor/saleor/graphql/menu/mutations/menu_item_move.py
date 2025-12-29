@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -8,8 +9,8 @@ from ....menu import models
 from ....menu.error_codes import MenuErrorCode
 from ....permission.enums import MenuPermissions
 from ....webhook.event_types import WebhookEventAsyncType
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
 from ...core.doc_category import DOC_CATEGORY_MENU
 from ...core.mutations import BaseMutation
 from ...core.types import MenuError, NonNullList
@@ -24,7 +25,7 @@ from ..types import Menu, MenuItem, MenuItemMoveInput
 class _MenuMoveOperation:
     menu_item: models.MenuItem
     parent_changed: bool
-    new_parent: models.MenuItem | None
+    new_parent: Optional[models.MenuItem]
     sort_order: int
 
 
@@ -142,7 +143,7 @@ class MenuItemMove(BaseMutation):
         move_operations: list[MenuItemMoveInput],
     ) -> list[_MenuMoveOperation]:
         operations = []
-        item_to_current_parent: dict[int, models.MenuItem | None] = {}
+        item_to_current_parent: dict[int, Optional[models.MenuItem]] = {}
         for move in move_operations:
             cls.clean_move(move)
             operation = cls.get_operation(info, item_to_current_parent, menu, move)

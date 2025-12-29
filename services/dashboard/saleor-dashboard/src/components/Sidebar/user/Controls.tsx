@@ -11,7 +11,7 @@ import {
   sprinkles,
   Text,
 } from "@saleor/macaw-ui-next";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { Link } from "react-router-dom";
 

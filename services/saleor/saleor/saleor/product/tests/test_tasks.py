@@ -1,5 +1,5 @@
-import datetime
 import logging
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -12,7 +12,6 @@ from ...discount.models import Promotion, PromotionRule
 from ..models import Product, ProductChannelListing, ProductVariantChannelListing
 from ..tasks import (
     _get_preorder_variants_to_clean,
-    mark_products_search_vector_as_dirty,
     recalculate_discounted_price_for_products_task,
     update_products_search_vector_task,
     update_variant_relations_for_active_promotion_rules_task,
@@ -32,7 +31,7 @@ def test_update_variant_relations_for_active_promotion_rules_task(
     collection,
 ):
     # given
-    Promotion.objects.update(start_date=timezone.now() - datetime.timedelta(days=1))
+    Promotion.objects.update(start_date=timezone.now() - timedelta(days=1))
     PromotionRule.objects.update(variants_dirty=True)
     PromotionRuleVariant = PromotionRule.variants.through
     PromotionRuleVariant.objects.all().delete()
@@ -74,12 +73,12 @@ def test_update_variant_relations_for_active_promotion_rules_task_when_not_valid
     promotion = Promotion.objects.create(
         name="Promotion",
         type=PromotionType.CATALOGUE,
-        end_date=timezone.now() + datetime.timedelta(days=30),
+        end_date=timezone.now() + timedelta(days=30),
     )
     rule = promotion.rules.create(
         name="Percentage promotion rule",
         reward_value_type=RewardValueType.PERCENTAGE,
-        reward_value=Decimal(10),
+        reward_value=Decimal("10"),
         catalogue_predicate={
             "categoryPredicate": {"metadata": [{"key": "test", "value": "test"}]}
         },
@@ -108,7 +107,7 @@ def test_update_variant_relations_for_active_promotion_rules_task_with_order_pre
     order_promotion_rule,
 ):
     # given
-    Promotion.objects.update(start_date=timezone.now() - datetime.timedelta(days=1))
+    Promotion.objects.update(start_date=timezone.now() - timedelta(days=1))
     PromotionRule.objects.update(catalogue_predicate={})
 
     # when
@@ -131,7 +130,7 @@ def test_update_variant_relations_for_active_promotion_rules_with_empty_reward_v
     product_list,
 ):
     # given
-    Promotion.objects.update(start_date=timezone.now() - datetime.timedelta(days=1))
+    Promotion.objects.update(start_date=timezone.now() - timedelta(days=1))
     PromotionRuleVariant = PromotionRule.variants.through
     PromotionRuleVariant.objects.all().delete()
 
@@ -268,14 +267,14 @@ def test_get_preorder_variants_to_clean(
     preorder_variant_global_and_channel_threshold,
 ):
     preorder_variant_before_end_date = preorder_variant_channel_threshold
-    preorder_variant_before_end_date.preorder_end_date = (
-        timezone.now() + datetime.timedelta(days=1)
+    preorder_variant_before_end_date.preorder_end_date = timezone.now() + timedelta(
+        days=1
     )
     preorder_variant_before_end_date.save(update_fields=["preorder_end_date"])
 
     preorder_variant_after_end_date = preorder_variant_global_and_channel_threshold
-    preorder_variant_after_end_date.preorder_end_date = (
-        timezone.now() - datetime.timedelta(days=1)
+    preorder_variant_after_end_date.preorder_end_date = timezone.now() - timedelta(
+        days=1
     )
     preorder_variant_after_end_date.save(update_fields=["preorder_end_date"])
 
@@ -309,7 +308,7 @@ def test_update_products_search_vector_task_with_static_number_of_queries(
         product_list[i].save(update_fields=["search_index_dirty"])
 
     # when & # then
-    with django_assert_num_queries(16):
+    with django_assert_num_queries(15):
         update_products_search_vector_task()
 
 
@@ -319,19 +318,3 @@ def test_mem_usage_recalculate_discounted_price_for_products_task(
     lots_of_products_with_variants,
 ):
     recalculate_discounted_price_for_products_task()
-
-
-def test_mark_products_search_vector_as_dirty(product_list):
-    # given
-    product_ids = [product.id for product in product_list]
-    Product.objects.all().update(search_index_dirty=False)
-
-    # when
-    mark_products_search_vector_as_dirty(product_ids)
-
-    # then
-    assert all(
-        Product.objects.filter(id__in=product_ids).values_list(
-            "search_index_dirty", flat=True
-        )
-    )

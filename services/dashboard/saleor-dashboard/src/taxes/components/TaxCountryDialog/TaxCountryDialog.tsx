@@ -8,7 +8,7 @@ import { taxesMessages } from "@dashboard/taxes/messages";
 import { Divider, FormControlLabel, InputAdornment, Radio, TextField } from "@material-ui/core";
 import { SearchIcon } from "@saleor/macaw-ui";
 import { Box, Button } from "@saleor/macaw-ui-next";
-import { Fragment, useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStyles } from "./styles";
@@ -20,10 +20,15 @@ interface TaxCountryDialogProps {
   onClose: () => void;
 }
 
-const TaxCountryDialog = ({ open, countries, onConfirm, onClose }: TaxCountryDialogProps) => {
+export const TaxCountryDialog: React.FC<TaxCountryDialogProps> = ({
+  open,
+  countries,
+  onConfirm,
+  onClose,
+}) => {
   const classes = useStyles();
   const intl = useIntl();
-  const [selectedCountry, setSelectedCountry] = useState<CountryFragment>();
+  const [selectedCountry, setSelectedCountry] = React.useState<CountryFragment>();
 
   useModalDialogOpen(open, {
     onClose: () => {
@@ -55,7 +60,7 @@ const TaxCountryDialog = ({ open, countries, onConfirm, onClose }: TaxCountryDia
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                <SearchIcon />
               </InputAdornment>
             ),
           }}
@@ -71,7 +76,7 @@ const TaxCountryDialog = ({ open, countries, onConfirm, onClose }: TaxCountryDia
           __paddingLeft={15}
         >
           {filteredCountries.map(country => (
-            <Fragment key={country.code}>
+            <React.Fragment key={country.code}>
               <FormControlLabel
                 data-test-id="country-row"
                 label={country.country}
@@ -80,7 +85,7 @@ const TaxCountryDialog = ({ open, countries, onConfirm, onClose }: TaxCountryDia
                 control={<Radio />}
               />
               <Divider />
-            </Fragment>
+            </React.Fragment>
           ))}
         </Box>
 

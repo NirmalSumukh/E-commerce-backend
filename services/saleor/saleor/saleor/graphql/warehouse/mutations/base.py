@@ -19,16 +19,16 @@ class WarehouseMixin:
             cleaned_input = validate_slug_and_generate_if_needed(
                 instance, "name", cleaned_input
             )
-        except ValidationError as e:
-            e.code = WarehouseErrorCode.REQUIRED.value
-            raise ValidationError({"slug": e}) from e
+        except ValidationError as error:
+            error.code = WarehouseErrorCode.REQUIRED.value
+            raise ValidationError({"slug": error})
 
         if "name" in cleaned_input:
             try:
                 cleaned_input = validate_required_string_field(cleaned_input, "name")
-            except ValidationError as e:
-                e.code = WarehouseErrorCode.REQUIRED.value
-                raise ValidationError({"name": e}) from e
+            except ValidationError as error:
+                error.code = WarehouseErrorCode.REQUIRED.value
+                raise ValidationError({"name": error})
 
         # assigning shipping zones in the WarehouseCreate mutation is deprecated
         if cleaned_input.get("shipping_zones"):

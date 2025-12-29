@@ -23,6 +23,7 @@ import { isLastElement } from "@dashboard/taxes/utils/utils";
 import { Card, CardContent, Divider } from "@material-ui/core";
 import { List, ListHeader, ListItem, ListItemCell, PageTab, PageTabs } from "@saleor/macaw-ui";
 import { Box, Button, Skeleton } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { getSelectedTaxStrategy, getTaxAppId, getTaxCalculationStrategy } from "./helpers";
@@ -61,7 +62,7 @@ export interface TaxConfigurationFormData {
   removeCountriesConfiguration: CountryCode[];
 }
 
-const TaxChannelsPage = (props: TaxChannelsPageProps) => {
+export const TaxChannelsPage: React.FC<TaxChannelsPageProps> = props => {
   const {
     taxConfigurations,
     selectedConfigurationId,
@@ -293,5 +294,4 @@ const TaxChannelsPage = (props: TaxChannelsPageProps) => {
     </Form>
   );
 };
-
 export default TaxChannelsPage;

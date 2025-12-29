@@ -1,16 +1,23 @@
 // @ts-strict-ignore
 import { FilterContainer } from "@dashboard/components/ConditionalFilter/FilterElement";
 import { createProductQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
-import { AttributeFragment, AttributeInputTypeEnum, StockAvailability } from "@dashboard/graphql";
+import { FlagValue } from "@dashboard/featureFlags/FlagContent";
+import {
+  AttributeFragment,
+  AttributeInputTypeEnum,
+  ProductWhereInput,
+  StockAvailability,
+} from "@dashboard/graphql";
 import { ProductFilterKeys } from "@dashboard/products/components/ProductListPage";
 
 import {
   FilterElement,
   FilterElementKeyValue,
   FilterElementRegular,
-} from "../../../components/Filter/types";
+} from "../../../components/Filter";
 import {
   createFilterTabUtils,
+  createFilterUtils,
   getGteLteVariables,
   getKeyValueQueryParam,
   getMinMaxQueryParam,
@@ -25,9 +32,10 @@ import {
   ProductListUrlFiltersEnum,
   ProductListUrlFiltersWithKeyValueValues,
   ProductListUrlFiltersWithMultipleValues,
+  ProductListUrlQueryParams,
 } from "../../urls";
 
-const PRODUCT_FILTERS_KEY = "productPresets";
+export const PRODUCT_FILTERS_KEY = "productPresets";
 
 function getAttributeFilterParamType(inputType: AttributeInputTypeEnum) {
   switch (inputType) {
@@ -184,6 +192,28 @@ export function getFilterQueryParam(
 }
 
 export const storageUtils = createFilterTabUtils<string>(PRODUCT_FILTERS_KEY);
+
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
+  ProductListUrlQueryParams,
+  ProductListUrlFilters
+>({
+  ...ProductListUrlFiltersEnum,
+  ...ProductListUrlFiltersWithMultipleValues,
+  ...ProductListUrlFiltersAsDictWithMultipleValues,
+});
+
+export const getWhereVariables = (
+  productListingPageFiltersFlag: FlagValue,
+  value: FilterContainer,
+): ProductWhereInput => {
+  if (productListingPageFiltersFlag.enabled) {
+    const queryVars = createProductQueryVariables(value);
+
+    return queryVars;
+  }
+
+  return undefined;
+};
 
 export const getFilterVariables = ({
   filterContainer,

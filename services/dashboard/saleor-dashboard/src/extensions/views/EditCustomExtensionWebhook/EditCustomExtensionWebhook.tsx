@@ -9,19 +9,17 @@ import {
 import useNotifier from "@dashboard/hooks/useNotifier";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors, getStringOrPlaceholder } from "@dashboard/misc";
+import React from "react";
 import { useIntl } from "react-intl";
 
-import {
-  WebhookDetailsPage,
-  WebhookFormData,
-} from "../../components/WebhookDetailsPage/WebhookDetailsPage";
+import WebhookDetailsPage, { WebhookFormData } from "../../components/WebhookDetailsPage";
 import { useAvailableEvents } from "../../hooks/useAvailableEvents";
 
-interface EditCustomExtensionWebhookProps {
+export interface EditCustomExtensionWebhookProps {
   id: string;
 }
 
-export const EditCustomExtensionWebhook = ({ id }: EditCustomExtensionWebhookProps) => {
+export const EditCustomExtensionWebhook: React.FC<EditCustomExtensionWebhookProps> = ({ id }) => {
   const notify = useNotifier();
   const intl = useIntl();
   const availableEvents = useAvailableEvents();

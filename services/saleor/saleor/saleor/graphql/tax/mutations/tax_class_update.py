@@ -5,8 +5,9 @@ from ....permission.enums import CheckoutPermissions
 from ....tax import error_codes, models
 from ...account.enums import CountryCodeEnum
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_39
 from ...core.doc_category import DOC_CATEGORY_TAXES
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import BaseInputObjectType, Error, NonNullList
 from ...core.utils import get_duplicates_items
 from ..types import TaxClass
@@ -63,7 +64,7 @@ class TaxClassUpdateInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_TAXES
 
 
-class TaxClassUpdate(DeprecatedModelMutation):
+class TaxClassUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(description="ID of the tax class.", required=True)
         input = TaxClassUpdateInput(
@@ -71,7 +72,7 @@ class TaxClassUpdate(DeprecatedModelMutation):
         )
 
     class Meta:
-        description = "Updates a tax class."
+        description = "Update a tax class." + ADDED_IN_39
         error_type_class = TaxClassUpdateError
         model = models.TaxClass
         object_type = TaxClass
@@ -138,7 +139,7 @@ class TaxClassUpdate(DeprecatedModelMutation):
         models.TaxClassCountryRate.objects.filter(country__in=country_codes).delete()
 
     @classmethod
-    def save(cls, _info, instance, cleaned_input, instance_tracker=None):
+    def save(cls, _info, instance, cleaned_input):
         instance.save()
         update_country_rates = cleaned_input.get("update_country_rates", [])
         remove_country_rates = cleaned_input.get("remove_country_rates", [])

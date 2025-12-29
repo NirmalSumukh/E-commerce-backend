@@ -72,7 +72,11 @@ test("TC: SALEOR_133 Should be able to create new permission group #permissions 
       .waitFor({ state: "visible", timeout: 30000 });
   }
   for (const permission of selectedPermissions) {
-    await expect(permissionDetails.permissionGroupCheckbox(permission)).toBeChecked();
+    await expect(
+      permissionDetails.permissionGroupListItem
+        .filter({ hasText: permission })
+        .locator(permissionDetails.permissionGroupCheckbox),
+    ).toBeChecked();
   }
 });
 test("TC: SALEOR_134 Should be able to edit existing permission group #permissions #e2e", async () => {
@@ -102,18 +106,29 @@ test("TC: SALEOR_134 Should be able to edit existing permission group #permissio
   for (const permission of permissionsToBeUnchecked) {
     await permissionDetails.selectPermissionGroup(permission);
   }
-
   await expect(
-    permissionDetails.permissionGroupCheckbox(assignedPermissions.names[2]),
+    permissionDetails.permissionGroupListItem
+      .filter({ hasText: assignedPermissions.names[2] })
+      .locator(permissionDetails.permissionGroupCheckbox),
   ).toBeChecked();
   await expect(
-    permissionDetails.permissionGroupCheckbox(assignedPermissions.names[0]),
+    permissionDetails.permissionGroupListItem
+      .filter({ hasText: assignedPermissions.names[0] })
+      .locator(permissionDetails.permissionGroupCheckbox),
   ).not.toBeChecked();
   await expect(
-    permissionDetails.permissionGroupCheckbox(assignedPermissions.names[1]),
+    permissionDetails.permissionGroupListItem
+      .filter({ hasText: assignedPermissions.names[1] })
+      .locator(permissionDetails.permissionGroupCheckbox),
   ).not.toBeChecked();
   await permissionDetails.selectPermissionGroup("HANDLE_CHECKOUTS");
-  await expect(permissionDetails.permissionGroupCheckbox("HANDLE_CHECKOUTS")).toBeChecked();
+  await expect(
+    permissionDetails.permissionGroupListItem
+      .filter({
+        hasText: "HANDLE_CHECKOUTS",
+      })
+      .locator(permissionDetails.permissionGroupCheckbox),
+  ).toBeChecked();
 
   const assignedMembers = PERMISSION_GROUPS.permissionGroupToBeEdited.assignedMembers;
 

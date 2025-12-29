@@ -1,5 +1,5 @@
-import datetime
 import json
+from datetime import date, timedelta
 from unittest import mock
 
 import graphene
@@ -520,9 +520,7 @@ def test_create_gift_card_with_expiry_date(
     # given
     initial_balance = 100
     currency = "USD"
-    date_value = datetime.datetime.now(tz=datetime.UTC).date() + datetime.timedelta(
-        days=365
-    )
+    date_value = date.today() + timedelta(days=365)
     tag = "gift-card-tag"
     variables = {
         "input": {
@@ -585,10 +583,7 @@ def test_create_gift_card_with_expiry_date(
     )
 
 
-@pytest.mark.parametrize(
-    "date_value",
-    [datetime.date(1999, 1, 1), datetime.datetime.now(tz=datetime.UTC).date()],
-)
+@pytest.mark.parametrize("date_value", [date(1999, 1, 1), date.today()])
 def test_create_gift_card_with_expiry_date_type_invalid(
     date_value,
     staff_api_client,
@@ -865,144 +860,3 @@ def test_create_gift_card_with_to_short_code(
     assert len(errors) == 1
     assert errors[0]["field"] == "code"
     assert errors[0]["code"] == "INVALID"
-
-
-CREATE_GIFT_CARD_MUTATION_FOR_METADATA = """
-    mutation giftCardCreate($input: GiftCardCreateInput!){
-        giftCardCreate(input: $input) {
-            giftCard {
-                id
-                metadata { key value }
-                privateMetadata { key value }
-            }
-            errors {
-                field
-                message
-                code
-            }
-        }
-    }
-"""
-
-
-def test_create_gift_card_with_public_metadata(
-    staff_api_client,
-    permission_manage_gift_card,
-):
-    # given
-    code = "custom-code"
-    metadata_key = "key"
-    metadata_value = "value"
-
-    variables = {
-        "input": {
-            "balance": {
-                "amount": 1,
-                "currency": "USD",
-            },
-            "code": code,
-            "isActive": True,
-            "metadata": [{"key": metadata_key, "value": metadata_value}],
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CREATE_GIFT_CARD_MUTATION_FOR_METADATA,
-        variables,
-        permissions=[
-            permission_manage_gift_card,
-        ],
-    )
-
-    # then
-    content = get_graphql_content(response)
-    errors = content["data"]["giftCardCreate"]["errors"]
-    data = content["data"]["giftCardCreate"]["giftCard"]
-
-    assert not errors
-    assert data["metadata"][0]["key"] == metadata_key
-    assert data["metadata"][0]["value"] == metadata_value
-
-
-def test_create_gift_card_with_private_metadata(
-    staff_api_client,
-    permission_manage_gift_card,
-):
-    # given
-    code = "custom-code"
-    metadata_key = "key"
-    metadata_value = "value"
-
-    variables = {
-        "input": {
-            "balance": {
-                "amount": 1,
-                "currency": "USD",
-            },
-            "code": code,
-            "isActive": True,
-            "privateMetadata": [{"key": metadata_key, "value": metadata_value}],
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CREATE_GIFT_CARD_MUTATION_FOR_METADATA,
-        variables,
-        permissions=[
-            permission_manage_gift_card,
-        ],
-    )
-
-    # then
-    content = get_graphql_content(response)
-    errors = content["data"]["giftCardCreate"]["errors"]
-    data = content["data"]["giftCardCreate"]["giftCard"]
-
-    assert not errors
-    assert data["privateMetadata"][0]["key"] == metadata_key
-    assert data["privateMetadata"][0]["value"] == metadata_value
-
-
-def test_create_gift_card_with_private_and_public_metadata(
-    staff_api_client,
-    permission_manage_gift_card,
-):
-    # given
-    code = "custom-code"
-    metadata_key = "key"
-    metadata_value = "value"
-
-    variables = {
-        "input": {
-            "balance": {
-                "amount": 1,
-                "currency": "USD",
-            },
-            "code": code,
-            "isActive": True,
-            "privateMetadata": [{"key": metadata_key, "value": metadata_value}],
-            "metadata": [{"key": metadata_key, "value": metadata_value}],
-        }
-    }
-
-    # when
-    response = staff_api_client.post_graphql(
-        CREATE_GIFT_CARD_MUTATION_FOR_METADATA,
-        variables,
-        permissions=[
-            permission_manage_gift_card,
-        ],
-    )
-
-    # then
-    content = get_graphql_content(response)
-    errors = content["data"]["giftCardCreate"]["errors"]
-    data = content["data"]["giftCardCreate"]["giftCard"]
-
-    assert not errors
-    assert data["metadata"][0]["key"] == metadata_key
-    assert data["metadata"][0]["value"] == metadata_value
-    assert data["privateMetadata"][0]["key"] == metadata_key
-    assert data["privateMetadata"][0]["value"] == metadata_value

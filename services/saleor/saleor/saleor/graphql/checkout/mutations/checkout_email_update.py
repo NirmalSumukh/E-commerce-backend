@@ -5,8 +5,7 @@ from ....checkout.actions import call_checkout_event
 from ....checkout.error_codes import CheckoutErrorCode
 from ....webhook.event_types import WebhookEventAsyncType
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import ADDED_IN_34, DEPRECATED_IN_3X_INPUT
 from ...core.doc_category import DOC_CATEGORY_CHECKOUT
 from ...core.mutations import BaseMutation
 from ...core.scalars import UUID
@@ -22,7 +21,7 @@ class CheckoutEmailUpdate(BaseMutation):
 
     class Arguments:
         id = graphene.ID(
-            description="The checkout's ID.",
+            description="The checkout's ID." + ADDED_IN_34,
             required=False,
         )
         token = UUID(
@@ -86,4 +85,4 @@ class CheckoutEmailUpdate(BaseMutation):
             event_name=WebhookEventAsyncType.CHECKOUT_UPDATED,
             checkout=checkout,
         )
-        return CheckoutEmailUpdate(checkout=SyncWebhookControlContext(node=checkout))
+        return CheckoutEmailUpdate(checkout=checkout)

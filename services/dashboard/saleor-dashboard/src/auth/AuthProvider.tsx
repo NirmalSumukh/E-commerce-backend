@@ -1,12 +1,16 @@
 import { useApolloClient } from "@apollo/client";
 import useNotifier from "@dashboard/hooks/useNotifier";
-import { PropsWithChildren } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { UserContext } from "./";
 import { useAuthProvider } from "./hooks/useAuthProvider";
 
-const AuthProvider = ({ children }: PropsWithChildren) => {
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
+
+const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const apolloClient = useApolloClient();
   const intl = useIntl();
   const notify = useNotifier();

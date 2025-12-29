@@ -5,14 +5,14 @@ from ....core import JobStatus
 from ....invoice import events, models
 from ....invoice.error_codes import InvoiceErrorCode
 from ....order import events as order_events
-from ....order.search import update_order_search_vector
 from ....permission.enums import OrderPermissions
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_314
 from ...core.doc_category import DOC_CATEGORY_ORDERS
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import BaseInputObjectType, InvoiceError, NonNullList
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 from ...order.types import Order
 from ..types import Invoice
 
@@ -22,14 +22,14 @@ class InvoiceCreateInput(BaseInputObjectType):
     url = graphene.String(required=True, description="URL of an invoice to download.")
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the invoice metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description="Fields required to update the invoice metadata." + ADDED_IN_314,
         required=False,
     )
     private_metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the invoice private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description=(
+            "Fields required to update the invoice private metadata." + ADDED_IN_314
+        ),
         required=False,
     )
 
@@ -37,7 +37,7 @@ class InvoiceCreateInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_ORDERS
 
 
-class InvoiceCreate(DeprecatedModelMutation):
+class InvoiceCreate(ModelMutation):
     class Arguments:
         order_id = graphene.ID(
             required=True, description="ID of the order related to invoice."
@@ -101,24 +101,13 @@ class InvoiceCreate(DeprecatedModelMutation):
         cls.clean_order(info, order)
         cleaned_input = cls.clean_input(info, order, input)
 
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
-
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
 
         invoice = models.Invoice(**cleaned_input)
         invoice.order = order
         invoice.status = JobStatus.SUCCESS
-        cls.validate_and_update_metadata(
-            invoice, metadata_collection, private_metadata_collection
-        )
+        cls.validate_and_update_metadata(invoice, metadata_list, private_metadata_list)
         invoice.save()
 
         app = get_app_promise(info.context).get()
@@ -135,5 +124,4 @@ class InvoiceCreate(DeprecatedModelMutation):
             app=app,
             invoice_number=cleaned_input["number"],
         )
-        update_order_search_vector(order)
         return InvoiceCreate(invoice=invoice)

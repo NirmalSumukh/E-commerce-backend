@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.core.exceptions import ValidationError
 
 from ...account.forms import get_address_form
@@ -72,7 +74,7 @@ class I18nMixin:
     def _validate_address_form(
         cls,
         address_data: dict,
-        address_type: str | None = None,
+        address_type: Optional[str] = None,
         instance=None,
         format_check=True,
         required_check=True,
@@ -153,13 +155,13 @@ class I18nMixin:
         cls,
         address_data: dict,
         *,
-        address_type: str | None = None,
-        instance: Address | None = None,
+        address_type: Optional[str] = None,
+        instance: Optional[Address] = None,
         info=None,
         format_check=True,
         required_check=True,
         enable_normalization=True,
-    ) -> Address:
+    ):
         if address_data.get("country") is None:
             params = {"address_type": address_type} if address_type else {}
             raise ValidationError(
@@ -191,7 +193,7 @@ class I18nMixin:
         return instance
 
     @classmethod
-    def can_skip_address_validation(cls, info: ResolveInfo | None):
+    def can_skip_address_validation(cls, info: Optional[ResolveInfo]):
         required_permissions = None
         if info:
             mutation_name = info.field_name
@@ -208,7 +210,7 @@ class I18nMixin:
                     )
                 }
             )
-        if info and not all_permissions_required(info.context, required_permissions):
+        elif info and not all_permissions_required(info.context, required_permissions):
             raise PermissionDenied(
                 f"To skip address validation, you need following permissions: "
                 f"{', '.join(perm.name for perm in required_permissions)}.",

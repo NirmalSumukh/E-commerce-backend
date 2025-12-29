@@ -32,7 +32,7 @@ def update_discount(
         "CheckoutLineDiscount", "CheckoutDiscount", "OrderLineDiscount", "OrderDiscount"
     ],
     updated_fields: list[str],
-    voucher_code: str | None,
+    voucher_code: Optional[str],
 ):
     if voucher and discount_to_update.voucher_id != voucher.id:
         discount_to_update.voucher_id = voucher.id

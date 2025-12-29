@@ -6,9 +6,8 @@ from ....app import models
 from ....app.error_codes import AppErrorCode
 from ....permission.enums import AppPermission
 from ...account.utils import can_manage_app
-from ...core import ResolveInfo
 from ...core.doc_category import DOC_CATEGORY_APPS
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import AppError, BaseInputObjectType
 from ...utils import get_user_or_app_from_context, requestor_is_superuser
 from ..types import AppToken
@@ -23,7 +22,7 @@ class AppTokenInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_APPS
 
 
-class AppTokenCreate(DeprecatedModelMutation):
+class AppTokenCreate(ModelMutation):
     auth_token = graphene.types.String(
         description="The newly created authentication token."
     )
@@ -57,7 +56,7 @@ class AppTokenCreate(DeprecatedModelMutation):
         return response
 
     @classmethod
-    def clean_input(cls, info: ResolveInfo, instance, data, *, input_cls=None):
+    def clean_input(cls, info, instance, data):
         cleaned_input = super().clean_input(info, instance, data)
         app = cleaned_input.get("app")
         validate_app_is_not_removed(app, data.get("app"), "app")

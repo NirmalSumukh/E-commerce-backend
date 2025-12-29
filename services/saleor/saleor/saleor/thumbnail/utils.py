@@ -1,7 +1,7 @@
 import os
 import secrets
 from io import BytesIO
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 from urllib.parse import urlparse
 
 import graphene
@@ -29,7 +29,7 @@ def get_image_or_proxy_url(
     instance_id: str,
     object_type: str,
     size: int,
-    format: str | None,
+    format: Optional[str],
 ):
     """Return the thumbnail ULR if thumbnails is provided, otherwise the proxy url."""
     return (
@@ -40,7 +40,7 @@ def get_image_or_proxy_url(
 
 
 def prepare_image_proxy_url(
-    instance_pk: str, object_type: str, size: int, format: str | None
+    instance_pk: str, object_type: str, size: int, format: Optional[str]
 ):
     instance_id = graphene.Node.to_global_id(object_type, instance_pk)
     kwargs = {"instance_id": instance_id, "size": size}
@@ -49,7 +49,7 @@ def prepare_image_proxy_url(
     return reverse("thumbnail", kwargs=kwargs)
 
 
-def get_thumbnail_size(size: int | None) -> int:
+def get_thumbnail_size(size: Optional[int]) -> int:
     """Return the closest size to the given one of the available sizes."""
     if size is None:
         requested_size = DEFAULT_THUMBNAIL_SIZE
@@ -61,7 +61,7 @@ def get_thumbnail_size(size: int | None) -> int:
     return min(THUMBNAIL_SIZES, key=lambda x: abs(x - requested_size))
 
 
-def get_thumbnail_format(format: str | None) -> str | None:
+def get_thumbnail_format(format: Optional[str]) -> Optional[str]:
     """Return the thumbnail format if it's supported, otherwise None."""
     if format is None:
         return None
@@ -73,14 +73,16 @@ def get_thumbnail_format(format: str | None) -> str | None:
     return format
 
 
-def get_icon_thumbnail_format(format: str | None) -> str | None:
+def get_icon_thumbnail_format(format: Optional[str]) -> Optional[str]:
     """Return the icon thumbnail format if it's supported, otherwise None."""
     if not format or format.lower() == IconThumbnailFormat.ORIGINAL:
         return None
     return format
 
 
-def prepare_thumbnail_file_name(file_name: str, size: int, format: str | None) -> str:
+def prepare_thumbnail_file_name(
+    file_name: str, size: int, format: Optional[str]
+) -> str:
     file_path, file_ext = file_name.rsplit(".", 1)
     file_ext = format or file_ext
     return file_path + f"_thumbnail_{size}." + file_ext
@@ -105,9 +107,9 @@ class ProcessedImage:
 
     def __init__(
         self,
-        image_source: str | File,
+        image_source: Union[str, File],
         size: int,
-        format: str | None = None,
+        format: Optional[str] = None,
         storage=default_storage,
     ):
         self.image_source = image_source

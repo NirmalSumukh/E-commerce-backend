@@ -1,27 +1,27 @@
 // @ts-strict-ignore
+import { CollectionWithTotalProductsFragment } from "@dashboard/graphql";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import AssignContainerDialog, { AssignContainerDialogProps } from "../AssignContainerDialog";
 import { messages } from "./messages";
 
-type Collections = {
-  id: string;
-  name: string;
-}[];
-
 interface AssignCollectionDialogProps
   extends Omit<AssignContainerDialogProps, "containers" | "labels"> {
-  collections: Collections | null;
+  collections: CollectionWithTotalProductsFragment[];
   labels?: Partial<AssignContainerDialogProps["labels"]>;
 }
 
-const AssignCollectionDialog = ({ collections, labels, ...rest }: AssignCollectionDialogProps) => {
+const AssignCollectionDialog: React.FC<AssignCollectionDialogProps> = ({
+  collections,
+  labels,
+  ...rest
+}) => {
   const intl = useIntl();
 
   return (
     <AssignContainerDialog
       containers={collections}
-      emptyMessage={intl.formatMessage(messages.noCollectionsFound)}
       labels={{
         title: intl.formatMessage(messages.assignCollectionDialogHeader),
         label: intl.formatMessage(messages.assignCollectionDialogLabel),

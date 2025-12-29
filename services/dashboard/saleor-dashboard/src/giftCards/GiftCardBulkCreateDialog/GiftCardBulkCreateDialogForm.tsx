@@ -11,10 +11,11 @@ import {
 import useForm from "@dashboard/hooks/useForm";
 import { Divider, TextField } from "@material-ui/core";
 import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import GiftCardCreateExpirySelect from "../GiftCardCreateDialog/GiftCardCreateExpirySelect";
-import { GiftCardCreateMoneyInput } from "../GiftCardCreateDialog/GiftCardCreateMoneyInput";
+import GiftCardCreateMoneyInput from "../GiftCardCreateDialog/GiftCardCreateMoneyInput";
 import GiftCardCreateRequiresActivationSection from "../GiftCardCreateDialog/GiftCardCreateRequiresActivationSection";
 import { giftCardCreateMessages as messages } from "../GiftCardCreateDialog/messages";
 import { getGiftCardErrorMessage } from "../GiftCardUpdate/messages";
@@ -24,7 +25,7 @@ import {
   GiftCardBulkCreateFormErrors,
 } from "./types";
 
-const initialData: GiftCardBulkCreateFormData = {
+export const initialData: GiftCardBulkCreateFormData = {
   tags: [],
   balanceAmount: 1,
   balanceCurrency: null,
@@ -39,17 +40,17 @@ const initialData: GiftCardBulkCreateFormData = {
 
 interface GiftCardBulkCreateDialogFormProps {
   opts: { status: ConfirmButtonTransitionState };
-  formErrors: GiftCardBulkCreateFormErrors | null;
+  formErrors: GiftCardBulkCreateFormErrors;
   onSubmit: (data: GiftCardBulkCreateFormData) => void;
   onClose: () => void;
 }
 
-const GiftCardBulkCreateDialogForm = ({
+const GiftCardBulkCreateDialogForm: React.FC<GiftCardBulkCreateDialogFormProps> = ({
   onSubmit,
   opts,
   onClose,
   formErrors = {},
-}: GiftCardBulkCreateDialogFormProps) => {
+}) => {
   const intl = useIntl();
   const { data: settingsData, loading: loadingSettings } = useGiftCardSettingsQuery();
   const getInitialExpirySettingsData = (): Partial<GiftCardBulkCreateFormData> => {

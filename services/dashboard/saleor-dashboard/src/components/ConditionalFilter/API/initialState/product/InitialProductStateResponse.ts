@@ -1,4 +1,4 @@
-import { AttributeEntityTypeEnum, AttributeInputTypeEnum } from "@dashboard/graphql";
+import { AttributeInputTypeEnum } from "@dashboard/graphql";
 
 import { createBooleanOption } from "../../../constants";
 import { AttributeInputType } from "../../../FilterElement/ConditionOptions";
@@ -16,7 +16,6 @@ export interface AttributeDTO {
   label: string;
   slug: string;
   value: string;
-  entityType?: AttributeEntityTypeEnum;
 }
 
 export interface InitialProductState {
@@ -33,8 +32,7 @@ export interface InitialProductState {
 }
 
 const isDateField = (name: string) =>
-  ["created", "updatedAt", "startDate", "endDate", "dateJoined", "started"].includes(name);
-const isNumericField = (name: string) => ["numberOfOrders", "timesUsed"].includes(name);
+  ["created", "updatedAt", "startDate", "endDate"].includes(name);
 
 export class InitialProductStateResponse implements InitialProductState {
   constructor(
@@ -60,25 +58,10 @@ export class InitialProductStateResponse implements InitialProductState {
 
   public filterByUrlToken(token: UrlToken) {
     if (token.isAttribute() && token.hasDynamicValues()) {
-      const attribute = this.attribute[token.name];
-      const isReference =
-        attribute?.inputType === "REFERENCE" || attribute?.inputType === "SINGLE_REFERENCE";
-
-      if (isReference) {
-        return attribute.choices.filter(({ slug }) => {
-          if (!slug) return false;
-
-          return Array.isArray(token.value) ? token.value.includes(slug) : token.value === slug;
-        });
-      }
-
-      // Handle non-reference attributes - match by value
-      return attribute.choices.filter(({ value }) => {
-        return Array.isArray(token.value) ? token.value.includes(value) : token.value === value;
-      });
+      return this.attribute[token.name].choices.filter(({ value }) => token.value.includes(value));
     }
 
-    if (isDateField(token.name) || isNumericField(token.name)) {
+    if (isDateField(token.name)) {
       return token.value;
     }
 
@@ -88,19 +71,6 @@ export class InitialProductStateResponse implements InitialProductState {
       return attr.inputType === "BOOLEAN"
         ? createBooleanOption(token.value === "true", AttributeInputTypeEnum.BOOLEAN)
         : token.value;
-    }
-
-    // Special handling for metadata fields - preserve tuple structure
-    // Metadata fields use text.double and should return the raw tuple value
-    const isMetadataField = [
-      "metadata",
-      "linesMetadata",
-      "transactionsMetadata",
-      "fulfillmentsMetadata",
-    ].includes(token.name);
-
-    if (isMetadataField) {
-      return token.value;
     }
 
     if (!token.isLoadable()) {

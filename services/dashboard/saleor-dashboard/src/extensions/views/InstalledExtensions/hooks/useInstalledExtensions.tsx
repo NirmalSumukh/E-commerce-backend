@@ -2,13 +2,13 @@ import {
   getLatestFailedAttemptFromWebhooks,
   LatestWebhookDeliveryWithMoment,
 } from "@dashboard/apps/components/AppAlerts/utils";
-import { useUserPermissions } from "@dashboard/auth/hooks/useUserPermissions";
+import { AppPaths } from "@dashboard/apps/urls";
 import { InstalledExtension } from "@dashboard/extensions/types";
-import { ExtensionsUrls } from "@dashboard/extensions/urls";
+import { ViewPluginDetails } from "@dashboard/extensions/views/InstalledExtensions/components/ViewPluginDetails";
 import { byActivePlugin, sortByName } from "@dashboard/extensions/views/InstalledExtensions/utils";
+import { useFlag } from "@dashboard/featureFlags";
 import {
   AppTypeEnum,
-  PermissionEnum,
   useEventDeliveryQuery,
   useInstalledAppsListQuery,
   usePluginsQuery,
@@ -18,10 +18,11 @@ import { PluginIcon } from "@dashboard/icons/PluginIcon";
 import { WebhookIcon } from "@dashboard/icons/WebhookIcon";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { Box, GenericAppIcon, Skeleton } from "@saleor/macaw-ui-next";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 
 import { AppDisabledInfo } from "../components/InfoLabels/AppDisabledInfo";
 import { FailedWebhookInfo } from "../components/InfoLabels/FailedWebhookInfo";
+import { ViewDetailsActionButton } from "../components/ViewDetailsActionButton";
 
 export const getExtensionInfo = ({
   loading,
@@ -45,7 +46,7 @@ export const getExtensionInfo = ({
   if (lastFailedAttempt) {
     return (
       <FailedWebhookInfo
-        link={ExtensionsUrls.resolveEditManifestExtensionUrl(id)}
+        link={AppPaths.resolveAppDetailsPath(id)}
         date={lastFailedAttempt.createdAt}
       />
     );
@@ -54,7 +55,7 @@ export const getExtensionInfo = ({
   return null;
 };
 
-const getExtensionLogo = ({
+export const getExtensionLogo = ({
   logo,
   type,
   name,
@@ -74,41 +75,19 @@ const getExtensionLogo = ({
   return <GenericAppIcon size="medium" color="default2" />;
 };
 
-const resolveExtensionHref = ({
-  id,
-  type,
-  isActive,
-}: {
-  id?: string;
-  type: AppTypeEnum | null;
-  isActive: boolean | null;
-}) => {
-  if (!id) {
-    return undefined;
-  }
-
-  if (type === AppTypeEnum.LOCAL) {
-    return ExtensionsUrls.editCustomExtensionUrl(id);
-  }
-
-  if (!isActive) {
-    return ExtensionsUrls.resolveEditManifestExtensionUrl(id);
-  }
-
-  return ExtensionsUrls.resolveViewManifestExtensionUrl(id);
-};
-
 export const useInstalledExtensions = () => {
   const { hasManagedAppsPermission } = useHasManagedAppsPermission();
-  const userPermissions = useUserPermissions();
-  const hasManagePluginsPermission = !!userPermissions?.find(
-    ({ code }) => code === PermissionEnum.MANAGE_PLUGINS,
-  );
+  const { enabled: isExtensionsDevEnabled } = useFlag("extensions_dev");
 
   const { data, refetch } = useInstalledAppsListQuery({
     displayLoader: true,
     variables: {
       first: 100,
+      ...(!isExtensionsDevEnabled && {
+        filter: {
+          type: AppTypeEnum.THIRDPARTY,
+        },
+      }),
     },
   });
   const installedAppsData = mapEdgesToItems(data?.apps) || [];
@@ -118,11 +97,9 @@ export const useInstalledExtensions = () => {
     variables: {
       first: 100,
     },
-    skip: !hasManagePluginsPermission,
+    skip: !isExtensionsDevEnabled,
   });
-  const installedPluginsData = hasManagePluginsPermission
-    ? mapEdgesToItems(plugins?.plugins) || []
-    : [];
+  const installedPluginsData = mapEdgesToItems(plugins?.plugins) || [];
 
   const { data: eventDeliveriesData } = useEventDeliveryQuery({
     displayLoader: true,
@@ -130,6 +107,9 @@ export const useInstalledExtensions = () => {
       first: 100,
       filter: {
         isActive: true,
+        ...(!isExtensionsDevEnabled && {
+          type: AppTypeEnum.THIRDPARTY,
+        }),
       },
       canFetchAppEvents: hasManagedAppsPermission,
     },
@@ -158,7 +138,9 @@ export const useInstalledExtensions = () => {
             loading: !eventDeliveriesData?.apps,
             lastFailedAttempt,
           }),
-          href: resolveExtensionHref({ id, type, isActive }),
+          actions: (
+            <ViewDetailsActionButton name={name} id={id} type={type} isDisabled={!isActive} />
+          ),
         };
       }),
     [eventDeliveries, eventDeliveriesData, installedAppsData],
@@ -171,14 +153,14 @@ export const useInstalledExtensions = () => {
         name: plugin.name,
         logo: <PluginIcon />,
         info: null,
-        href: ExtensionsUrls.resolveEditPluginExtensionUrl(plugin.id),
+        actions: <ViewPluginDetails id={plugin.id} />,
       })),
     [installedPluginsData],
   );
 
   return {
     installedExtensions: [...installedApps, ...installedPlugins].sort(sortByName),
-    installedAppsLoading: !data?.apps || (hasManagePluginsPermission && !plugins?.plugins),
+    installedAppsLoading: !data?.apps || (!plugins?.plugins && isExtensionsDevEnabled),
     refetchInstalledApps: refetch,
   };
 };

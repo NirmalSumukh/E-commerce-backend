@@ -4,7 +4,7 @@ from ....app.models import AppExtension
 from ...core.dataloaders import DataLoader
 
 
-class AppExtensionByIdLoader(DataLoader[str, AppExtension]):
+class AppExtensionByIdLoader(DataLoader):
     context_key = "app_extension_by_id"
 
     def batch_load(self, keys):
@@ -14,7 +14,7 @@ class AppExtensionByIdLoader(DataLoader[str, AppExtension]):
         return [extensions.get(key) for key in keys]
 
 
-class AppExtensionByAppIdLoader(DataLoader[str, AppExtension]):
+class AppExtensionByAppIdLoader(DataLoader):
     context_key = "app_extension_by_app_id"
 
     def batch_load(self, keys):
@@ -23,7 +23,7 @@ class AppExtensionByAppIdLoader(DataLoader[str, AppExtension]):
         )
         extensions_map = defaultdict(list)
         app_extension_loader = AppExtensionByIdLoader(self.context)
-        for extension in extensions.iterator(chunk_size=1000):
+        for extension in extensions.iterator():
             extensions_map[extension.app_id].append(extension)
             app_extension_loader.prime(extension.id, extension)
         return [extensions_map.get(app_id, []) for app_id in keys]

@@ -4,20 +4,14 @@ from ...channel import models as channel_models
 from ...permission.enums import GiftcardPermissions, OrderPermissions
 from ..channel.types import OrderSettings
 from ..core.context import get_database_connection_name
-from ..core.descriptions import DEFAULT_DEPRECATION_REASON
-from ..core.doc_category import (
-    DOC_CATEGORY_GIFT_CARDS,
-    DOC_CATEGORY_ORDERS,
-    DOC_CATEGORY_SHOP,
-)
+from ..core.descriptions import DEPRECATED_IN_3X_FIELD, DEPRECATED_IN_3X_MUTATION
+from ..core.doc_category import DOC_CATEGORY_GIFT_CARDS, DOC_CATEGORY_ORDERS
 from ..core.fields import PermissionsField
 from ..site.dataloaders import load_site_callback
 from ..translations.mutations import ShopSettingsTranslate
 from .mutations import (
     GiftCardSettingsUpdate,
     OrderSettingsUpdate,
-    RefundReasonReferenceTypeClear,
-    RefundSettingsUpdate,
     ShopAddressUpdate,
     ShopDomainUpdate,
     ShopFetchTaxRates,
@@ -26,7 +20,7 @@ from .mutations import (
     StaffNotificationRecipientDelete,
     StaffNotificationRecipientUpdate,
 )
-from .types import GiftCardSettings, RefundSettings, Shop
+from .types import GiftCardSettings, Shop
 
 
 class ShopQueries(graphene.ObjectType):
@@ -42,7 +36,10 @@ class ShopQueries(graphene.ObjectType):
             "Returns `orderSettings` for the first `channel` in "
             "alphabetical order."
         ),
-        deprecation_reason="Use the `channel` query to fetch the `orderSettings` field instead.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} "
+            "Use the `channel` query to fetch the `orderSettings` field instead."
+        ),
         permissions=[OrderPermissions.MANAGE_ORDERS],
         doc_category=DOC_CATEGORY_ORDERS,
     )
@@ -52,13 +49,6 @@ class ShopQueries(graphene.ObjectType):
         required=True,
         permissions=[GiftcardPermissions.MANAGE_GIFT_CARD],
         doc_category=DOC_CATEGORY_GIFT_CARDS,
-    )
-    refund_settings = PermissionsField(
-        RefundSettings,
-        description="Refunds related settings. Returns `RefundSettings` configuration, global for the entire shop.",
-        required=True,
-        permissions=[],
-        doc_category=DOC_CATEGORY_SHOP,
     )
 
     def resolve_shop(self, _info):
@@ -88,10 +78,6 @@ class ShopQueries(graphene.ObjectType):
     def resolve_gift_card_settings(self, _info, site):
         return site.settings
 
-    @load_site_callback
-    def resolve_refund_settings(self, _info, site):
-        return site.settings
-
 
 class ShopMutations(graphene.ObjectType):
     staff_notification_recipient_create = StaffNotificationRecipientCreate.Field()
@@ -99,18 +85,19 @@ class ShopMutations(graphene.ObjectType):
     staff_notification_recipient_delete = StaffNotificationRecipientDelete.Field()
 
     shop_domain_update = ShopDomainUpdate.Field(
-        deprecation_reason="Use `PUBLIC_URL` environment variable instead."
+        deprecation_reason=DEPRECATED_IN_3X_MUTATION
+        + " Use `PUBLIC_URL` environment variable instead."
     )
     shop_settings_update = ShopSettingsUpdate.Field()
     shop_fetch_tax_rates = ShopFetchTaxRates.Field(
-        deprecation_reason=DEFAULT_DEPRECATION_REASON
+        deprecation_reason=DEPRECATED_IN_3X_MUTATION
     )
     shop_settings_translate = ShopSettingsTranslate.Field()
     shop_address_update = ShopAddressUpdate.Field()
 
     order_settings_update = OrderSettingsUpdate.Field(
-        deprecation_reason="Use `channelUpdate` mutation instead."
+        deprecation_reason=(
+            DEPRECATED_IN_3X_MUTATION + " Use `channelUpdate` mutation instead."
+        )
     )
     gift_card_settings_update = GiftCardSettingsUpdate.Field()
-    refund_settings_update = RefundSettingsUpdate.Field()
-    refund_reason_reference_clear = RefundReasonReferenceTypeClear.Field()

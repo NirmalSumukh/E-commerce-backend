@@ -6,17 +6,22 @@ export const pageFragment = gql`
     title
     slug
     isPublished
-    pageType {
-      id
-      name
-    }
   }
 `;
 
 export const pageSelectedAttribute = gql`
   fragment PageSelectedAttribute on SelectedAttribute {
     attribute {
-      ...AttributeDetails
+      id
+      slug
+      name
+      inputType
+      entityType
+      valueRequired
+      unit
+      choices(first: $firstValues, after: $afterValues, last: $lastValues, before: $beforeValues) {
+        ...AttributeValueList
+      }
     }
     values {
       ...AttributeValueDetails

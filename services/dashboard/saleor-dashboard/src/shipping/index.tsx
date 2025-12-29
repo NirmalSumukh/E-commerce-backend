@@ -1,6 +1,7 @@
 import { Route } from "@dashboard/components/Router";
 import { sectionNames } from "@dashboard/intl";
 import { parse as parseQs } from "qs";
+import React from "react";
 import { useIntl } from "react-intl";
 import { RouteComponentProps, Switch } from "react-router-dom";
 
@@ -22,7 +23,7 @@ import ShippingZoneCreate from "./views/ShippingZoneCreate";
 import ShippingZoneDetailsComponent from "./views/ShippingZoneDetails";
 import ShippingZonesListComponent from "./views/ShippingZonesList";
 
-const ShippingZonesList = ({ location }: RouteComponentProps<{}>) => {
+const ShippingZonesList: React.FC<RouteComponentProps<{}>> = ({ location }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ShippingZonesListUrlQueryParams = qs;
 
@@ -33,27 +34,27 @@ interface ShippingZoneDetailsRouteProps {
   id: string;
 }
 
-const ShippingZoneDetails = ({
+const ShippingZoneDetails: React.FC<RouteComponentProps<ShippingZoneDetailsRouteProps>> = ({
   location,
   match,
-}: RouteComponentProps<ShippingZoneDetailsRouteProps>) => {
+}) => {
   const qs = parseQs(location.search.substr(1));
   const params: ShippingZoneUrlQueryParams = qs;
 
   return <ShippingZoneDetailsComponent id={decodeURIComponent(match.params.id)} params={params} />;
 };
-const RateCreate = ({ match }: RouteComponentProps<{ id: string }>) => {
+const RateCreate: React.FC<RouteComponentProps<{ id: string }>> = ({ match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ShippingRateCreateUrlQueryParams = qs;
 
   return <RateCreateComponent id={decodeURIComponent(match.params.id)} params={params} />;
 };
-const RateUpdate = ({
-  match,
-}: RouteComponentProps<{
-  id: string;
-  rateId: string;
-}>) => {
+const RateUpdate: React.FC<
+  RouteComponentProps<{
+    id: string;
+    rateId: string;
+  }>
+> = ({ match }) => {
   const qs = parseQs(location.search.substr(1));
   const params: ShippingRateUrlQueryParams = qs;
 
@@ -66,7 +67,7 @@ const RateUpdate = ({
   );
 };
 
-const ShippingRouter = () => {
+export const ShippingRouter: React.FC = () => {
   const intl = useIntl();
 
   return (
@@ -82,5 +83,4 @@ const ShippingRouter = () => {
     </>
   );
 };
-
 export default ShippingRouter;

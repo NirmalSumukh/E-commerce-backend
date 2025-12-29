@@ -3,7 +3,7 @@ import { CircularProgress } from "@material-ui/core";
 import { DeleteIcon, EditIcon, makeStyles } from "@saleor/macaw-ui";
 import { vars } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 
 const useStyles = makeStyles(
   theme => ({
@@ -87,7 +87,7 @@ interface MediaTileBaseProps {
   onEdit?: (event: React.ChangeEvent<any>) => void;
 }
 
-type MediaTileProps = MediaTileBaseProps &
+export type MediaTileProps = MediaTileBaseProps &
   (
     | {
         onEdit?: React.MouseEventHandler<HTMLButtonElement>;
@@ -99,7 +99,7 @@ type MediaTileProps = MediaTileBaseProps &
       }
   );
 
-const MediaTile = (props: MediaTileProps) => {
+const MediaTile: React.FC<MediaTileProps> = props => {
   const { loading, onDelete, onEdit, editHref, media, disableOverlay = false } = props;
   const classes = useStyles(props);
   const parsedMediaOembedData = media?.oembedData ? JSON.parse(media.oembedData) : null;
@@ -125,7 +125,7 @@ const MediaTile = (props: MediaTileProps) => {
                 className={classes.controlButton}
                 onClick={onEdit}
               >
-                <EditIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                <EditIcon />
               </IconButton>
             )}
             {onDelete && (
@@ -135,7 +135,7 @@ const MediaTile = (props: MediaTileProps) => {
                 className={classes.controlButton}
                 onClick={onDelete}
               >
-                <DeleteIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                <DeleteIcon />
               </IconButton>
             )}
           </div>

@@ -1,15 +1,16 @@
 // @ts-strict-ignore
 import { Pill } from "@dashboard/components/Pill";
 import { TransactionEventStatus } from "@dashboard/orders/types";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { statusMessages } from "../messages";
 
-interface EventStatusProps {
+export interface EventStatusProps {
   status: TransactionEventStatus | null;
 }
 
-export const EventStatus = ({ status }: EventStatusProps) => {
+export const EventStatus: React.FC<EventStatusProps> = ({ status }) => {
   const intl = useIntl();
 
   switch (status) {

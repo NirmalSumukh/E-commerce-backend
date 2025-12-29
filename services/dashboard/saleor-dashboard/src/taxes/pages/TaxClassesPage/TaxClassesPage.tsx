@@ -31,7 +31,7 @@ import {
   SearchIcon,
 } from "@saleor/macaw-ui";
 import { Box, Skeleton } from "@saleor/macaw-ui-next";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import TaxInput from "../../components/TaxInput";
@@ -52,7 +52,7 @@ interface TaxClassesPageProps {
   onTaxClassUpdate: (data: TaxClassesPageFormData) => SubmitPromise;
 }
 
-const TaxClassesPage = (props: TaxClassesPageProps) => {
+export const TaxClassesPage: React.FC<TaxClassesPageProps> = props => {
   const {
     taxClasses,
     selectedTaxClassId,
@@ -175,10 +175,7 @@ const TaxClassesPage = (props: TaxClassesPageProps) => {
                                 InputProps={{
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      <SearchIcon
-                                        onPointerEnterCapture={undefined}
-                                        onPointerLeaveCapture={undefined}
-                                      />
+                                      <SearchIcon />
                                     </InputAdornment>
                                   ),
                                 }}
@@ -200,7 +197,7 @@ const TaxClassesPage = (props: TaxClassesPageProps) => {
                               </ListHeader>
                               <Divider />
                               {paginatedRates?.map((countryRate, countryRateIndex) => (
-                                <Fragment key={countryRate.id}>
+                                <React.Fragment key={countryRate.id}>
                                   <ListItem
                                     hover={false}
                                     className={classes.noDivider}
@@ -217,7 +214,7 @@ const TaxClassesPage = (props: TaxClassesPageProps) => {
                                     </ListItemCell>
                                   </ListItem>
                                   {!isLastElement(filteredRates, countryRateIndex) && <Divider />}
-                                </Fragment>
+                                </React.Fragment>
                               )) ?? (
                                 <>
                                   <Skeleton />

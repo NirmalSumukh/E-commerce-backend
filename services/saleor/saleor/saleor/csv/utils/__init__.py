@@ -8,8 +8,9 @@ class ProductExportFields:
             "description": "description_as_str",
             "category": "category__slug",
             "product type": "product_type__name",
-            # charge taxes are deprecated, and do not return any value. In case of
-            # requesting them, the headers number needs to match to the size of the row
+            # `charge taxes` is deprecated, and do not return any value. In case of
+            # requesting it, the headers number needs to match to the number of the
+            # rows.
             "charge taxes": "",  # deprecated; remove in Saleor 4.0
             "product weight": "product_weight",
             "variant id": "variants__id",
@@ -42,8 +43,6 @@ class ProductExportFields:
         "reference_page": "attributevalues__value__reference_page",
         "reference_product": "attributevalues__value__reference_product",
         "reference_variant": "attributevalues__value__reference_variant",
-        "reference_category": "attributevalues__value__reference_category",
-        "reference_collection": "attributevalues__value__reference_collection",
     }
 
     PRODUCT_CHANNEL_LISTING_FIELDS = {
@@ -79,8 +78,6 @@ class ProductExportFields:
         "reference_page": "values__reference_page",
         "reference_product": "values__reference_product",
         "reference_variant": "values__reference_variant",
-        "reference_category": "values__reference_category",
-        "reference_collection": "values__reference_collection",
     }
 
     VARIANT_CHANNEL_LISTING_FIELDS = {

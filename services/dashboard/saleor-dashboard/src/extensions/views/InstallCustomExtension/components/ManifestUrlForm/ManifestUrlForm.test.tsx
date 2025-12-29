@@ -1,23 +1,43 @@
 import { fireEvent, logRoles, render, screen } from "@testing-library/react";
-import { useForm } from "react-hook-form";
+import React from "react";
+import { type Control } from "react-hook-form";
 
 import { ExtensionInstallFormData } from "../../types";
 import { ManifestUrlForm } from "./ManifestUrlForm";
 
+jest.mock("react-intl", () => ({
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => (
+    <span>{defaultMessage}</span>
+  ),
+  useIntl: () => ({
+    formatMessage: () => "Required field",
+  }),
+  defineMessages: (msg: unknown) => msg,
+}));
+
+// Mock HookFormInput - we are testing without useForm from hook-form
+jest.mock("@dashboard/components/HookFormInput", () => ({
+  HookFormInput: ({
+    "aria-labelledby": ariaLabelledby,
+    placeholder,
+    onPaste,
+  }: {
+    "aria-labelledby": string;
+    placeholder: string;
+    onPaste: () => void;
+  }) => <input aria-labelledby={ariaLabelledby} placeholder={placeholder} onPaste={onPaste} />,
+}));
+
 describe("ManifestUrlForm", () => {
   const mockOnSubmit = jest.fn();
   const mockOnPaste = jest.fn();
-
-  // Helper component to use the useForm hook required by components in form
-  const TestWrapper = ({ onSubmit, onPaste }: { onSubmit: () => void; onPaste: () => void }) => {
-    const { control } = useForm<ExtensionInstallFormData>();
-
-    return <ManifestUrlForm onSubmit={onSubmit} control={control} onPaste={onPaste} />;
-  };
+  const mockControl = {} as Control<ExtensionInstallFormData>;
 
   it("renders form with correct structure and accessibility attributes", () => {
     // Arrange
-    const { container } = render(<TestWrapper onSubmit={mockOnSubmit} onPaste={mockOnPaste} />);
+    const { container } = render(
+      <ManifestUrlForm onSubmit={mockOnSubmit} control={mockControl} onPaste={mockOnPaste} />,
+    );
 
     // Debug accessibility tree
     logRoles(container);
@@ -32,7 +52,7 @@ describe("ManifestUrlForm", () => {
     expect(labelContainer).toBeInTheDocument();
     expect(labelContainer).toHaveAttribute("id", "manifest-input-label");
 
-    const input = screen.getByRole("input");
+    const input = screen.getByRole("textbox");
 
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute("aria-labelledby", "manifest-input-label");
@@ -41,7 +61,9 @@ describe("ManifestUrlForm", () => {
 
   it("calls onSubmit when form is submitted", () => {
     // Arrange
-    const { container } = render(<TestWrapper onSubmit={mockOnSubmit} onPaste={mockOnPaste} />);
+    const { container } = render(
+      <ManifestUrlForm onSubmit={mockOnSubmit} control={mockControl} onPaste={mockOnPaste} />,
+    );
 
     // Act
     const form = container.querySelector("form");
@@ -54,10 +76,10 @@ describe("ManifestUrlForm", () => {
 
   it("calls onPaste when input receives paste event", () => {
     // Arrange
-    render(<TestWrapper onSubmit={mockOnSubmit} onPaste={mockOnPaste} />);
+    render(<ManifestUrlForm onSubmit={mockOnSubmit} control={mockControl} onPaste={mockOnPaste} />);
 
     // Act
-    const input = screen.getByRole("input");
+    const input = screen.getByRole("textbox");
 
     fireEvent.paste(input);
 

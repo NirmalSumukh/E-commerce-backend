@@ -1,5 +1,6 @@
 from collections import defaultdict
 from functools import reduce
+from typing import Union
 
 from django.db.models import Exists, OuterRef, Q
 
@@ -16,7 +17,7 @@ from .models import (
     AttributeVariant,
 )
 
-T_INSTANCE = Product | ProductVariant | Page
+T_INSTANCE = Union[Product, ProductVariant, Page]
 
 
 instance_to_function_variables_mapping = {
@@ -101,11 +102,11 @@ def _associate_attribute_to_instance(
     assignments = []
     if isinstance(instance, ProductVariant):
         prod_type_id = instance.product.product_type_id
-        attribute_filter: dict[str, int | list[int]] = {
+        attribute_filter: dict[str, Union[int, list[int]]] = {
             "attribute_id__in": list(attr_val_map.keys()),
             "product_type_id": prod_type_id,
         }
-        instance_attrs_ids = instance_attribute_model.objects.filter(  # type: ignore[attr-defined]
+        instance_attrs_ids = instance_attribute_model.objects.filter(  # type: ignore
             **attribute_filter
         ).values_list("pk", flat=True)
 
@@ -237,7 +238,7 @@ def _order_assigned_attr_values(
         assignment_model.objects.filter(
             Exists(values_qs.filter(id=OuterRef("value_id"))),
             **instance_field_kwarg,
-        ).iterator(chunk_size=1000)
+        ).iterator()
     )
     for value in assigned_values:
         attribute_id = value_id_to_attribute_id[value.value_id]

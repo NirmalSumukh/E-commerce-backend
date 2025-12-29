@@ -1,9 +1,17 @@
 import { act, render, screen, waitForElementToBeRemoved } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 
 import { ChannelPermission } from "./ChannelPermission";
 import { allChannels } from "./fixtures";
 
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
 describe("ChannelPermission", () => {
   it("should render by default header and checkbox", () => {
     // Arrange & Act

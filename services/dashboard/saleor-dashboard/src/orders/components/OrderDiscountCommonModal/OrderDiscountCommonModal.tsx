@@ -8,8 +8,7 @@ import { useUpdateEffect } from "@dashboard/hooks/useUpdateEffect";
 import { buttonMessages } from "@dashboard/intl";
 import { toFixed } from "@dashboard/utils/toFixed";
 import { Button, CloseIcon, Input, Text } from "@saleor/macaw-ui-next";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
-import * as React from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { ORDER_LINE_DISCOUNT, OrderDiscountCommonInput, OrderDiscountType } from "./types";
@@ -70,7 +69,7 @@ const messages = defineMessages({
   },
 });
 
-interface OrderDiscountCommonModalProps {
+export interface OrderDiscountCommonModalProps {
   maxPrice: MoneyFragment;
   onConfirm: (discount: OrderDiscountCommonInput) => void;
   onClose: () => void;
@@ -81,8 +80,8 @@ interface OrderDiscountCommonModalProps {
   removeStatus: ConfirmButtonTransitionState;
 }
 
-const OrderDiscountCommonModal = ({
-  maxPrice = { amount: 0, currency: "", __typename: "Money" },
+const OrderDiscountCommonModal: React.FC<OrderDiscountCommonModalProps> = ({
+  maxPrice = { amount: 0, currency: "" },
   onConfirm,
   modalType,
   onClose,
@@ -90,7 +89,7 @@ const OrderDiscountCommonModal = ({
   existingDiscount,
   confirmStatus,
   removeStatus,
-}: OrderDiscountCommonModalProps) => {
+}) => {
   const { currency, amount: maxAmount } = maxPrice;
   const getInitialDiscountValue = (calculationMode: DiscountValueTypeEnum) => {
     if (!existingDiscount?.value) {

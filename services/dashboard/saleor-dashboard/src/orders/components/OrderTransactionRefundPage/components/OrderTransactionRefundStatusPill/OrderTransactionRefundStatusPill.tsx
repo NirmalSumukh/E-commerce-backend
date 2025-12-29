@@ -1,5 +1,6 @@
 import { Pill } from "@dashboard/components/Pill";
 import { OrderGrantedRefundStatusEnum } from "@dashboard/graphql";
+import React from "react";
 
 interface OrderTransactionRefundStatusPillProps {
   status: OrderGrantedRefundStatusEnum;
@@ -22,10 +23,10 @@ const getStatusColor = (status: OrderGrantedRefundStatusEnum) => {
   }
 };
 
-export const OrderTransactionRefundStatusPill = ({
+export const OrderTransactionRefundStatusPill: React.FC<OrderTransactionRefundStatusPillProps> = ({
   status,
   label,
   size,
-}: OrderTransactionRefundStatusPillProps) => {
+}) => {
   return <Pill color={getStatusColor(status)} label={label ?? status} size={size} />;
 };

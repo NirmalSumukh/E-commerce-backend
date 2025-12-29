@@ -9,7 +9,6 @@ from ...shipping.models import (
     ShippingMethodPostalCodeRule,
     ShippingZone,
 )
-from ..channel.dataloaders.by_self import ChannelByIdLoader
 from ..core.dataloaders import DataLoader
 
 
@@ -174,9 +173,7 @@ class ShippingMethodChannelListingByShippingMethodIdAndChannelSlugLoader(DataLoa
 
         def _find_listing_by_shipping_method_id(listings_by_channel):
             listings_by_method = []
-            for method_id, listings in zip(
-                shipping_method_ids, listings_by_channel, strict=False
-            ):
+            for method_id, listings in zip(shipping_method_ids, listings_by_channel):
                 for listing in listings:
                     if method_id == listing.shipping_method_id:
                         listings_by_method.append(listing)
@@ -197,6 +194,8 @@ class ChannelsByShippingZoneIdLoader(DataLoader):
     context_key = "channels_by_shippingzone"
 
     def batch_load(self, keys):
+        from ..channel.dataloaders import ChannelByIdLoader
+
         channel_and_zone_is_pairs = (
             Channel.objects.using(self.database_connection_name)
             .filter(shipping_zones__id__in=keys)

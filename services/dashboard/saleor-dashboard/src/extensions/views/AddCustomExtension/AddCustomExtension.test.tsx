@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import * as React from "react";
+import React from "react";
 
 import { AddCustomExtension } from "./AddCustomExtension";
 import { useHandleCreateAppSubmit } from "./hooks/useHandleCreateAppSubmit";
@@ -35,6 +35,14 @@ jest.mock("react-router-dom", () => ({
 
 jest.mock("@dashboard/components/Savebar");
 
+jest.mock("react-intl", () => ({
+  useIntl: () => ({
+    formatMessage: (message: { id: string; defaultMessage: string }) => message.defaultMessage,
+  }),
+  FormattedMessage: ({ defaultMessage }: { id: string; defaultMessage: string }) => defaultMessage,
+  defineMessages: (messages: Record<string, any>) => messages,
+}));
+
 jest.mock("./hooks/usePermissions");
 jest.mock("./hooks/useHandleCreateAppSubmit");
 jest.mock("./hooks/useUserAppCreationPermissions");
@@ -64,9 +72,9 @@ describe("AddCustomExtension", () => {
     render(<AddCustomExtension setToken={mockSetToken} />);
 
     // Assert
-    expect(screen.getByPlaceholderText("Extension Name")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("App Name")).toBeInTheDocument();
     expect(screen.getByText("Permissions")).toBeInTheDocument();
-    expect(screen.getByText("Grant this extension full access to the store")).toBeInTheDocument();
+    expect(screen.getByText("Grant this app full access to the store")).toBeInTheDocument();
     expect(screen.getByText("Manage Orders")).toBeInTheDocument();
     expect(screen.getByText("Manage Products")).toBeInTheDocument();
   });
@@ -79,14 +87,14 @@ describe("AddCustomExtension", () => {
     await userEvent.click(screen.getByText("save"));
 
     // Assert
-    expect(screen.getByText("Extension name is required")).toBeInTheDocument();
+    expect(screen.getByText("App name is required")).toBeInTheDocument();
   });
 
   it("creates app without permissions", async () => {
     // Arrange
     render(<AddCustomExtension setToken={mockSetToken} />);
 
-    const appNameInput = screen.getByPlaceholderText("Extension Name");
+    const appNameInput = screen.getByPlaceholderText("App Name");
 
     // Act
     await userEvent.type(appNameInput, "Test App");
@@ -109,7 +117,7 @@ describe("AddCustomExtension", () => {
     // Arrange
     render(<AddCustomExtension setToken={mockSetToken} />);
 
-    const appNameInput = screen.getByPlaceholderText("Extension Name");
+    const appNameInput = screen.getByPlaceholderText("App Name");
     const ordersCheckbox = screen.getByLabelText(/Manage Orders/i);
     const productsCheckbox = screen.getByLabelText(/Manage Products/i);
 
@@ -137,9 +145,9 @@ describe("AddCustomExtension", () => {
     // Arrange
     render(<AddCustomExtension setToken={mockSetToken} />);
 
-    const appNameInput = screen.getByPlaceholderText("Extension Name");
+    const appNameInput = screen.getByPlaceholderText("App Name");
     const fullAccessCheckbox = screen.getByRole("checkbox", {
-      name: /Grant this extension full access/i,
+      name: /Grant this app full access/i,
     });
     const ordersCheckbox = screen.getByLabelText(/Manage Orders/i);
     const productsCheckbox = screen.getByLabelText(/Manage Products/i);
@@ -168,9 +176,9 @@ describe("AddCustomExtension", () => {
     // Arrange
     render(<AddCustomExtension setToken={mockSetToken} />);
 
-    const appNameInput = screen.getByPlaceholderText("Extension Name");
+    const appNameInput = screen.getByPlaceholderText("App Name");
     const fullAccessCheckbox = screen.getByRole("checkbox", {
-      name: /Grant this extension full access/i,
+      name: /Grant this app full access/i,
     });
     const ordersCheckbox = screen.getByLabelText(/Manage Orders/i);
     const productsCheckbox = screen.getByLabelText(/Manage Products/i);
@@ -215,9 +223,7 @@ describe("AddCustomExtension", () => {
 
     // Assert
     expect(screen.getByText(/warning/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Grant this extension full access to the store/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Grant this app full access to the store/i)).not.toBeInTheDocument();
   });
 
   it("allows toggling available permissions and prevents toggling unavailable ones", async () => {
@@ -227,7 +233,7 @@ describe("AddCustomExtension", () => {
     (useUserPermissionSet as jest.Mock).mockReturnValue(availablePermissions);
     render(<AddCustomExtension setToken={mockSetToken} />);
 
-    const appNameInput = screen.getByPlaceholderText("Extension Name");
+    const appNameInput = screen.getByPlaceholderText("App Name");
     const ordersCheckbox = screen.getByLabelText(/Manage Orders/i);
     const productsCheckbox = screen.getByLabelText(/Manage Products/i);
 

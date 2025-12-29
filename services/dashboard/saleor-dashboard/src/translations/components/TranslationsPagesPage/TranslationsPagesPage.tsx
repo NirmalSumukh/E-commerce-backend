@@ -1,10 +1,9 @@
 // @ts-strict-ignore
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import CardSpacer from "@dashboard/components/CardSpacer";
-import { LanguageSwitchWithCaching } from "@dashboard/components/LanguageSwitch/LanguageSwitch";
+import LanguageSwitch from "@dashboard/components/LanguageSwitch";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { LanguageCodeEnum, PageTranslationFragment } from "@dashboard/graphql";
-import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { getStringOrPlaceholder } from "@dashboard/misc";
 import {
@@ -17,16 +16,17 @@ import {
   TranslatableEntities,
 } from "@dashboard/translations/urls";
 import { mapAttributeValuesToTranslationFields } from "@dashboard/translations/utils";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationFields from "../TranslationFields";
 
-interface TranslationsPagesPageProps extends TranslationsEntitiesPageProps {
+export interface TranslationsPagesPageProps extends TranslationsEntitiesPageProps {
   data: PageTranslationFragment;
   onAttributeValueSubmit: TranslationsEntitiesPageProps["onSubmit"];
 }
 
-const TranslationsPagesPage = ({
+const TranslationsPagesPage: React.FC<TranslationsPagesPageProps> = ({
   translationId,
   activeField,
   disabled,
@@ -38,9 +38,8 @@ const TranslationsPagesPage = ({
   onEdit,
   onSubmit,
   onAttributeValueSubmit,
-}: TranslationsPagesPageProps) => {
+}) => {
   const intl = useIntl();
-  const navigate = useNavigator();
 
   return (
     <DetailPageLayout gridTemplateColumns={1}>
@@ -60,11 +59,11 @@ const TranslationsPagesPage = ({
           },
         )}
       >
-        <LanguageSwitchWithCaching
+        <LanguageSwitch
           currentLanguage={LanguageCodeEnum[languageCode]}
           languages={languages}
-          onLanguageChange={lang =>
-            navigate(languageEntityUrl(lang, TranslatableEntities.pages, translationId))
+          getLanguageUrl={lang =>
+            languageEntityUrl(lang, TranslatableEntities.pages, translationId)
           }
         />
       </TopNav>
@@ -77,8 +76,8 @@ const TranslationsPagesPage = ({
           fields={[
             {
               displayName: intl.formatMessage({
-                id: "DaPGcn",
-                defaultMessage: "Model title",
+                id: "gvOzOl",
+                defaultMessage: "Page Title",
               }),
               name: PageTranslationInputFieldName.title,
               translation: data?.translation?.title || null,
@@ -87,9 +86,9 @@ const TranslationsPagesPage = ({
             },
             {
               displayName: intl.formatMessage({
-                id: "ymvZrH",
-                defaultMessage: "Models",
-                description: "page models",
+                id: "gMwpNC",
+                defaultMessage: "Content",
+                description: "page content",
               }),
               name: PageTranslationInputFieldName.content,
               translation: data?.translation?.content || null,

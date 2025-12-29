@@ -5,13 +5,14 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import getAccountErrorMessage from "@dashboard/utils/errors/account";
 import { TextField } from "@material-ui/core";
 import { Box, Button, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 export interface NewPasswordPageFormData {
   password: string;
   confirmPassword: string;
 }
-interface NewPasswordPageProps {
+export interface NewPasswordPageProps {
   loading: boolean;
   errors: AccountErrorFragment[];
   onSubmit: (data: NewPasswordPageFormData) => SubmitPromise;
@@ -21,7 +22,7 @@ const initialForm: NewPasswordPageFormData = {
   confirmPassword: "",
   password: "",
 };
-const NewPasswordPage = (props: NewPasswordPageProps) => {
+const NewPasswordPage: React.FC<NewPasswordPageProps> = props => {
   const { loading, errors, onSubmit } = props;
   const intl = useIntl();
 

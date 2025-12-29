@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from ..permission.enums import (
     AccountPermissions,
@@ -145,7 +145,6 @@ class WebhookEventAsyncType:
 
     CHECKOUT_CREATED = "checkout_created"
     CHECKOUT_UPDATED = "checkout_updated"
-    CHECKOUT_FULLY_AUTHORIZED = "checkout_fully_authorized"
     CHECKOUT_FULLY_PAID = "checkout_fully_paid"
     CHECKOUT_METADATA_UPDATED = "checkout_metadata_updated"
 
@@ -608,10 +607,6 @@ class WebhookEventAsyncType:
             "permission": CheckoutPermissions.MANAGE_CHECKOUTS,
             "is_deferred_payload": True,
         },
-        CHECKOUT_FULLY_AUTHORIZED: {
-            "name": "Checkout fully authorized",
-            "permission": CheckoutPermissions.MANAGE_CHECKOUTS,
-        },
         CHECKOUT_FULLY_PAID: {
             "name": "Checkout fully paid",
             "permission": CheckoutPermissions.MANAGE_CHECKOUTS,
@@ -779,7 +774,7 @@ class WebhookEventAsyncType:
     ] + [
         (event_name, event_data["name"]) for event_name, event_data in EVENT_MAP.items()
     ]
-    PERMISSIONS: dict[str, BasePermissionEnum | None] = {
+    PERMISSIONS: dict[str, Optional[BasePermissionEnum]] = {
         event_name: event_data["permission"]
         for event_name, event_data in EVENT_MAP.items()
     }
@@ -922,7 +917,7 @@ class WebhookEventSyncType:
     CHOICES = [
         (event_name, event_data["name"]) for event_name, event_data in EVENT_MAP.items()
     ]
-    PERMISSIONS: dict[str, BasePermissionEnum | None] = {
+    PERMISSIONS: dict[str, Optional[BasePermissionEnum]] = {
         event_name: event_data["permission"]
         for event_name, event_data in EVENT_MAP.items()
     }

@@ -16,7 +16,6 @@ const defaultValues = {
   formsData: {},
 };
 
-/** @deprecated Use react-hook-form instead */
 export function useExitFormDialogProvider() {
   const history = useHistory();
   const { history: routerHistory } = useRouter();

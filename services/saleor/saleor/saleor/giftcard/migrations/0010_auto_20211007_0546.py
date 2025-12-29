@@ -45,7 +45,6 @@ class Migration(migrations.Migration):
                 related_name="gift_cards", to="giftcard.GiftCardTag"
             ),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="giftcardtag",
             index=django.contrib.postgres.indexes.GinIndex(

@@ -6,6 +6,7 @@ import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import { mapCountriesToCountriesCodes } from "@dashboard/utils/maps";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import ShippingZoneCreatePage, {
@@ -13,7 +14,7 @@ import ShippingZoneCreatePage, {
 } from "../components/ShippingZoneCreatePage";
 import { shippingZoneUrl } from "../urls";
 
-const ShippingZoneCreate = () => {
+const ShippingZoneCreate: React.FC<{}> = () => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

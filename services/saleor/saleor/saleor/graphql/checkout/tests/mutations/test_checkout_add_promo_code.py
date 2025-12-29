@@ -1,8 +1,9 @@
-import datetime
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest import mock
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
+import before_after
 import graphene
 import pytest
 from django.test import override_settings
@@ -13,10 +14,7 @@ from .....checkout import base_calculations, calculations
 from .....checkout.actions import call_checkout_info_event
 from .....checkout.error_codes import CheckoutErrorCode
 from .....checkout.fetch import fetch_checkout_info, fetch_checkout_lines
-from .....checkout.utils import (
-    add_variant_to_checkout,
-    assign_external_shipping_to_checkout,
-)
+from .....checkout.utils import add_variant_to_checkout, set_external_shipping
 from .....core.models import EventDelivery
 from .....discount import DiscountValueType, VoucherType
 from .....plugins.manager import get_plugins_manager
@@ -26,7 +24,6 @@ from .....product.models import (
     ProductVariantChannelListing,
 )
 from .....shipping.interface import ShippingMethodData
-from .....tests import race_condition
 from .....warehouse.models import Stock
 from .....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from ....core.utils import to_global_id_or_none
@@ -99,7 +96,7 @@ def test_checkout_add_voucher_for_entire_order(api_client, checkout_with_item, v
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout_with_item)
     checkout_info = fetch_checkout_info(checkout_with_item, lines, manager)
-    taxed_total = calculations.calculate_checkout_total(
+    taxed_total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -197,7 +194,6 @@ def test_checkout_add_voucher_code_by_token_with_external_shipment(
     external_shipping_method_id = graphene.Node.to_global_id(
         "app", f"{shipping_app.id}:{response_method_id}"
     )
-
     external_shipping_method = ShippingMethodData(
         id=external_shipping_method_id,
         name=shipping_name,
@@ -206,14 +202,8 @@ def test_checkout_add_voucher_code_by_token_with_external_shipment(
 
     checkout = checkout_with_item
     checkout.shipping_address = address
-    assign_external_shipping_to_checkout(checkout, external_shipping_method)
-    checkout.save(
-        update_fields=[
-            "shipping_address",
-            "external_shipping_method_id",
-            "shipping_method_name",
-        ]
-    )
+    set_external_shipping(checkout, external_shipping_method)
+    checkout.save(update_fields=["shipping_address"])
     checkout.metadata_storage.save(update_fields=["private_metadata"])
 
     variables = {
@@ -411,7 +401,7 @@ def test_checkout_add_collection_voucher_code_checkout_with_promotion_collection
     def delete_collections(*args, **kwargs):
         Collection.objects.all().delete()
 
-    with race_condition.RunAfter(
+    with before_after.after(
         "saleor.graphql.product.dataloaders.products.CollectionsByProductIdLoader"
         ".batch_load",
         delete_collections,
@@ -898,9 +888,7 @@ def test_checkout_add_expired_gift_card_code(
     staff_api_client, checkout_with_item, gift_card
 ):
     # given
-    gift_card.expiry_date = datetime.datetime.now(
-        tz=datetime.UTC
-    ).date() - datetime.timedelta(days=10)
+    gift_card.expiry_date = date.today() - timedelta(days=10)
     gift_card.save(update_fields=["expiry_date"])
 
     variables = {
@@ -949,7 +937,7 @@ def test_checkout_get_total_with_gift_card(api_client, checkout_with_item, gift_
     manager = get_plugins_manager(allow_replica=False)
     lines, _ = fetch_checkout_lines(checkout_with_item)
     checkout_info = fetch_checkout_info(checkout_with_item, lines, manager)
-    taxed_total = calculations.calculate_checkout_total(
+    taxed_total = calculations.checkout_total(
         manager=manager,
         checkout_info=checkout_info,
         lines=lines,
@@ -1051,9 +1039,7 @@ def test_checkout_add_gift_card_code_in_active_gift_card(
 def test_checkout_add_gift_card_code_in_expired_gift_card(
     api_client, checkout_with_item, gift_card
 ):
-    gift_card.expiry_date = datetime.datetime.now(
-        tz=datetime.UTC
-    ).date() - datetime.timedelta(days=1)
+    gift_card.expiry_date = date.today() - timedelta(days=1)
     gift_card.save()
 
     variables = {
@@ -1384,7 +1370,6 @@ def test_checkout_add_voucher_triggers_webhooks(
     api_client,
     checkout_with_item,
     voucher,
-    address,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -1400,12 +1385,6 @@ def test_checkout_add_voucher_triggers_webhooks(
         "promoCode": voucher.code,
     }
 
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout_with_item.shipping_address = address
-    checkout_with_item.billing_address = address
-
-    checkout_with_item.save()
-
     # when
     response = api_client.post_graphql(MUTATION_CHECKOUT_ADD_PROMO_CODE, variables)
 
@@ -1420,12 +1399,11 @@ def test_checkout_add_voucher_triggers_webhooks(
         webhook_id=checkout_updated_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": checkout_update_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": checkout_update_delivery.id},
         queue=settings.CHECKOUT_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

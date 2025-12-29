@@ -1,7 +1,8 @@
-import datetime
 from collections import defaultdict
+from datetime import datetime
 
 import graphene
+import pytz
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -16,9 +17,9 @@ from .....webhook.event_types import WebhookEventAsyncType
 from ....app.dataloaders import get_app_promise
 from ....channel.types import Channel
 from ....core import ResolveInfo
-from ....core.descriptions import ADDED_IN_319, PREVIEW_FEATURE
+from ....core.descriptions import ADDED_IN_317, ADDED_IN_319, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.scalars import JSON, DateTime
 from ....core.types import BaseInputObjectType, Error, NonNullList
 from ....core.utils import WebhookEventInfo
@@ -91,14 +92,14 @@ class PromotionCreateInput(PromotionInput):
         doc_category = DOC_CATEGORY_DISCOUNTS
 
 
-class PromotionCreate(DeprecatedModelMutation):
+class PromotionCreate(ModelMutation):
     class Arguments:
         input = PromotionCreateInput(
             description="Fields requires to create a promotion.", required=True
         )
 
     class Meta:
-        description = "Creates a new promotion."
+        description = "Creates a new promotion." + ADDED_IN_317 + PREVIEW_FEATURE
         model = models.Promotion
         object_type = Promotion
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)
@@ -270,7 +271,7 @@ class PromotionCreate(DeprecatedModelMutation):
         Return true, when the start date is before the current date and the
         promotion is not already finished.
         """
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = datetime.now(pytz.utc)
         start_date = instance.start_date
         end_date = instance.end_date
 
@@ -301,7 +302,7 @@ class PromotionCreate(DeprecatedModelMutation):
     ):
         """Send a webhook about starting promotion if it hasn't been sent yet."""
 
-        now = datetime.datetime.now(tz=datetime.UTC)
+        now = datetime.now(pytz.utc)
         cls.call_event(manager.promotion_started, instance)
         instance.last_notification_scheduled_at = now
         instance.save(update_fields=["last_notification_scheduled_at"])

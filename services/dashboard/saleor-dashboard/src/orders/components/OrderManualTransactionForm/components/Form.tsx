@@ -1,9 +1,9 @@
 // @ts-strict-ignore
-import * as React from "react";
+import React from "react";
 
 import { useManualTransactionContext } from "../context";
 
-export const Form = ({ children, ...props }: React.HTMLProps<HTMLFormElement>) => {
+export const Form: React.FC<React.HTMLProps<HTMLFormElement>> = ({ children, ...props }) => {
   const { amount, description, pspReference, onAddTransaction } = useManualTransactionContext();
 
   return (

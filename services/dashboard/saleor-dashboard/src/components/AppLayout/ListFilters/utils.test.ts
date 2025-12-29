@@ -1,4 +1,4 @@
-import { FilterElement, IFilter } from "@dashboard/components/Filter/types";
+import { FilterElement, IFilter } from "@dashboard/components/Filter";
 
 import { getSelectedFilterAmount } from "./utils";
 

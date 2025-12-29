@@ -1,13 +1,21 @@
 import { ChannelData } from "@dashboard/channels/utils";
 import { ThemeWrapper } from "@test/themeWrapper";
 import { fireEvent, render, screen } from "@testing-library/react";
-import * as React from "react";
+import React from "react";
 
 import { ProductVariantPrice } from "./ProductVariantPrice";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeWrapper>{children}</ThemeWrapper>
 );
+
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: { defaultMessage: string }) => <>{defaultMessage}</>,
+}));
 
 describe("ProductVariantPrice", () => {
   it("should render not assign info text when variant is not assigned to any channel", () => {

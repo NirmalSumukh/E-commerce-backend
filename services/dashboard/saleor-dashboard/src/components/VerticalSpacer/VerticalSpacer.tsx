@@ -1,6 +1,7 @@
 import { makeStyles } from "@saleor/macaw-ui";
+import React from "react";
 
-interface VerticalSpacerProps {
+export interface VerticalSpacerProps {
   spacing?: number;
 }
 
@@ -12,7 +13,7 @@ const useStyles = makeStyles(
   }),
   { name: "VerticalSpacer" },
 );
-const VerticalSpacer = ({ spacing = 1 }: VerticalSpacerProps) => {
+const VerticalSpacer: React.FC<VerticalSpacerProps> = ({ spacing = 1 }) => {
   const classes = useStyles({ spacing });
 
   return <div className={classes.container} />;

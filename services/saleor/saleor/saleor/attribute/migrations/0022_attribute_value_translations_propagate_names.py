@@ -2,6 +2,7 @@
 
 import re
 import warnings
+from typing import Optional
 
 from django.db import migrations
 from django.template.defaultfilters import truncatechars
@@ -13,7 +14,7 @@ BLACKLISTED_URL_SCHEMES = ("javascript",)
 HYPERLINK_TAG_WITH_URL_PATTERN = r"(.*?<a\s+href=\\?\")(\w+://\S+[^\\])(\\?\">)"
 
 
-def clean_editor_js(definitions: dict | None, *, to_string: bool = False):
+def clean_editor_js(definitions: Optional[dict], *, to_string: bool = False):
     """Sanitize a given EditorJS JSON definitions.
 
     Look for not allowed URLs, replaced them with `invalid` value, and clean valid ones.
@@ -59,14 +60,14 @@ def clean_editor_js(definitions: dict | None, *, to_string: bool = False):
     return " ".join(plain_text_list) if to_string else definitions
 
 
-def clean_text_data(text: str) -> str:
+def clean_text_data(text: str):
     """Look for url in text, check if URL is allowed and return the cleaned URL.
 
     By default, only the protocol ``javascript`` is denied.
     """
 
     if not text:
-        return text
+        return
 
     end_of_match = 0
     new_text = ""
@@ -79,8 +80,7 @@ def clean_text_data(text: str) -> str:
         if url.scheme in BLACKLISTED_URL_SCHEMES:
             warnings.warn(
                 f"An invalid url was sent: {original_url} "
-                f"-- Scheme: {url.scheme} is blacklisted",
-                stacklevel=1,
+                f"-- Scheme: {url.scheme} is blacklisted"
             )
             new_url = "#invalid"
 

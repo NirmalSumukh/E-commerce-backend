@@ -19,10 +19,9 @@ from ....account.types import User
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
 from ....core.doc_category import DOC_CATEGORY_USERS
-from ....core.mutations import DeprecatedModelMutation
+from ....core.mutations import ModelMutation
 from ....core.types import NonNullList, StaffError
 from ....core.utils import WebhookEventInfo
-from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ...utils import get_groups_which_user_can_manage
 from ..base import UserInput
@@ -49,7 +48,7 @@ class StaffCreateInput(StaffInput):
         doc_category = DOC_CATEGORY_USERS
 
 
-class StaffCreate(DeprecatedModelMutation):
+class StaffCreate(ModelMutation):
     class Arguments:
         input = StaffCreateInput(
             description="Fields required to create a staff user.", required=True
@@ -57,7 +56,8 @@ class StaffCreate(DeprecatedModelMutation):
 
     class Meta:
         description = (
-            "Creates a new staff user. Apps are not allowed to perform this mutation."
+            "Creates a new staff user. "
+            "Apps are not allowed to perform this mutation."
         )
         doc_category = DOC_CATEGORY_USERS
         exclude = ["password"]
@@ -86,9 +86,7 @@ class StaffCreate(DeprecatedModelMutation):
         ]
 
     @classmethod
-    def check_permissions(
-        cls, context, permissions=None, require_all_permissions=False, **data
-    ):
+    def check_permissions(cls, context, permissions=None, **data):
         app = get_app_promise(context).get()
         if app:
             raise PermissionDenied(
@@ -169,7 +167,7 @@ class StaffCreate(DeprecatedModelMutation):
         send_notification=True,
         redirect_url=None,
     ):
-        if any(field in cleaned_input for field in USER_SEARCH_FIELDS):
+        if any([field in cleaned_input for field in USER_SEARCH_FIELDS]):
             user.search_document = prepare_user_search_document_value(
                 user, attach_addresses_data=False
             )
@@ -229,23 +227,11 @@ class StaffCreate(DeprecatedModelMutation):
         instance, send_notification = cls.get_instance(info, **data)
         data = data.get("input")
         cleaned_input = cls.clean_input(info, instance, data)
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
-
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
         instance = cls.construct_instance(instance, cleaned_input)
 
-        cls.validate_and_update_metadata(
-            instance, metadata_collection, private_metadata_collection
-        )
+        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
         cls.clean_instance(info, instance)
         cls.save(info, instance, cleaned_input, send_notification)
         cls._save_m2m(info, instance, cleaned_input)

@@ -1,10 +1,9 @@
 import pytest
 
-from ....account.models import User
-from ....graphql.core.utils import to_global_id_or_none
-from ..account.utils import account_register, customer_update, get_user
+from ..account.utils import account_register
 from ..product.utils.preparing_product import prepare_product
 from ..shop.utils.preparing_shop import prepare_shop
+from ..users.utils import customer_update, get_user
 from ..utils import assign_permissions
 from .utils import (
     checkout_complete,
@@ -92,6 +91,8 @@ def test_guest_checkout_should_be_assigned_to_user_after_creating_the_account_CO
         lines,
         channel_slug,
         email,
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
 
@@ -135,9 +136,7 @@ def test_guest_checkout_should_be_assigned_to_user_after_creating_the_account_CO
         channel_slug,
         redirect_url,
     )
-    user = User.objects.last()
-    assert user
-    user_id = to_global_id_or_none(user)
+    user_id = user_account["user"]["id"]
     assert user_account["user"]["isActive"] is True
 
     # Step 6 - Confirm new account

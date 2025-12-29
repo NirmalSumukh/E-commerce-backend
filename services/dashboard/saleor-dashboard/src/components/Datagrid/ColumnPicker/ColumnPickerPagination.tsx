@@ -1,4 +1,5 @@
 import { Box, Button, ChevronLeftIcon, ChevronRightIcon } from "@saleor/macaw-ui-next";
+import React from "react";
 
 export interface ColumnPickerPagination {
   query: string;

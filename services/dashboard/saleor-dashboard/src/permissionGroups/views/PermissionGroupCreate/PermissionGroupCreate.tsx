@@ -7,7 +7,7 @@ import useNotifier from "@dashboard/hooks/useNotifier";
 import useShop from "@dashboard/hooks/useShop";
 import { extractMutationErrors } from "@dashboard/misc";
 import { PermissionData } from "@dashboard/permissionGroups/components/PermissionGroupDetailsPage";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useIntl } from "react-intl";
 
 import {
@@ -20,7 +20,7 @@ import {
   getUserAccessibleChannelsOptions,
 } from "../../utils";
 
-export const PermissionGroupCreate = () => {
+export const PermissionGroupCreate: React.FC = () => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();

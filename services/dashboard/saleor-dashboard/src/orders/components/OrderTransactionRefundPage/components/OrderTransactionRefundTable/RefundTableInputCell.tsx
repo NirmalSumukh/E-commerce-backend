@@ -1,6 +1,6 @@
 import { GridTable } from "@dashboard/components/GridTable";
 import { Box, Button, Input } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { Control, Controller } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -17,7 +17,7 @@ interface RefundTableInputCellProps {
   handleMaxRefund: () => void;
 }
 
-export const RefundTableInputCell = ({
+export const RefundTableInputCell: React.FC<RefundTableInputCellProps> = ({
   index,
   control,
   qtyToRefund,
@@ -25,7 +25,7 @@ export const RefundTableInputCell = ({
   handleInputOnBlur,
   handleInputOnChange,
   handleMaxRefund,
-}: RefundTableInputCellProps) => {
+}) => {
   return (
     <GridTable.Cell>
       <Box backgroundColor="default1" display="flex" gap={2}>

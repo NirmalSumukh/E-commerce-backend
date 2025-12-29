@@ -6,6 +6,7 @@ import { useGiftCardDetails } from "@dashboard/giftCards/GiftCardUpdate/provider
 import { GiftCardEventsEnum, useGiftCardAddNoteMutation } from "@dashboard/graphql";
 import useNotifier from "@dashboard/hooks/useNotifier";
 import { HistoryComponentLoader } from "@dashboard/orders/components/OrderHistory/HistoryComponentLoader";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { GIFT_CARD_DETAILS_QUERY } from "../queries";
@@ -16,7 +17,7 @@ interface FormData {
   message: string;
 }
 
-const GiftCardHistory = () => {
+const GiftCardHistory: React.FC = () => {
   const intl = useIntl();
   const notify = useNotifier();
   const { giftCard } = useGiftCardDetails();

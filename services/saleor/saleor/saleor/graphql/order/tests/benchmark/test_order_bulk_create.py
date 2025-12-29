@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from ....discount.enums import DiscountValueTypeEnum
 from ....tests.utils import get_graphql_content
-from ..mutations.test_order_bulk_create import (  # noqa: F401
+from ..mutations.test_order_bulk_create import (  # noqa F401
     ORDER_BULK_CREATE,
     order_bulk_input,
     order_bulk_input_with_multiple_order_lines_and_fulfillments,
@@ -20,7 +20,7 @@ def test_order_bulk_create(
     permission_manage_orders,
     permission_manage_orders_import,
     permission_manage_users,
-    order_bulk_input_with_multiple_order_lines_and_fulfillments,  # noqa: F811
+    order_bulk_input_with_multiple_order_lines_and_fulfillments,  # noqa F881
     product_variant_list,
     customer_user,
     app,
@@ -44,7 +44,7 @@ def test_order_bulk_create(
     transaction_1 = {
         "name": "Authorized for 10$",
         "amountAuthorized": {
-            "amount": Decimal(20),
+            "amount": Decimal("20"),
             "currency": "PLN",
         },
     }
@@ -52,7 +52,7 @@ def test_order_bulk_create(
     transaction_2 = {
         "name": "Credit Card",
         "amountCharged": {
-            "amount": Decimal(100),
+            "amount": Decimal("100"),
             "currency": "PLN",
         },
     }

@@ -4,19 +4,20 @@ import { DashboardCard } from "@dashboard/components/Card";
 import { FilterPresetsSelect } from "@dashboard/components/FilterPresetsSelect";
 import { ListPageLayout } from "@dashboard/components/Layouts";
 import { configurationMenuUrl } from "@dashboard/configuration";
+import { useFlag } from "@dashboard/featureFlags";
 import { ProductTypeFragment } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { sectionNames } from "@dashboard/intl";
 import ProductTypeList from "@dashboard/productTypes/components/ProductTypeList/ProductTypeList";
 import { productTypeAddUrl, ProductTypeListUrlSortField } from "@dashboard/productTypes/urls";
 import { Box, Button, ChevronRightIcon } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FilterPageProps, ListActions, PageListProps, SortPage } from "../../../types";
-import { ProductTypeFilterKeys, ProductTypeListFilterOpts } from "./filters";
+import { createFilterStructure, ProductTypeFilterKeys, ProductTypeListFilterOpts } from "./filters";
 
-interface ProductTypeListPageProps
+export interface ProductTypeListPageProps
   extends PageListProps,
     ListActions,
     Omit<FilterPageProps<ProductTypeFilterKeys, ProductTypeListFilterOpts>, "onTabDelete">,
@@ -27,10 +28,12 @@ interface ProductTypeListPageProps
   hasPresetsChanged: () => boolean;
 }
 
-const ProductTypeListPage = ({
+const ProductTypeListPage: React.FC<ProductTypeListPageProps> = ({
   currentTab,
+  filterOpts,
   initialSearch,
   onAll,
+  onFilterChange,
   onSearchChange,
   onTabChange,
   onTabDelete,
@@ -40,10 +43,12 @@ const ProductTypeListPage = ({
   hasPresetsChanged,
   disabled,
   ...listProps
-}: ProductTypeListPageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const [isFilterPresetOpen, setFilterPresetOpen] = useState(false);
+  const filterStructure = createFilterStructure(intl, filterOpts);
+  const { enabled: isProductTypesFilterEnabled } = useFlag("new_filters");
 
   return (
     <ListPageLayout>
@@ -95,16 +100,30 @@ const ProductTypeListPage = ({
       </TopNav>
 
       <DashboardCard gap={0}>
-        <ListFilters
-          type="expression-filter"
-          initialSearch={initialSearch}
-          onSearchChange={onSearchChange}
-          searchPlaceholder={intl.formatMessage({
-            id: "Nqh0na",
-            defaultMessage: "Search product types...",
-            description: "Product types search input placeholder",
-          })}
-        />
+        {isProductTypesFilterEnabled ? (
+          <ListFilters
+            type="expression-filter"
+            initialSearch={initialSearch}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={intl.formatMessage({
+              id: "Nqh0na",
+              defaultMessage: "Search product types...",
+              description: "Product types search input placeholder",
+            })}
+          />
+        ) : (
+          <ListFilters
+            initialSearch={initialSearch}
+            onSearchChange={onSearchChange}
+            searchPlaceholder={intl.formatMessage({
+              id: "Nqh0na",
+              defaultMessage: "Search product types...",
+              description: "Product types search input placeholder",
+            })}
+            onFilterChange={onFilterChange}
+            filterStructure={filterStructure}
+          />
+        )}
 
         <ProductTypeList {...listProps} disabled={disabled} />
       </DashboardCard>

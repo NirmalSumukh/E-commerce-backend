@@ -36,13 +36,13 @@ INVOICE_REQUEST_MUTATION = """
 @pytest.fixture(autouse=True)
 def setup_dummy_gateways(settings):
     settings.PLUGINS = [
-        "saleor.payment.gateways.dummy.plugin.DeprecatedDummyGatewayPlugin",
+        "saleor.payment.gateways.dummy.plugin.DummyGatewayPlugin",
     ]
     return settings
 
 
 @patch(
-    "saleor.plugins.manager.PluginsManager.is_event_active_for_any_plugin",
+    "saleor.graphql.invoice.mutations.invoice_request.is_event_active_for_any_plugin",
     return_value=True,
 )
 @patch("saleor.plugins.manager.PluginsManager.invoice_request")
@@ -54,7 +54,6 @@ def test_invoice_request(
     order,
 ):
     # given
-    assert not order.search_vector
     permission_group_manage_orders.user_set.add(staff_api_client.user)
     dummy_invoice = Invoice.objects.create(order=order)
     plugin_mock.return_value = dummy_invoice
@@ -90,9 +89,6 @@ def test_invoice_request(
         type=OrderEvents.INVOICE_REQUESTED, order=order, user=staff_api_client.user
     ).exists()
 
-    order.refresh_from_db()
-    assert order.search_vector
-
 
 def test_invoice_request_by_user_no_channel_access(
     staff_api_client,
@@ -122,7 +118,7 @@ def test_invoice_request_by_user_no_channel_access(
 
 
 @patch(
-    "saleor.plugins.manager.PluginsManager.is_event_active_for_any_plugin",
+    "saleor.graphql.invoice.mutations.invoice_request.is_event_active_for_any_plugin",
     return_value=True,
 )
 @patch("saleor.plugins.manager.PluginsManager.invoice_request")
@@ -229,7 +225,7 @@ def test_invoice_request_no_billing_address(
 
 
 @patch(
-    "saleor.plugins.manager.PluginsManager.is_event_active_for_any_plugin",
+    "saleor.graphql.invoice.mutations.invoice_request.is_event_active_for_any_plugin",
     return_value=True,
 )
 def test_invoice_request_no_number(
@@ -267,7 +263,7 @@ def test_invoice_request_invalid_id(staff_api_client, permission_group_manage_or
 
 
 @patch(
-    "saleor.plugins.manager.PluginsManager.is_event_active_for_any_plugin",
+    "saleor.graphql.invoice.mutations.invoice_request.is_event_active_for_any_plugin",
     return_value=False,
 )
 def test_invoice_request_no_invoice_plugin(

@@ -58,7 +58,7 @@ import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHa
 import createMetadataUpdateHandler from "@dashboard/utils/handlers/metadataUpdateHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { Button } from "@saleor/macaw-ui-next";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { maybe } from "../../../misc";
@@ -71,7 +71,7 @@ interface VoucherDetailsProps {
   params: VoucherUrlQueryParams;
 }
 
-const VoucherDetails = ({ id, params }: VoucherDetailsProps) => {
+export const VoucherDetails: React.FC<VoucherDetailsProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();
@@ -696,5 +696,4 @@ const VoucherDetails = ({ id, params }: VoucherDetailsProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default VoucherDetails;

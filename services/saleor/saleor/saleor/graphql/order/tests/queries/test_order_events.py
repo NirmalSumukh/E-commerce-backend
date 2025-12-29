@@ -340,7 +340,7 @@ def test_retrieving_event_lines_with_deleted_line(
 
     # Check every line is returned and the one deleted is None
     assert len(data["lines"]) == len(lines)
-    for expected_data, received_line in zip(lines, data["lines"], strict=False):
+    for expected_data, received_line in zip(lines, data["lines"]):
         quantity = expected_data.quantity
         line = expected_data
 

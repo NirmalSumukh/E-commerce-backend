@@ -3,9 +3,9 @@ import graphene
 from ....menu import models
 from ....permission.enums import MenuPermissions
 from ....webhook.event_types import WebhookEventAsyncType
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import MenuError
 from ...core.utils import WebhookEventInfo
 from ...plugins.dataloaders import get_plugin_manager_promise
@@ -17,7 +17,7 @@ class MenuInput(graphene.InputObjectType):
     slug = graphene.String(description="Slug of the menu.", required=False)
 
 
-class MenuUpdate(DeprecatedModelMutation):
+class MenuUpdate(ModelMutation):
     class Arguments:
         id = graphene.ID(required=True, description="ID of a menu to update.")
         input = MenuInput(

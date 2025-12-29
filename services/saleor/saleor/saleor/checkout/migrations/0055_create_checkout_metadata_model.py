@@ -53,14 +53,12 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="checkoutmetadata",
             index=django.contrib.postgres.indexes.GinIndex(
                 fields=["private_metadata"], name="checkoutmetadata_p_meta_idx"
             ),
         ),
-        # nosemgrep: add-index-concurrently
         migrations.AddIndex(
             model_name="checkoutmetadata",
             index=django.contrib.postgres.indexes.GinIndex(

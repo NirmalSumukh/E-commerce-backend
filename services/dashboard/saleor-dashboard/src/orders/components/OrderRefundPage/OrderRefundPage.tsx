@@ -7,7 +7,7 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { renderCollection } from "@dashboard/misc";
 import { OrderRefundData } from "@dashboard/orders/types";
 import { orderUrl } from "@dashboard/orders/urls";
-import { Fragment } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import OrderRefund from "../OrderRefund";
@@ -26,21 +26,20 @@ export const refundFulfilledStatuses = [
   FulfillmentStatus.WAITING_FOR_APPROVAL,
 ];
 
-interface OrderRefundPageProps {
+export interface OrderRefundPageProps {
   order: OrderRefundData;
   defaultType?: OrderRefundType;
-  loading: boolean;
+  disabled: boolean;
   errors: OrderErrorFragment[];
   onSubmit: (data: OrderRefundSubmitData) => SubmitPromise;
 }
 
-const OrderRefundPage = (props: OrderRefundPageProps) => {
-  const { order, defaultType = OrderRefundType.PRODUCTS, loading, errors = [], onSubmit } = props;
+const OrderRefundPage: React.FC<OrderRefundPageProps> = props => {
+  const { order, defaultType = OrderRefundType.PRODUCTS, disabled, errors = [], onSubmit } = props;
   const intl = useIntl();
   const unfulfilledLines = order?.lines.filter(line => line.quantityToFulfill > 0);
   const fulfilledFulfillemnts =
     order?.fulfillments.filter(({ status }) => refundFulfilledStatuses.includes(status)) || [];
-  const disabled = loading;
 
   return (
     <OrderRefundForm
@@ -84,7 +83,7 @@ const OrderRefundPage = (props: OrderRefundPageProps) => {
                     </>
                   )}
                   {renderCollection(fulfilledFulfillemnts, fulfillment => (
-                    <Fragment key={fulfillment?.id}>
+                    <React.Fragment key={fulfillment?.id}>
                       <CardSpacer />
                       <OrderRefundFulfilledProducts
                         fulfillment={fulfillment}
@@ -98,7 +97,7 @@ const OrderRefundPage = (props: OrderRefundPageProps) => {
                           handlers.setMaximalRefundedFulfilledProductQuantities(fulfillment?.id)
                         }
                       />
-                    </Fragment>
+                    </React.Fragment>
                   ))}
                 </>
               )}
@@ -116,7 +115,6 @@ const OrderRefundPage = (props: OrderRefundPageProps) => {
                 errors={errors}
                 onChange={change}
                 onRefund={submit}
-                loading={loading}
               />
             </DetailPageLayout.RightSidebar>
           </DetailPageLayout>

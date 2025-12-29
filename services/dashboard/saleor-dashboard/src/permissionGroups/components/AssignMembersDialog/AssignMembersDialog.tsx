@@ -14,7 +14,7 @@ import { DialogProps, FetchMoreProps, RelayToFlat, SearchPageProps } from "@dash
 import { Checkbox, CircularProgress, TableBody, TableCell, TextField } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Box, Skeleton, Text } from "@saleor/macaw-ui-next";
-import { useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { messages } from "./messages";
@@ -75,7 +75,7 @@ const useStyles = makeStyles(
   { name: "AssignStaffMembersDialog" },
 );
 
-interface AssignMembersDialogProps extends DialogProps, FetchMoreProps, SearchPageProps {
+export interface AssignMembersDialogProps extends DialogProps, FetchMoreProps, SearchPageProps {
   confirmButtonState: ConfirmButtonTransitionState;
   disabled: boolean;
   staffMembers: RelayToFlat<SearchStaffMembersQuery["search"]>;
@@ -99,7 +99,7 @@ function handleStaffMemberAssign(
 
 const scrollableTargetId = "assignMemberScrollableDialog";
 
-const AssignMembersDialog = ({
+const AssignMembersDialog: React.FC<AssignMembersDialogProps> = ({
   confirmButtonState,
   disabled,
   loading,
@@ -110,11 +110,11 @@ const AssignMembersDialog = ({
   onSubmit,
   open,
   staffMembers,
-}: AssignMembersDialogProps) => {
+}) => {
   const intl = useIntl();
   const classes = useStyles({});
   const [query, onQueryChange] = useSearchQuery(onSearchChange);
-  const [selectedMembers, setSelectedMembers] = useState<
+  const [selectedMembers, setSelectedMembers] = React.useState<
     RelayToFlat<SearchStaffMembersQuery["search"]>
   >([]);
 

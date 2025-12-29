@@ -1,4 +1,4 @@
-import { AttributeEntityTypeEnum, AttributeInputTypeEnum } from "@dashboard/graphql";
+import { AttributeInputTypeEnum } from "@dashboard/graphql";
 
 import { StaticElementName } from "./FilterElement/ConditionOptions";
 
@@ -7,7 +7,6 @@ export interface LeftOperand {
   label: string;
   value: string;
   slug: string;
-  entityType?: AttributeEntityTypeEnum;
 }
 
 export interface LeftOperandsProvider {

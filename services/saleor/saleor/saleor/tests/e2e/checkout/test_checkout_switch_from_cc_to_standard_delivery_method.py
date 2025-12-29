@@ -61,6 +61,8 @@ def test_checkout_switch_from_cc_to_standard_delivery_method_CORE_0133(
         lines,
         channel_slug,
         email=None,
+        set_default_billing_address=True,
+        set_default_shipping_address=True,
     )
     checkout_id = checkout_data["id"]
 

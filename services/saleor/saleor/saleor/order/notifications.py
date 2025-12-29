@@ -42,7 +42,9 @@ class AttributeData:
 
 
 def get_attribute_data_from_order_lines(lines: Iterable["OrderLine"]) -> AttributeData:
-    product_ids = {line.variant.product_id for line in lines if line.variant_id}  # type: ignore[union-attr]
+    product_ids = set(
+        [line.variant.product_id for line in lines if line.variant_id]  # type: ignore
+    )
     assigned_product_attribute_values = (
         AssignedProductAttributeValue.objects.using(
             settings.DATABASE_CONNECTION_REPLICA_NAME
@@ -60,11 +62,13 @@ def get_attribute_data_from_order_lines(lines: Iterable["OrderLine"]) -> Attribu
         settings.DATABASE_CONNECTION_REPLICA_NAME
     ).in_bulk(attribute_value_ids)
 
-    product_type_ids = {
-        line.variant.product.product_type_id  # type: ignore[union-attr]
-        for line in lines
-        if line.variant_id
-    }
+    product_type_ids = set(
+        [
+            line.variant.product.product_type_id  # type: ignore
+            for line in lines
+            if line.variant_id
+        ]
+    )
 
     attribute_products = AttributeProduct.objects.filter(
         product_type_id__in=product_type_ids
@@ -104,7 +108,7 @@ def get_default_images_payload(images: list[ProductMedia]):
         first_image_payload = {"original": get_image_payload(first_image)}
     images_payload = None
     if images:
-        images_payload = [{"original": get_image_payload(image) for image in images}]  # noqa: B035
+        images_payload = [{"original": get_image_payload(image) for image in images}]
     return {"first_image": first_image_payload, "images": images_payload}
 
 
@@ -181,7 +185,7 @@ def get_product_variant_payload(variant: ProductVariant):
 
 
 def get_order_line_payload(line: "OrderLine", attribute_data: AttributeData):
-    digital_url: str | None = None
+    digital_url: Optional[str] = None
     if line.is_digital:
         content = DigitalContentUrl.objects.filter(line=line).first()
         digital_url = content.get_absolute_url() if content else None
@@ -320,8 +324,8 @@ def get_custom_order_payload(order: Order):
 def get_default_order_payload(
     order: "Order",
     redirect_url: str = "",
-    lines: Iterable["OrderLine"] | None = None,
-    attribute_data: AttributeData | None = None,
+    lines: Optional[Iterable["OrderLine"]] = None,
+    attribute_data: Optional[AttributeData] = None,
 ):
     order_details_url = ""
     if redirect_url:
@@ -455,7 +459,7 @@ def send_order_confirmation(order_info, redirect_url, manager):
             }
             return payload
 
-        handler = NotifyHandler(_generate_payload)
+        handler = NotifyHandler(_generate_staff_payload)
         manager.notify(
             NotifyEventType.STAFF_ORDER_CONFIRMATION, payload_func=handler.payload
         )

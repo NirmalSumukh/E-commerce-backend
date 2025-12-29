@@ -1,16 +1,16 @@
 import { ExtensionData } from "@dashboard/extensions/types";
 import { render, screen } from "@testing-library/react";
-import * as React from "react";
+import React from "react";
+import { FormattedMessageProps } from "react-intl";
 
 import { ExtensionItem } from "./ExtenionItem";
 
-jest.mock("@dashboard/hooks/useNavigator", () => ({
-  __esModule: true,
-  default: jest.fn(() => jest.fn()),
-}));
-
-jest.mock("@dashboard/utils/permissions", () => ({
-  useUserHasPermissions: jest.fn(() => true),
+jest.mock("react-intl", () => ({
+  useIntl: jest.fn(() => ({
+    formatMessage: jest.fn(x => x.defaultMessage),
+  })),
+  defineMessages: jest.fn(x => x),
+  FormattedMessage: ({ defaultMessage }: FormattedMessageProps) => <>{defaultMessage}</>,
 }));
 
 jest.mock("@dashboard/components/Link", () => {
@@ -19,10 +19,6 @@ jest.mock("@dashboard/components/Link", () => {
     <a href={href}>{children}</a>
   );
 });
-
-jest.mock("@dashboard/featureFlags", () => ({
-  useFlag: jest.fn(() => ({ enabled: true })),
-}));
 
 jest.mock("@saleor/macaw-ui-next", () => ({
   ...(jest.requireActual("@saleor/macaw-ui-next") as object),

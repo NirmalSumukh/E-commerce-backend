@@ -2,22 +2,20 @@ import logging
 import operator
 import os
 import re
-from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from email.headerregistry import Address
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import dateutil.parser
 import i18naddress
 import pybars
-from babel.core import Locale
 from babel.numbers import format_currency
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.mail.backends.smtp import EmailBackend
 from django.core.validators import EmailValidator
+from django_prices.utils.locale import get_locale_data
 from lxml import etree
 from lxml import html as lxml_html
 
@@ -45,12 +43,12 @@ DEFAULT_EMAIL_TIMEOUT = 5
 
 @dataclass
 class EmailConfig:
-    host: str | None = None
-    port: str | None = None
-    username: str | None = None
-    password: str | None = None
-    sender_name: str | None = None
-    sender_address: str | None = None
+    host: Optional[str] = None
+    port: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_address: Optional[str] = None
     use_tls: bool = False
     use_ssl: bool = False
 
@@ -70,22 +68,22 @@ DEFAULT_EMAIL_CONFIGURATION = [
 DEFAULT_EMAIL_CONFIG_STRUCTURE = {
     "host": {
         "type": ConfigurationTypeField.STRING,
-        "help_text": "The host to use for sending email.",
+        "help_text": ("The host to use for sending email."),
         "label": "SMTP host",
     },
     "port": {
         "type": ConfigurationTypeField.STRING,
-        "help_text": "Port to use for the SMTP server.",
+        "help_text": ("Port to use for the SMTP server."),
         "label": "SMTP port",
     },
     "username": {
         "type": ConfigurationTypeField.STRING,
-        "help_text": "Username to use for the SMTP server.",
+        "help_text": ("Username to use for the SMTP server."),
         "label": "SMTP user",
     },
     "password": {
         "type": ConfigurationTypeField.PASSWORD,
-        "help_text": "Password to use for the SMTP server.",
+        "help_text": ("Password to use for the SMTP server."),
         "label": "Password",
     },
     "sender_name": {
@@ -128,7 +126,7 @@ def format_address(this, address, include_phone=True, inline=False, latin=False)
     address["name"] = f"{address.get('first_name', '')} {address.get('last_name', '')}"
     address["country_code"] = address["country"]
     address["street_address"] = (
-        f"{address.get('street_address_1', '')}\n {address.get('street_address_2', '')}"
+        f"{address.get('street_address_1','')}\n {address.get('street_address_2','')}"
     )
     address_lines = i18naddress.format_address(address, latin).split("\n")
     phone = address.get("phone")
@@ -147,10 +145,10 @@ def format_datetime(this, date, date_format=None):
     return date.strftime(date_format)
 
 
-def get_product_image_thumbnail(this, size: int, image_data) -> None | str:
+def get_product_image_thumbnail(this, size: int, image_data):
     """Use provided size to get a correct image."""
     if image_data is None:
-        return None
+        return
     expected_size = get_thumbnail_size(size)
     return image_data.get("original", {}).get(str(expected_size))
 
@@ -179,9 +177,8 @@ def price(this, net_amount, gross_amount, currency, display_gross=False):
     except (TypeError, InvalidOperation):
         return ""
 
-    locale_code = settings.LANGUAGE_CODE
-    locale = Locale(locale_code)
-    pattern = locale.currency_formats["standard"].pattern
+    locale, locale_code = get_locale_data()
+    pattern = locale.currency_formats.get("standard").pattern
 
     pattern = re.sub("(\xa4+)", '<span class="currency">\\1</span>', pattern)
 
@@ -335,7 +332,7 @@ def validate_default_email_configuration(
                 )
                 for c in asdict(config).keys()
             }
-        ) from e
+        )
 
 
 def validate_format_of_provided_templates(
@@ -403,7 +400,7 @@ def get_email_template_or_default(
 
 
 def get_email_subject(
-    plugin_configuration: list | None,
+    plugin_configuration: Optional[list],
     subject_field_name: str,
     default: str,
 ) -> str:

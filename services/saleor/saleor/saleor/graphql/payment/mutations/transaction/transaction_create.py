@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import Optional, Union
 
 import graphene
 from django.core.exceptions import ValidationError
@@ -14,43 +14,39 @@ from .....order.events import transaction_event as order_transaction_event
 from .....payment import TransactionEventType
 from .....payment import models as payment_models
 from .....payment.error_codes import TransactionCreateErrorCode
-from .....payment.interface import PaymentMethodDetails
 from .....payment.transaction_item_calculations import recalculate_transaction_amounts
 from .....payment.utils import (
     create_manual_adjustment_events,
     process_order_or_checkout_with_transaction,
     truncate_transaction_event_message,
-    update_transaction_item_with_payment_method_details,
 )
 from .....permission.enums import PaymentPermissions
 from ....app.dataloaders import get_app_promise
 from ....core import ResolveInfo
-from ....core.descriptions import ADDED_IN_322
+from ....core.descriptions import ADDED_IN_34, ADDED_IN_313, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_PAYMENTS
 from ....core.mutations import BaseMutation
 from ....core.types import BaseInputObjectType
 from ....core.types import common as common_types
-from ....meta.inputs import MetadataInput, MetadataInputDescription
+from ....meta.inputs import MetadataInput
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ...enums import TransactionActionEnum
 from ...types import TransactionItem
-from ...utils import deprecated_metadata_contains_empty_key
+from ...utils import metadata_contains_empty_key
 from ..payment.payment_check_balance import MoneyInput
-from .shared import (
-    PaymentMethodDetailsInput,
-    get_payment_method_details,
-    validate_payment_method_details_input,
-)
-
-if TYPE_CHECKING:
-    pass
 
 
 class TransactionCreateInput(BaseInputObjectType):
-    name = graphene.String(description="Payment name of the transaction.")
-    message = graphene.String(description="The message of the transaction.")
+    name = graphene.String(
+        description="Payment name of the transaction." + ADDED_IN_313
+    )
+    message = graphene.String(
+        description="The message of the transaction." + ADDED_IN_313
+    )
 
-    psp_reference = graphene.String(description="PSP Reference of the transaction.")
+    psp_reference = graphene.String(
+        description=("PSP Reference of the transaction. " + ADDED_IN_313)
+    )
     available_actions = graphene.List(
         graphene.NonNull(TransactionActionEnum),
         description="List of all possible actions for the transaction",
@@ -59,30 +55,25 @@ class TransactionCreateInput(BaseInputObjectType):
     amount_charged = MoneyInput(description="Amount charged by this transaction.")
     amount_refunded = MoneyInput(description="Amount refunded by this transaction.")
 
-    amount_canceled = MoneyInput(description="Amount canceled by this transaction.")
+    amount_canceled = MoneyInput(
+        description="Amount canceled by this transaction." + ADDED_IN_313
+    )
 
     metadata = graphene.List(
         graphene.NonNull(MetadataInput),
-        description="Payment public metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description="Payment public metadata.",
         required=False,
     )
     private_metadata = graphene.List(
         graphene.NonNull(MetadataInput),
-        description="Payment private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description="Payment private metadata.",
         required=False,
     )
     external_url = graphene.String(
         description=(
             "The url that will allow to redirect user to "
-            "payment provider page with transaction event details."
+            "payment provider page with transaction event details." + ADDED_IN_313
         )
-    )
-    payment_method_details = PaymentMethodDetailsInput(
-        description="Details of the payment method used for the transaction."
-        + ADDED_IN_322,
-        required=False,
     )
 
     class Meta:
@@ -90,9 +81,13 @@ class TransactionCreateInput(BaseInputObjectType):
 
 
 class TransactionEventInput(BaseInputObjectType):
-    psp_reference = graphene.String(description="PSP Reference related to this action.")
+    psp_reference = graphene.String(
+        description=("PSP Reference related to this action." + ADDED_IN_313)
+    )
 
-    message = graphene.String(description="The message related to the event.")
+    message = graphene.String(
+        description="The message related to the event." + ADDED_IN_313
+    )
 
     class Meta:
         doc_category = DOC_CATEGORY_PAYMENTS
@@ -115,36 +110,36 @@ class TransactionCreate(BaseMutation):
         )
 
     class Meta:
-        description = "Creates transaction for checkout or order."
+        description = (
+            "Create transaction for checkout or order." + ADDED_IN_34 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_PAYMENTS
         error_type_class = common_types.TransactionCreateError
         permissions = (PaymentPermissions.HANDLE_PAYMENTS,)
 
     @classmethod
-    def validate_external_url(cls, external_url: str | None, error_code: str):
+    def validate_external_url(cls, external_url: Optional[str], error_code: str):
         if external_url is None:
             return
         validator = URLValidator()
         try:
             validator(external_url)
-        except ValidationError as e:
+        except ValidationError:
             raise ValidationError(
                 {
                     "transaction": ValidationError(
                         "Invalid format of `externalUrl`.", code=error_code
                     )
                 }
-            ) from e
+            )
 
-    # TODO This should be unified with metadata_manager and MetadataItemCollection
-    # EXT-2054
     @classmethod
-    def validate_metadata_keys(
-        cls, metadata_list: list[dict] | None, field_name, error_code
+    def validate_metadata_keys(  # type: ignore[override]
+        cls, metadata_list: Optional[list[dict]], field_name, error_code
     ):
         if not metadata_list:
             return
-        if deprecated_metadata_contains_empty_key(metadata_list):
+        if metadata_contains_empty_key(metadata_list):
             raise ValidationError(
                 {
                     "transaction": ValidationError(
@@ -179,27 +174,20 @@ class TransactionCreate(BaseMutation):
         return money_data
 
     @classmethod
-    def cleanup_and_update_metadata_data(
-        cls,
-        transaction: payment_models.TransactionItem,
-        metadata: list | None,
-        private_metadata: list | None,
-    ):
-        if metadata is not None:
-            transaction.store_value_in_metadata(
-                {data.key: data.value for data in metadata}
-            )
-        if private_metadata is not None:
-            transaction.store_value_in_private_metadata(
-                {data.key: data.value for data in private_metadata}
-            )
+    def cleanup_metadata_data(cls, cleaned_data: dict):
+        if metadata := cleaned_data.pop("metadata", None):
+            cleaned_data["metadata"] = {data.key: data.value for data in metadata}
+        if private_metadata := cleaned_data.pop("private_metadata", None):
+            cleaned_data["private_metadata"] = {
+                data.key: data.value for data in private_metadata
+            }
 
     @classmethod
     def validate_instance(
         cls, instance: Model, instance_id
-    ) -> checkout_models.Checkout | order_models.Order:
+    ) -> Union[checkout_models.Checkout, order_models.Order]:
         """Validate if provided instance is an order or checkout type."""
-        if not isinstance(instance, checkout_models.Checkout | order_models.Order):
+        if not isinstance(instance, (checkout_models.Checkout, order_models.Order)):
             raise ValidationError(
                 {
                     "id": ValidationError(
@@ -237,8 +225,8 @@ class TransactionCreate(BaseMutation):
 
     @classmethod
     def validate_input(
-        cls, instance: checkout_models.Checkout | order_models.Order, transaction
-    ) -> checkout_models.Checkout | order_models.Order:
+        cls, instance: Union[checkout_models.Checkout, order_models.Order], transaction
+    ) -> Union[checkout_models.Checkout, order_models.Order]:
         currency = instance.currency
 
         cls.validate_money_input(
@@ -260,32 +248,21 @@ class TransactionCreate(BaseMutation):
             transaction.get("external_url"),
             error_code=TransactionCreateErrorCode.INVALID.value,
         )
-        if payment_method_details := transaction.get("payment_method_details"):
-            validate_payment_method_details_input(
-                payment_method_details, TransactionCreateErrorCode
-            )
-
         if "available_actions" in transaction and not transaction["available_actions"]:
             transaction.pop("available_actions")
         return instance
 
     @classmethod
     def create_transaction(
-        cls,
-        transaction_input: dict,
-        user,
-        app,
-        save: bool = True,
-        payment_details_data: PaymentMethodDetails | None = None,
+        cls, transaction_input: dict, user, app, save: bool = True
     ) -> payment_models.TransactionItem:
+        cls.cleanup_metadata_data(transaction_input)
         app_identifier = None
         if app and app.identifier:
             app_identifier = app.identifier
         transaction_input["available_actions"] = list(
             set(transaction_input.get("available_actions", []))
         )
-        metadata = transaction_input.pop("metadata", None)
-        private_metadata = transaction_input.pop("private_metadata", None)
         transaction = payment_models.TransactionItem(
             token=uuid.uuid4(),
             use_old_id=True,
@@ -294,11 +271,6 @@ class TransactionCreate(BaseMutation):
             app_identifier=app_identifier,
             app=app,
         )
-        if payment_details_data:
-            update_transaction_item_with_payment_method_details(
-                transaction, payment_details_data
-            )
-        cls.cleanup_and_update_metadata_data(transaction, metadata, private_metadata)
         if save:
             transaction.save()
         return transaction
@@ -344,10 +316,6 @@ class TransactionCreate(BaseMutation):
         order_or_checkout_instance = cls.validate_input(
             order_or_checkout_instance, transaction=transaction
         )
-        payment_details_data: PaymentMethodDetails | None = None
-        if payment_method_details := transaction.pop("payment_method_details", None):
-            payment_details_data = get_payment_method_details(payment_method_details)
-
         transaction_data = {**transaction}
         currency = order_or_checkout_instance.currency
         transaction_data["currency"] = currency
@@ -368,12 +336,7 @@ class TransactionCreate(BaseMutation):
                     message=transaction_event.get("message", ""),
                 )
         money_data = cls.get_money_data_from_input(transaction_data, currency)
-        new_transaction = cls.create_transaction(
-            transaction_data,
-            user=user,
-            app=app,
-            payment_details_data=payment_details_data,
-        )
+        new_transaction = cls.create_transaction(transaction_data, user=user, app=app)
         if money_data:
             create_manual_adjustment_events(
                 transaction=new_transaction, money_data=money_data, user=user, app=app

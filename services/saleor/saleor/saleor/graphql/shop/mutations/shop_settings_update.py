@@ -7,14 +7,19 @@ from ....permission.enums import SitePermissions
 from ....site.models import DEFAULT_LIMIT_QUANTITY_PER_CHECKOUT
 from ....webhook.event_types import WebhookEventAsyncType
 from ...core import ResolveInfo
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_314,
+    ADDED_IN_315,
+    DEPRECATED_IN_3X_INPUT,
+)
 from ...core.doc_category import DOC_CATEGORY_SHOP
 from ...core.enums import WeightUnitsEnum
 from ...core.mutations import BaseMutation
 from ...core.types import ShopError
 from ...core.types import common as common_types
 from ...core.utils import WebhookEventInfo
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...site.dataloaders import get_site_promise
 from ..types import Shop
@@ -25,7 +30,8 @@ class ShopSettingsInput(graphene.InputObjectType):
     description = graphene.String(description="SEO description.")
     track_inventory_by_default = graphene.Boolean(
         description=(
-            "This field is used as a default value for `ProductVariant.trackInventory`."
+            "This field is used as a default value for "
+            "`ProductVariant.trackInventory`."
         )
     )
     default_weight_unit = WeightUnitsEnum(description="Default weight unit.")
@@ -33,10 +39,12 @@ class ShopSettingsInput(graphene.InputObjectType):
         description="Enable automatic fulfillment for all digital products."
     )
     fulfillment_auto_approve = graphene.Boolean(
-        description="Enable automatic approval of all new fulfillments."
+        description="Enable automatic approval of all new fulfillments." + ADDED_IN_31
     )
     fulfillment_allow_unpaid = graphene.Boolean(
-        description="Enable ability to approve fulfillments which are unpaid."
+        description=(
+            "Enable ability to approve fulfillments which are unpaid." + ADDED_IN_31
+        )
     )
     default_digital_max_downloads = graphene.Int(
         description="Default number of max downloads per digital content URL."
@@ -56,39 +64,39 @@ class ShopSettingsInput(graphene.InputObjectType):
     reserve_stock_duration_anonymous_user = graphene.Int(
         description=(
             "Default number of minutes stock will be reserved for "
-            "anonymous checkout. Enter 0 or null to disable."
+            "anonymous checkout. Enter 0 or null to disable." + ADDED_IN_31
         )
     )
     reserve_stock_duration_authenticated_user = graphene.Int(
         description=(
             "Default number of minutes stock will be reserved for "
-            "authenticated checkout. Enter 0 or null to disable."
+            "authenticated checkout. Enter 0 or null to disable." + ADDED_IN_31
         )
     )
     limit_quantity_per_checkout = graphene.Int(
         description=(
             "Default number of maximum line quantity "
             "in single checkout. Minimum possible value is 1, default "
-            f"value is {DEFAULT_LIMIT_QUANTITY_PER_CHECKOUT}."
+            f"value is {DEFAULT_LIMIT_QUANTITY_PER_CHECKOUT}." + ADDED_IN_31
         )
     )
 
     enable_account_confirmation_by_email = graphene.Boolean(
-        description="Enable automatic account confirmation by email."
+        description="Enable automatic account confirmation by email." + ADDED_IN_314
     )
     allow_login_without_confirmation = graphene.Boolean(
-        description="Enable possibility to login without account confirmation."
+        description=(
+            "Enable possibility to login without account confirmation." + ADDED_IN_315
+        )
     )
     metadata = common_types.NonNullList(
         MetadataInput,
-        description="Shop public metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description="Shop public metadata." + ADDED_IN_315,
         required=False,
     )
     private_metadata = common_types.NonNullList(
         MetadataInput,
-        description="Shop private metadata. "
-        f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}",
+        description="Shop private metadata." + ADDED_IN_315,
         required=False,
     )
     # deprecated
@@ -145,11 +153,11 @@ class ShopSettingsUpdate(BaseMutation):
         if data.get("customer_set_password_url"):
             try:
                 validate_storefront_url(data["customer_set_password_url"])
-            except ValidationError as e:
+            except ValidationError as error:
                 raise ValidationError(
-                    {"customer_set_password_url": e},
+                    {"customer_set_password_url": error},
                     code=ShopErrorCode.INVALID.value,
-                ) from e
+                )
 
         if "reserve_stock_duration_anonymous_user" in data:
             new_value = data["reserve_stock_duration_anonymous_user"]
@@ -190,25 +198,13 @@ class ShopSettingsUpdate(BaseMutation):
         data = data.get("input")
         cleaned_input = cls.clean_input(info, instance, data)
 
-        metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-            "private_metadata", None
-        )
-
-        metadata_collection = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        private_metadata_collection = cls.create_metadata_from_graphql_input(
-            private_metadata_list, error_field_name="private_metadata"
-        )
-
+        metadata_list = cleaned_input.pop("metadata", None)
+        private_metadata_list = cleaned_input.pop("private_metadata", None)
         old_metadata = dict(instance.metadata)
         old_private_metadata = dict(instance.private_metadata)
 
         instance = cls.construct_instance(instance, cleaned_input)
-        cls.validate_and_update_metadata(
-            instance, metadata_collection, private_metadata_collection
-        )
+        cls.validate_and_update_metadata(instance, metadata_list, private_metadata_list)
         cls.clean_instance(info, instance)
         instance.save()
 

@@ -26,7 +26,14 @@ from ...core.doc_category import (
     DOC_CATEGORY_WEBHOOKS,
 )
 from ...core.scalars import DateTime, Decimal
-from ..descriptions import ADDED_IN_318
+from ..descriptions import (
+    ADDED_IN_36,
+    ADDED_IN_312,
+    ADDED_IN_314,
+    ADDED_IN_318,
+    DEPRECATED_IN_3X_FIELD,
+    PREVIEW_FEATURE,
+)
 from ..enums import (
     AccountErrorCode,
     AppErrorCode,
@@ -68,7 +75,6 @@ from ..enums import (
     ProductTranslateErrorCode,
     ProductVariantBulkErrorCode,
     ProductVariantTranslateErrorCode,
-    RefundSettingsErrorCode,
     SendConfirmationEmailErrorCode,
     ShippingErrorCode,
     ShopErrorCode,
@@ -115,23 +121,16 @@ class NonNullList(graphene.List):
         super().__init__(of_type, *args, **kwargs)
 
 
-class SecureGlobalID(graphene.GlobalID):
-    @staticmethod
-    def id_resolver(parent_resolver, node, root, info, parent_type_name=None, **args):
-        if hasattr(root, "NEWLY_CREATED_USER") and root.NEWLY_CREATED_USER:
-            return ""
-        return graphene.GlobalID.id_resolver(
-            parent_resolver, node, root, info, parent_type_name, **args
-        )
-
-
 class CountryDisplay(graphene.ObjectType):
     code = graphene.String(description="Country code.", required=True)
     country = graphene.String(description="Country name.", required=True)
     vat = graphene.Field(
         VAT,
         description="Country tax.",
-        deprecation_reason="Always returns `null`. Use `TaxClassCountryRate` type to manage tax rates per country.",
+        deprecation_reason=(
+            f"{DEPRECATED_IN_3X_FIELD} Always returns `null`. Use `TaxClassCountryRate`"
+            " type to manage tax rates per country."
+        ),
     )
 
 
@@ -353,24 +352,6 @@ class GiftCardSettingsError(Error):
         doc_category = DOC_CATEGORY_GIFT_CARDS
 
 
-class RefundSettingsUpdateError(Error):
-    code = RefundSettingsErrorCode(
-        description="Failed to update Refund Settings", required=True
-    )
-
-    class Meta:
-        doc_category = DOC_CATEGORY_SHOP
-
-
-class RefundReasonReferenceTypeClearError(Error):
-    code = RefundSettingsErrorCode(
-        description="Failed to clear refund reason reference type", required=True
-    )
-
-    class Meta:
-        doc_category = DOC_CATEGORY_SHOP
-
-
 class MetadataError(Error):
     code = MetadataErrorCode(description="The error code.", required=True)
 
@@ -551,7 +532,7 @@ class ProductVariantBulkError(Error):
     path = graphene.String(
         description=(
             "Path to field that caused the error. A value of `null` indicates that "
-            "the error isn't associated with a particular field."
+            "the error isn't associated with a particular field." + ADDED_IN_314
         ),
         required=False,
     )
@@ -572,12 +553,12 @@ class ProductVariantBulkError(Error):
     )
     stocks = NonNullList(
         graphene.ID,
-        description="List of stocks IDs which causes the error.",
+        description="List of stocks IDs which causes the error." + ADDED_IN_312,
         required=False,
     )
     channels = NonNullList(
         graphene.ID,
-        description="List of channel IDs which causes the error.",
+        description="List of channel IDs which causes the error." + ADDED_IN_312,
         required=False,
     )
     channel_listings = NonNullList(
@@ -966,7 +947,7 @@ class Job(graphene.Interface):
     @traced_resolver
     def resolve_type(cls, instance, _info: "ResolveInfo"):
         """Map a data object to a Graphene type."""
-        return  # FIXME: why do we have this method?
+        return None  # FIXME: why do we have this method?
 
 
 class TimePeriod(graphene.ObjectType):
@@ -986,7 +967,7 @@ class ThumbnailField(graphene.Field):
         default_value="ORIGINAL",
         description=(
             "The format of the image. When not provided, format of the original "
-            "image will be used."
+            "image will be used." + ADDED_IN_36
         ),
     )
 
@@ -1001,7 +982,7 @@ class IconThumbnailField(ThumbnailField):
         default_value="ORIGINAL",
         description=(
             "The format of the image. When not provided, format of the original "
-            "image will be used."
+            "image will be used." + ADDED_IN_314 + PREVIEW_FEATURE
         ),
     )
 

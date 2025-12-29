@@ -11,14 +11,13 @@ from ..channel.filters import get_currency_from_filter_data
 from ..channel.types import Channel
 from ..core.doc_category import DOC_CATEGORY_CHECKOUT
 from ..core.filters import (
-    FilterInputObjectType,
     GlobalIDMultipleChoiceFilter,
     ListObjectTypeFilter,
     MetadataFilter,
     MetadataFilterBase,
     ObjectTypeFilter,
 )
-from ..core.types import DateRangeInput
+from ..core.types import DateRangeInput, FilterInputObjectType
 from ..core.utils import from_global_id_or_error
 from ..discount.filters import DiscountedObjectWhere
 from ..utils import resolve_global_ids_to_primary_keys

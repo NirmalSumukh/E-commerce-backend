@@ -2,15 +2,16 @@ import { useRequestPasswordResetMutation } from "@dashboard/graphql";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
-import { useState } from "react";
+import { getAppMountUriForRedirect } from "@dashboard/utils/urls";
+import React from "react";
 import { useIntl } from "react-intl";
+import urlJoin from "url-join";
 
 import ResetPasswordPage, { ResetPasswordPageFormData } from "../components/ResetPasswordPage";
-import { passwordResetSuccessUrl } from "../urls";
-import { getNewPasswordResetRedirectUrl } from "../utils";
+import { newPasswordUrl, passwordResetSuccessUrl } from "../urls";
 
-const ResetPasswordView = () => {
-  const [error, setError] = useState<string>();
+const ResetPasswordView: React.FC = () => {
+  const [error, setError] = React.useState<string>();
   const navigate = useNavigator();
   const intl = useIntl();
   const [requestPasswordReset, requestPasswordResetOpts] = useRequestPasswordResetMutation({
@@ -18,7 +19,16 @@ const ResetPasswordView = () => {
       if (data?.requestPasswordReset?.errors.length === 0) {
         navigate(passwordResetSuccessUrl);
       } else {
-        setError(intl.formatMessage(commonMessages.somethingWentWrong));
+        if (data?.requestPasswordReset?.errors.find(err => err.field === "email")) {
+          setError(
+            intl.formatMessage({
+              id: "C0JLNW",
+              defaultMessage: "Provided email address does not exist in our database.",
+            }),
+          );
+        } else {
+          setError(intl.formatMessage(commonMessages.somethingWentWrong));
+        }
       }
     },
   });
@@ -27,7 +37,11 @@ const ResetPasswordView = () => {
       requestPasswordReset({
         variables: {
           email: data.email,
-          redirectUrl: getNewPasswordResetRedirectUrl(),
+          redirectUrl: urlJoin(
+            window.location.origin,
+            getAppMountUriForRedirect(),
+            newPasswordUrl().replace(/\?/, ""),
+          ),
         },
       }),
     );

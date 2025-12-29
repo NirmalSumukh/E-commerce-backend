@@ -20,7 +20,7 @@ import createFilterHandlers from "@dashboard/utils/handlers/filterHandlers";
 import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
-import { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { useIntl } from "react-intl";
 
 import {
@@ -35,7 +35,7 @@ interface DiscountListProps {
   params: DiscountListUrlQueryParams;
 }
 
-export const DiscountList = ({ params }: DiscountListProps) => {
+export const DiscountList: React.FC<DiscountListProps> = ({ params }) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const { updateListSettings, settings } = useListSettings(ListViews.DISCOUNTS_LIST);
@@ -46,7 +46,7 @@ export const DiscountList = ({ params }: DiscountListProps) => {
   const { valueProvider } = useConditionalFilterContext();
   const where = createDiscountsQueryVariables(valueProvider.value);
 
-  const queryVariables = useMemo(
+  const queryVariables = React.useMemo(
     () => ({
       ...paginationState,
       sort: getSortQueryVariables(params),
@@ -64,7 +64,7 @@ export const DiscountList = ({ params }: DiscountListProps) => {
     variables: queryVariables,
   });
   const promotions: PromotionFragment[] = mapEdgesToItems(data?.promotions) ?? [];
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, resetFilters, handleSearchChange] = createFilterHandlers({
     createUrl: discountListUrl,
     getFilterQueryParam: () => 0,
@@ -151,3 +151,4 @@ export const DiscountList = ({ params }: DiscountListProps) => {
     </PaginatorContext.Provider>
   );
 };
+export default DiscountList;

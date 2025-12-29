@@ -1,14 +1,14 @@
+import { ExternalAppProvider } from "@dashboard/apps/components/ExternalAppContext";
 import { Provider as DateProvider } from "@dashboard/components/Date/DateContext";
 import { Locale, RawLocaleProvider } from "@dashboard/components/Locale";
 import { TimezoneProvider } from "@dashboard/components/Timezone";
-import { ExternalAppProvider } from "@dashboard/extensions/components/ExternalAppContext/ExternalAppContext";
 import React from "react";
 import { IntlProvider } from "react-intl";
 
 import { ApolloMockedProvider } from "./ApolloMockedProvider";
 import { ThemeWrapper } from "./themeWrapper";
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
+const Wrapper: React.FC = ({ children }) => (
   <ApolloMockedProvider>
     <IntlProvider defaultLocale={Locale.EN} locale={Locale.EN}>
       <RawLocaleProvider

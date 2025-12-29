@@ -2,11 +2,7 @@ import graphene
 from django.db.models import F, Min, OuterRef, Q, QuerySet, Subquery
 
 from ...discount.models import VoucherCode
-from ..core.descriptions import (
-    ADDED_IN_318,
-    CHANNEL_REQUIRED,
-    DEFAULT_DEPRECATION_REASON,
-)
+from ..core.descriptions import ADDED_IN_318, CHANNEL_REQUIRED, DEPRECATED_IN_3X_INPUT
 from ..core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ..core.types import BaseEnum, ChannelSortInputObjectType, SortInputObjectType
 
@@ -25,17 +21,15 @@ class SaleSortField(BaseEnum):
 
     @property
     def description(self):
-        descriptions = {
-            SaleSortField.NAME.name: "name.",  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.START_DATE.name: "start date.",  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.END_DATE.name: "end date.",  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.VALUE.name: "value." + CHANNEL_REQUIRED,  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.TYPE.name: "type.",  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.CREATED_AT.name: "creation date.",  # type: ignore[attr-defined] # noqa: E501
-            SaleSortField.LAST_MODIFIED_AT.name: "last modification date.",  # type: ignore[attr-defined] # noqa: E501
+        descrption_extras = {
+            SaleSortField.VALUE.name: [CHANNEL_REQUIRED],  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
         }
-        if self.name in descriptions:
-            return f"Sort sales by {descriptions[self.name]}"
+        if self.name in SaleSortField.__enum__._member_names_:
+            sort_name = self.name.lower().replace("_", " ")
+            description = f"Sort sales by {sort_name}."
+            if extras := descrption_extras.get(self.name):
+                description += "".join(extras)
+            return description
         raise ValueError(f"Unsupported enum value: {self.value}")
 
     @staticmethod
@@ -78,6 +72,7 @@ class VoucherSortField(graphene.Enum):
             VoucherSortField.VALUE.name: [CHANNEL_REQUIRED],  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
             VoucherSortField.MINIMUM_SPENT_AMOUNT.name: [CHANNEL_REQUIRED],  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
             VoucherSortField.NAME.name: [ADDED_IN_318],  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
+            VoucherSortField.CODE.name: [DEPRECATED_IN_3X_INPUT],  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
         }
         if self.name in VoucherSortField.__enum__._member_names_:
             sort_name = self.name.lower().replace("_", " ")
@@ -86,15 +81,6 @@ class VoucherSortField(graphene.Enum):
                 description += "".join(extras)
             return description
         raise ValueError(f"Unsupported enum value: {self.value}")
-
-    @property
-    def deprecation_reason(self):
-        deprecations = {
-            VoucherSortField.CODE.name: DEFAULT_DEPRECATION_REASON,  # type: ignore[attr-defined] # graphene.Enum is not typed # noqa: E501
-        }
-        if self.name in deprecations:
-            return deprecations[self.name]
-        return None
 
     @staticmethod
     def qs_with_minimum_spent_amount(queryset: QuerySet, channel_slug: str) -> QuerySet:
@@ -144,14 +130,10 @@ class PromotionSortField(BaseEnum):
 
     @property
     def description(self):
-        descriptions = {
-            PromotionSortField.NAME.name: "name.",  # type: ignore[attr-defined] # noqa: E501
-            PromotionSortField.START_DATE.name: "start date.",  # type: ignore[attr-defined] # noqa: E501
-            PromotionSortField.END_DATE.name: "end date.",  # type: ignore[attr-defined] # noqa: E501
-            PromotionSortField.CREATED_AT.name: "creation date.",  # type: ignore[attr-defined] # noqa: E501
-        }
-        if self.name in descriptions:
-            return f"Sort promotions by {descriptions[self.name]}"
+        if self.name in PromotionSortField.__enum__._member_names_:
+            sort_name = self.name.lower().replace("_", " ")
+            description = f"Sort promotions by {sort_name}."
+            return description
         raise ValueError(f"Unsupported enum value: {self.value}")
 
 

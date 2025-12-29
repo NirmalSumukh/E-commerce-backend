@@ -12,11 +12,12 @@ def resolve_by_global_id_or_ext_ref(info, model, id, external_reference):
             .filter(id=id)
             .first()
         )
-    return (
-        model.objects.using(get_database_connection_name(info.context))
-        .filter(external_reference=external_reference)
-        .first()
-    )
+    else:
+        return (
+            model.objects.using(get_database_connection_name(info.context))
+            .filter(external_reference=external_reference)
+            .first()
+        )
 
 
 def resolve_by_global_id_slug_or_ext_ref(info, model, id, slug, external_reference):
@@ -30,14 +31,15 @@ def resolve_by_global_id_slug_or_ext_ref(info, model, id, slug, external_referen
             .filter(id=id)
             .first()
         )
-    if slug:
+    elif slug:
         return (
             model.objects.using(get_database_connection_name(info.context))
             .filter(slug=slug)
             .first()
         )
-    return (
-        model.objects.using(get_database_connection_name(info.context))
-        .filter(external_reference=external_reference)
-        .first()
-    )
+    else:
+        return (
+            model.objects.using(get_database_connection_name(info.context))
+            .filter(external_reference=external_reference)
+            .first()
+        )

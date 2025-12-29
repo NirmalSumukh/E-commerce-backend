@@ -10,23 +10,27 @@ import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import { extractMutationErrors } from "@dashboard/misc";
 import { stringifyQs } from "@dashboard/utils/urls";
-import { OutputData } from "@editorjs/editorjs";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationsMenuItemPage from "../components/TranslationsMenuItemPage";
 import { TranslationField, TranslationInputFieldName } from "../types";
 import { getParsedTranslationInputData } from "../utils";
 
-interface TranslationsMenuItemQueryParams {
+export interface TranslationsMenuItemQueryParams {
   activeField: string;
 }
-interface TranslationsMenuItemProps {
+export interface TranslationsMenuItemProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsMenuItemQueryParams;
 }
 
-const TranslationsMenuItem = ({ id, languageCode, params }: TranslationsMenuItemProps) => {
+const TranslationsMenuItem: React.FC<TranslationsMenuItemProps> = ({
+  id,
+  languageCode,
+  params,
+}) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();
@@ -36,7 +40,7 @@ const TranslationsMenuItem = ({ id, languageCode, params }: TranslationsMenuItem
   });
   const [updateTranslations, updateTranslationsOpts] = useUpdateMenuItemTranslationsMutation({
     onCompleted: data => {
-      if ((data.menuItemTranslate?.errors ?? []).length === 0) {
+      if (data.menuItemTranslate.errors.length === 0) {
         menuItemTranslations.refetch();
         notify({
           status: "success",
@@ -59,7 +63,7 @@ const TranslationsMenuItem = ({ id, languageCode, params }: TranslationsMenuItem
   };
   const handleSubmit = (
     { name: fieldName }: TranslationField<TranslationInputFieldName>,
-    data: string | OutputData,
+    data: string,
   ) =>
     extractMutationErrors(
       updateTranslations({

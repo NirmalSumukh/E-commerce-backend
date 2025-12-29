@@ -1,15 +1,12 @@
 // @ts-strict-ignore
 import { FetchResult } from "@apollo/client";
-import { AppWidgets } from "@dashboard/apps/components/AppWidgets/AppWidgets";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
+import CardMenu from "@dashboard/components/CardMenu";
 import CardSpacer from "@dashboard/components/CardSpacer";
 import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { DateTime } from "@dashboard/components/Date";
 import { DetailPageLayout } from "@dashboard/components/Layouts";
 import { Savebar } from "@dashboard/components/Savebar";
-import { extensionMountPoints } from "@dashboard/extensions/extensionMountPoints";
-import { getExtensionsItemsForDraftOrderDetails } from "@dashboard/extensions/getExtensionsItems";
-import { useExtensions } from "@dashboard/extensions/hooks/useExtensions";
 import {
   ChannelUsabilityDataQuery,
   OrderDetailsFragment,
@@ -24,7 +21,8 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import OrderChannelSectionCard from "@dashboard/orders/components/OrderChannelSectionCard";
 import { orderDraftListUrl } from "@dashboard/orders/urls";
 import { FetchMoreProps, RelayToFlat } from "@dashboard/types";
-import { Box, Divider, Skeleton, Text } from "@saleor/macaw-ui-next";
+import { Box, Skeleton, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import OrderCustomer, { CustomerEditData } from "../OrderCustomer";
@@ -32,7 +30,7 @@ import OrderDraftDetails from "../OrderDraftDetails/OrderDraftDetails";
 import OrderHistory, { FormData as HistoryFormData } from "../OrderHistory";
 import OrderDraftAlert from "./OrderDraftAlert";
 
-interface OrderDraftPageProps extends FetchMoreProps {
+export interface OrderDraftPageProps extends FetchMoreProps {
   disabled: boolean;
   order?: OrderDetailsFragment;
   channelUsabilityData?: ChannelUsabilityDataQuery;
@@ -60,7 +58,7 @@ interface OrderDraftPageProps extends FetchMoreProps {
 
 const draftOrderListUrl = orderDraftListUrl();
 
-const OrderDraftPage = (props: OrderDraftPageProps) => {
+const OrderDraftPage: React.FC<OrderDraftPageProps> = props => {
   const {
     loading,
     fetchUsers,
@@ -94,14 +92,6 @@ const OrderDraftPage = (props: OrderDraftPageProps) => {
     path: draftOrderListUrl,
   });
 
-  const { DRAFT_ORDER_DETAILS_MORE_ACTIONS, DRAFT_ORDER_DETAILS_WIDGETS } = useExtensions(
-    extensionMountPoints.DRAFT_ORDER_DETAILS,
-  );
-  const extensionMenuItems = getExtensionsItemsForDraftOrderDetails(
-    DRAFT_ORDER_DETAILS_MORE_ACTIONS,
-    order?.id,
-  );
-
   return (
     <DetailPageLayout>
       <TopNav
@@ -121,8 +111,8 @@ const OrderDraftPage = (props: OrderDraftPageProps) => {
           </Box>
         }
       >
-        <TopNav.Menu
-          items={[
+        <CardMenu
+          menuItems={[
             {
               label: intl.formatMessage({
                 id: "PAqicb",
@@ -131,9 +121,7 @@ const OrderDraftPage = (props: OrderDraftPageProps) => {
               }),
               onSelect: onDraftRemove,
             },
-            ...extensionMenuItems,
           ]}
-          dataTestId="menu"
         />
       </TopNav>
       <DetailPageLayout.Content>
@@ -175,13 +163,6 @@ const OrderDraftPage = (props: OrderDraftPageProps) => {
           onProfileView={onProfileView}
           onShippingAddressEdit={onShippingAddressEdit}
         />
-        {DRAFT_ORDER_DETAILS_WIDGETS.length > 0 && order.id && (
-          <>
-            <CardSpacer />
-            <Divider />
-            <AppWidgets extensions={DRAFT_ORDER_DETAILS_WIDGETS} params={{ orderId: order.id }} />
-          </>
-        )}
       </DetailPageLayout.RightSidebar>
       <Savebar>
         <Savebar.Spacer />

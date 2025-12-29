@@ -1,14 +1,17 @@
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import { LanguageFragment } from "@dashboard/graphql";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import TranslationsLanguageList from "../TranslationsLanguageList";
 
-interface TranslationsLanguageListPageProps {
+export interface TranslationsLanguageListPageProps {
   languages: LanguageFragment[];
 }
 
-const TranslationsLanguageListPage = ({ languages }: TranslationsLanguageListPageProps) => {
+const TranslationsLanguageListPage: React.FC<TranslationsLanguageListPageProps> = ({
+  languages,
+}) => {
   const intl = useIntl();
 
   return (

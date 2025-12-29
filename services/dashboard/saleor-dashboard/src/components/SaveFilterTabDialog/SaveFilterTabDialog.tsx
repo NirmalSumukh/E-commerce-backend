@@ -1,11 +1,12 @@
-import { ConfirmButton, ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
+import { ConfirmButtonTransitionState } from "@dashboard/components/ConfirmButton";
 import { DashboardModal } from "@dashboard/components/Modal";
 import { buttonMessages } from "@dashboard/intl";
 import { TextField } from "@material-ui/core";
-import { useState } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import BackButton from "../BackButton";
+import { ConfirmButton } from "../ConfirmButton";
 import Form from "../Form";
 
 export interface SaveFilterTabDialogFormData {
@@ -16,21 +17,21 @@ const initialForm: SaveFilterTabDialogFormData = {
   name: "",
 };
 
-interface SaveFilterTabDialogProps {
+export interface SaveFilterTabDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   open: boolean;
   onClose: () => void;
   onSubmit: (data: SaveFilterTabDialogFormData) => void;
 }
 
-const SaveFilterTabDialog = ({
+const SaveFilterTabDialog: React.FC<SaveFilterTabDialogProps> = ({
   confirmButtonState,
   onClose,
   onSubmit,
   open,
-}: SaveFilterTabDialogProps) => {
+}) => {
   const intl = useIntl();
-  const [errors, setErrors] = useState(false);
+  const [errors, setErrors] = React.useState(false);
   const handleErrors = (data: SaveFilterTabDialogFormData) => {
     if (data.name.trim().length) {
       onSubmit(data);

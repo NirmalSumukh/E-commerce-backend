@@ -3,6 +3,7 @@ import { AppInstallationFragment } from "@dashboard/graphql";
 import { buttonMessages } from "@dashboard/intl";
 import { Button, Indicator, TooltipMountWrapper } from "@saleor/macaw-ui";
 import { sprinkles, Text, Tooltip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 interface InstallErrorActionProps {
@@ -11,7 +12,7 @@ interface InstallErrorActionProps {
   removeInstall?: () => void;
 }
 
-export const InstallErrorAction = ({
+const InstallErrorAction = ({
   appInstallation,
   retryInstall,
   removeInstall,
@@ -66,3 +67,4 @@ export const InstallErrorAction = ({
 };
 
 InstallErrorAction.displayName = "InstallErrorAction";
+export default InstallErrorAction;

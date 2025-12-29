@@ -12,7 +12,7 @@ from ...core import ResolveInfo
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.types import BaseInputObjectType, ExportError, NonNullList
 from ...core.utils import WebhookEventInfo
-from ...product.filters.product import ProductFilterInput
+from ...product.filters import ProductFilterInput
 from ...product.types import Product
 from ...warehouse.types import Warehouse
 from ..enums import ExportScope, FileTypeEnum, ProductFieldEnum
@@ -127,6 +127,6 @@ class ExportProducts(BaseExportMutation):
     def get_items_pks(cls, field, export_info_input, graphene_type):
         ids = export_info_input.get(field)
         if not ids:
-            return []
+            return
         pks = cls.get_global_ids_or_error(ids, only_type=graphene_type, field=field)
         return pks

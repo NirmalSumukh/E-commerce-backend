@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 
 import AvatarImage from "./AvatarImage";
 import { useAvatarStyles } from "./styles";
@@ -16,7 +16,7 @@ export interface AvatarProps {
   className?: string;
 }
 
-const Avatar = ({
+const Avatar: React.FC<AvatarProps> = ({
   children,
   alignRight,
   initials,
@@ -24,7 +24,7 @@ const Avatar = ({
   avatarProps,
   badge,
   className,
-}: AvatarProps) => {
+}) => {
   const classes = useAvatarStyles();
 
   return (

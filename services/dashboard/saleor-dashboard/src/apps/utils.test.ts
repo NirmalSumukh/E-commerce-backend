@@ -1,6 +1,6 @@
 import { AppstoreApi } from "@dashboard/apps/appstore.types";
 import { AppInstallationFragment, JobStatusEnum } from "@dashboard/graphql";
-import { testIntlInstance } from "@test/intl";
+import { intlMock } from "@test/intl";
 
 import { appsInProgress, releasedApp } from "./fixtures";
 import { getAppDetails, resolveInstallationOfAppstoreApp } from "./utils";
@@ -30,7 +30,7 @@ describe("App utils app details", () => {
     };
     // Act
     const details = getAppDetails({
-      intl: testIntlInstance,
+      intl: intlMock,
       app,
       appInstallation: undefined,
       navigateToAppInstallPage: () => undefined,
@@ -82,7 +82,7 @@ describe("App utils app details", () => {
     };
     // Act
     const details = getAppDetails({
-      intl: testIntlInstance,
+      intl: intlMock,
       app,
       appInstallation: undefined,
       navigateToAppInstallPage: () => undefined,
@@ -134,7 +134,7 @@ describe("App utils app details", () => {
     };
     // Act
     const details = getAppDetails({
-      intl: testIntlInstance,
+      intl: intlMock,
       app,
       appInstallation,
       navigateToAppInstallPage: () => undefined,
@@ -199,7 +199,7 @@ describe("App utils app details", () => {
     };
     // Act
     const details = getAppDetails({
-      intl: testIntlInstance,
+      intl: intlMock,
       app,
       appInstallation,
       navigateToAppInstallPage: () => undefined,

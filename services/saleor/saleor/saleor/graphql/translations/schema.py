@@ -59,7 +59,7 @@ class TranslatableItem(graphene.Union):
             instance_type == Promotion and instance.old_sale_id
         ):
             return translation_types.SaleTranslatableContent
-        if instance_type in TYPES_TRANSLATIONS_MAP:
+        elif instance_type in TYPES_TRANSLATIONS_MAP:
             return TYPES_TRANSLATIONS_MAP[instance_type]
 
         return super().resolve_type(instance, info)
@@ -120,7 +120,7 @@ class TranslationQueries(graphene.ObjectType):
         elif kind == TranslatableKinds.CATEGORY:
             qs = resolve_categories(info)
         elif kind == TranslatableKinds.PAGE:
-            qs = resolve_pages(info).qs
+            qs = resolve_pages(info)
         elif kind == TranslatableKinds.SHIPPING_METHOD:
             qs = resolve_shipping_methods(info)
         elif kind == TranslatableKinds.VOUCHER:

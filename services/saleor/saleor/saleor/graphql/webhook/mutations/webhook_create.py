@@ -1,3 +1,5 @@
+from typing import Optional
+
 import graphene
 from django.core.exceptions import ValidationError
 
@@ -14,10 +16,15 @@ from ....webhook.validators import (
 from ...app.dataloaders import get_app_promise
 from ...app.utils import validate_app_is_not_removed
 from ...core import ResolveInfo
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import (
+    ADDED_IN_32,
+    ADDED_IN_312,
+    DEPRECATED_IN_3X_INPUT,
+    PREVIEW_FEATURE,
+)
 from ...core.doc_category import DOC_CATEGORY_WEBHOOKS
 from ...core.fields import JSONString
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import BaseInputObjectType, NonNullList, WebhookError
 from ...core.utils import raise_validation_error
 from .. import enums
@@ -58,14 +65,17 @@ class WebhookCreateInput(BaseInputObjectType):
         required=False,
     )
     query = graphene.String(
-        description="Subscription query used to define a webhook payload.",
+        description="Subscription query used to define a webhook payload."
+        + ADDED_IN_32,
         required=False,
     )
     custom_headers = JSONString(
         description=f"Custom headers, which will be added to HTTP request. "
         f"There is a limitation of {HEADERS_NUMBER_LIMIT} headers per webhook "
         f"and {HEADERS_LENGTH_LIMIT} characters per header."
-        f"Only `X-*`, `Authorization*`, and `BrokerProperties` keys are allowed.",
+        f"Only `X-*`, `Authorization*`, and `BrokerProperties` keys are allowed."
+        + ADDED_IN_312
+        + PREVIEW_FEATURE,
         required=False,
     )
 
@@ -73,7 +83,7 @@ class WebhookCreateInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_WEBHOOKS
 
 
-class WebhookCreate(DeprecatedModelMutation, NotifyUserEventValidationMixin):
+class WebhookCreate(ModelMutation, NotifyUserEventValidationMixin):
     class Arguments:
         input = WebhookCreateInput(
             description="Fields required to create a webhook.", required=True
@@ -154,7 +164,9 @@ class WebhookCreate(DeprecatedModelMutation, NotifyUserEventValidationMixin):
         return cleaned_data
 
     @classmethod
-    def _clean_webhook_events(cls, data, subscription_query: SubscriptionQuery | None):
+    def _clean_webhook_events(
+        cls, data, subscription_query: Optional[SubscriptionQuery]
+    ):
         # if `events` field is not empty, use this field. Otherwise get event types
         # from `async_events` and `sync_events`. If the fields are also empty,
         # parse events from `query`.
@@ -178,7 +190,7 @@ class WebhookCreate(DeprecatedModelMutation, NotifyUserEventValidationMixin):
         return instance
 
     @classmethod
-    def save(cls, _info: ResolveInfo, instance, cleaned_input, instance_tracker=None):
+    def save(cls, _info: ResolveInfo, instance, cleaned_input):
         instance.save()
         events = set(cleaned_input.get("events", []))
         models.WebhookEvent.objects.bulk_create(

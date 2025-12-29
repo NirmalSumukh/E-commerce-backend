@@ -1,19 +1,21 @@
 import json
 import logging
+from collections.abc import Iterable
 from typing import Optional
 from urllib.parse import urlencode, urljoin
 
+import opentracing
+import opentracing.tags
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.handlers.wsgi import WSGIRequest
 from django.http import HttpResponse, HttpResponseNotFound
 from django.urls import reverse
 from requests.exceptions import SSLError
 
 from ....checkout.fetch import CheckoutInfo, CheckoutLineInfo
-from ....core.telemetry import saleor_attributes, tracer
 from ....core.utils import build_absolute_uri
 from ....core.utils.url import prepare_url
-from ....graphql.core import SaleorContext
 from ....order.events import external_notification_event
 from ....plugins.base_plugin import BasePlugin, ConfigurationTypeField
 from ....plugins.error_codes import PluginErrorCode
@@ -242,9 +244,7 @@ class AdyenGatewayPlugin(BasePlugin):
         base_url = build_absolute_uri(api_path)
         return urljoin(base_url, "webhooks")
 
-    def webhook(
-        self, request: SaleorContext, path: str, previous_value
-    ) -> HttpResponse:
+    def webhook(self, request: WSGIRequest, path: str, previous_value) -> HttpResponse:
         """Handle a request received from Adyen.
 
         The method handles two types of requests:
@@ -261,9 +261,13 @@ class AdyenGatewayPlugin(BasePlugin):
         config = self._get_gateway_config()
         if path.startswith(WEBHOOK_PATH):
             return handle_webhook(request, config)
-        if path.startswith(ADDITIONAL_ACTION_PATH):
-            with tracer.start_as_current_span("adyen.checkout.payment_details") as span:
-                span.set_attribute(saleor_attributes.COMPONENT, "payment")
+        elif path.startswith(ADDITIONAL_ACTION_PATH):
+            with opentracing.global_tracer().start_active_span(
+                "adyen.checkout.payment_details"
+            ) as scope:
+                span = scope.span
+                span.set_tag(opentracing.tags.COMPONENT, "payment")
+                span.set_tag("service.name", "adyen")
                 return handle_additional_actions(
                     request, self.adyen.checkout.payments_details, self.channel.slug
                 )
@@ -300,9 +304,9 @@ class AdyenGatewayPlugin(BasePlugin):
 
     def get_payment_gateways(
         self,
-        currency: str | None,
+        currency: Optional[str],
         checkout_info: Optional["CheckoutInfo"],
-        checkout_lines: list["CheckoutLineInfo"] | None,
+        checkout_lines: Optional[Iterable["CheckoutLineInfo"]],
         previous_value,
     ) -> list["PaymentGateway"]:
         """Fetch current configuration for given checkout.
@@ -333,8 +337,12 @@ class AdyenGatewayPlugin(BasePlugin):
                 checkout_lines,
                 local_config.connection_params["merchant_account"],
             )
-            with tracer.start_as_current_span("adyen.checkout.payment_methods") as span:
-                span.set_attribute(saleor_attributes.COMPONENT, "payment")
+            with opentracing.global_tracer().start_active_span(
+                "adyen.checkout.payment_methods"
+            ) as scope:
+                span = scope.span
+                span.set_tag(opentracing.tags.COMPONENT, "payment")
+                span.set_tag("service.name", "adyen")
                 response = api_call(request, self.adyen.checkout.payment_methods)
                 adyen_payment_methods = json.dumps(response.message)
                 config.append({"field": "config", "value": adyen_payment_methods})
@@ -359,10 +367,13 @@ class AdyenGatewayPlugin(BasePlugin):
             data, self.config.connection_params["merchant_account"]
         )
 
-        with tracer.start_as_current_span(
+        with opentracing.global_tracer().start_active_span(
             "adyen.checkout.payment_methods_balance"
-        ) as span:
-            span.set_attribute(saleor_attributes.COMPONENT, "payment")
+        ) as scope:
+            span = scope.span
+            span.set_tag(opentracing.tags.COMPONENT, "payment")
+            span.set_tag("service.name", "adyen")
+
             try:
                 result = api_call(
                     request_data,
@@ -378,10 +389,6 @@ class AdyenGatewayPlugin(BasePlugin):
         if self.channel is None:
             return False
         return self.channel.automatically_confirm_all_new_orders
-
-    def _normalize_response_field(self, field: str) -> str:
-        """Normalize response field to lowercase and remove spaces."""
-        return field.strip().lower()
 
     def process_payment(
         self, payment_information: "PaymentData", previous_value
@@ -403,10 +410,8 @@ class AdyenGatewayPlugin(BasePlugin):
             return previous_value
         try:
             payment = Payment.objects.get(pk=payment_information.payment_id)
-        except ObjectDoesNotExist as e:
-            raise PaymentError(
-                "Payment cannot be performed. Payment does not exists."
-            ) from e
+        except ObjectDoesNotExist:
+            raise PaymentError("Payment cannot be performed. Payment does not exists.")
 
         checkout = payment.checkout
         if checkout is None:
@@ -420,7 +425,7 @@ class AdyenGatewayPlugin(BasePlugin):
         return_url = prepare_url(
             params,
             build_absolute_uri(
-                f"/plugins/channel/{self.channel.slug}/"  # type: ignore[union-attr]
+                f"/plugins/channel/{self.channel.slug}/"  # type: ignore
                 f"{self.PLUGIN_ID}/additional-actions"
             ),
         )
@@ -430,10 +435,14 @@ class AdyenGatewayPlugin(BasePlugin):
             merchant_account=self.config.connection_params["merchant_account"],
             native_3d_secure=self.config.connection_params["enable_native_3d_secure"],
         )
-        with tracer.start_as_current_span("adyen.checkout.payments") as span:
-            span.set_attribute(saleor_attributes.COMPONENT, "payment")
+        with opentracing.global_tracer().start_active_span(
+            "adyen.checkout.payments"
+        ) as scope:
+            span = scope.span
+            span.set_tag(opentracing.tags.COMPONENT, "payment")
+            span.set_tag("service.name", "adyen")
             result = api_call(request_data, self.adyen.checkout.payments)
-        result_code = self._normalize_response_field(result.message["resultCode"])
+        result_code = result.message["resultCode"].strip().lower()
         is_success = result_code not in FAILED_STATUSES
         adyen_auto_capture = self.config.connection_params["adyen_auto_capture"]
         kind = TransactionKind.AUTH
@@ -477,12 +486,12 @@ class AdyenGatewayPlugin(BasePlugin):
             action_required_data=action,
             payment_method_info=payment_method_info,
             psp_reference=psp_reference,
-            legacy_adyen_plugin_payment_method=self._normalize_response_field(
-                result.message.get("paymentMethod", "")
-            ),
-            legacy_adyen_plugin_result_code=self._normalize_response_field(
-                result.message.get("resultCode", "")
-            ),
+            legacy_adyen_plugin_payment_method=result.message.get("paymentMethod", "")
+            .strip()
+            .lower(),
+            legacy_adyen_plugin_result_code=result.message.get("resultCode", "")
+            .strip()
+            .lower(),
         )
 
     @classmethod
@@ -521,10 +530,14 @@ class AdyenGatewayPlugin(BasePlugin):
                 f"does not have the additional data.",
             )
 
-        with tracer.start_as_current_span("adyen.checkout.payment_details") as span:
-            span.set_attribute(saleor_attributes.COMPONENT, "payment")
+        with opentracing.global_tracer().start_active_span(
+            "adyen.checkout.payment_details"
+        ) as scope:
+            span = scope.span
+            span.set_tag(opentracing.tags.COMPONENT, "payment")
+            span.set_tag("service.name", "adyen")
             result = api_call(additional_data, self.adyen.checkout.payments_details)
-        result_code = self._normalize_response_field(result.message["resultCode"])
+        result_code = result.message["resultCode"].strip().lower()
         is_success = result_code not in FAILED_STATUSES
         action_required = "action" in result.message
         if result_code in PENDING_STATUSES:
@@ -560,12 +573,12 @@ class AdyenGatewayPlugin(BasePlugin):
             raw_response=result.message,
             psp_reference=result.message.get("pspReference", ""),
             payment_method_info=payment_method_info,
-            legacy_adyen_plugin_payment_method=self._normalize_response_field(
-                result.message.get("paymentMethod", "")
-            ),
-            legacy_adyen_plugin_result_code=self._normalize_response_field(
-                result.message.get("resultCode", "")
-            ),
+            legacy_adyen_plugin_payment_method=result.message.get("paymentMethod", "")
+            .strip()
+            .lower(),
+            legacy_adyen_plugin_result_code=result.message.get("resultCode", "")
+            .strip()
+            .lower(),
         )
 
     def confirm_payment(
@@ -626,15 +639,15 @@ class AdyenGatewayPlugin(BasePlugin):
         if result_code_temporary_field:
             result_code = result_code_temporary_field
         else:
-            result_code = self._normalize_response_field(
-                transaction.gateway_response.get("resultCode", "")
+            result_code = (
+                transaction.gateway_response.get("resultCode", "").strip().lower()
             )
 
         if payment_method_temporary_field:
             payment_method = payment_method_temporary_field
         else:
-            payment_method = self._normalize_response_field(
-                transaction.gateway_response.get("paymentMethod", "")
+            payment_method = (
+                transaction.gateway_response.get("paymentMethod", "").strip().lower()
             )
 
         if result_code and result_code in PENDING_STATUSES:
@@ -748,12 +761,12 @@ class AdyenGatewayPlugin(BasePlugin):
             # @deprecated
             raw_response=result.message,
             psp_reference=result.message.get("pspReference", ""),
-            legacy_adyen_plugin_payment_method=self._normalize_response_field(
-                result.message.get("paymentMethod", "")
-            ),
-            legacy_adyen_plugin_result_code=self._normalize_response_field(
-                result.message.get("resultCode", "")
-            ),
+            legacy_adyen_plugin_payment_method=result.message.get("paymentMethod", "")
+            .strip()
+            .lower(),
+            legacy_adyen_plugin_result_code=result.message.get("resultCode", "")
+            .strip()
+            .lower(),
         )
 
     def capture_payment(
@@ -786,12 +799,12 @@ class AdyenGatewayPlugin(BasePlugin):
             raw_response=result.message,
             payment_method_info=payment_method_info,
             psp_reference=result.message.get("pspReference", ""),
-            legacy_adyen_plugin_payment_method=self._normalize_response_field(
-                result.message.get("paymentMethod", "")
-            ),
-            legacy_adyen_plugin_result_code=self._normalize_response_field(
-                result.message.get("resultCode", "")
-            ),
+            legacy_adyen_plugin_payment_method=result.message.get("paymentMethod", "")
+            .strip()
+            .lower(),
+            legacy_adyen_plugin_result_code=result.message.get("resultCode", "")
+            .strip()
+            .lower(),
         )
 
     def void_payment(
@@ -799,17 +812,17 @@ class AdyenGatewayPlugin(BasePlugin):
     ) -> "GatewayResponse":
         if not self.active:
             return previous_value
-
-        if not payment_information.token:
-            raise PaymentError("Cannot find a payment reference to void.")
-
         request = request_for_payment_cancel(
             payment_information=payment_information,
             merchant_account=self.config.connection_params["merchant_account"],
-            token=payment_information.token,
+            token=payment_information.token,  # type: ignore
         )
-        with tracer.start_as_current_span("adyen.payment.cancel") as span:
-            span.set_attribute(saleor_attributes.COMPONENT, "payment")
+        with opentracing.global_tracer().start_active_span(
+            "adyen.payment.cancel"
+        ) as scope:
+            span = scope.span
+            span.set_tag(opentracing.tags.COMPONENT, "payment")
+            span.set_tag("service.name", "adyen")
             result = api_call(request, self.adyen.payment.cancel)
 
         return GatewayResponse(
@@ -823,12 +836,12 @@ class AdyenGatewayPlugin(BasePlugin):
             # @deprecated
             raw_response=result.message,
             psp_reference=result.message.get("pspReference", ""),
-            legacy_adyen_plugin_payment_method=self._normalize_response_field(
-                result.message.get("paymentMethod", "")
-            ),
-            legacy_adyen_plugin_result_code=self._normalize_response_field(
-                result.message.get("resultCode", "")
-            ),
+            legacy_adyen_plugin_payment_method=result.message.get("paymentMethod", "")
+            .strip()
+            .lower(),
+            legacy_adyen_plugin_result_code=result.message.get("resultCode", "")
+            .strip()
+            .lower(),
         )
 
     @classmethod
@@ -858,7 +871,7 @@ class AdyenGatewayPlugin(BasePlugin):
                     request_data=request_data,
                     certificate=apple_certificate,
                 )
-            except SSLError as e:
+            except SSLError:
                 raise ValidationError(
                     {
                         "apple-pay-cert": ValidationError(
@@ -866,6 +879,6 @@ class AdyenGatewayPlugin(BasePlugin):
                             code=PluginErrorCode.INVALID.value,
                         )
                     }
-                ) from e
+                )
             except Exception:
                 pass

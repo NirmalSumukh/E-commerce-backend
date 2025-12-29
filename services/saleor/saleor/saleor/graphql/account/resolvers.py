@@ -1,4 +1,5 @@
 from itertools import chain
+from typing import Optional
 
 from django.db.models import Q
 from graphql import GraphQLError
@@ -67,7 +68,7 @@ def resolve_user(info, id=None, email=None, external_reference=None):
         if id:
             _model, filter_kwargs["pk"] = from_global_id_or_error(id, User)
         if email:
-            filter_kwargs["email__iexact"] = email.lower()
+            filter_kwargs["email"] = email
         if external_reference:
             filter_kwargs["external_reference"] = external_reference
         if requester.has_perms(
@@ -130,7 +131,7 @@ def resolve_users(info, ids=None, emails=None):
 
     if ids and emails:
         return qs.filter(Q(id__in=ids) | Q(email__in=emails))
-    if ids:
+    elif ids:
         return qs.filter(id__in=ids)
     return qs.filter(email__in=emails)
 
@@ -139,9 +140,9 @@ def resolve_users(info, ids=None, emails=None):
 def resolve_address_validation_rules(
     info: ResolveInfo,
     country_code: str,
-    country_area: str | None,
-    city: str | None,
-    city_area: str | None,
+    country_area: Optional[str],
+    city: Optional[str],
+    city_area: Optional[str],
 ):
     params = {
         "country_code": country_code,
@@ -183,7 +184,7 @@ def resolve_address_validation_rules(
 
 @traced_resolver
 def resolve_payment_sources(
-    _info, user: models.User, manager, channel_slug: str | None
+    _info, user: models.User, manager, channel_slug: Optional[str]
 ):
     stored_customer_accounts = [
         (gtw.id, fetch_customer_id(user, gtw.id))

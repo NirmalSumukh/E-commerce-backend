@@ -110,7 +110,7 @@ def get_group_permission_codes(group: Group) -> "QuerySet":
     """Return group permissions in the format '<app label>.<permission codename>'."""
     return group.permissions.annotate(
         formatted_codename=Concat("content_type__app_label", Value("."), "codename")
-    ).values_list("formatted_codename", flat=True)
+    ).values_list("formatted_codename", flat=True)  # type: ignore[misc]
 
 
 def get_groups_which_user_can_manage(
@@ -131,7 +131,7 @@ def get_groups_which_user_can_manage(
     )
 
     editable_groups: list[Group] = []
-    for group in groups.iterator(chunk_size=1000):
+    for group in groups.iterator():
         out_of_scope_permissions = set(group.group_perms) - user_permission_pks
         out_of_scope_permissions.discard(None)
         if not out_of_scope_permissions:
@@ -207,7 +207,7 @@ def get_not_manageable_permissions_after_removing_users_from_group(
     After removing users from group, for each permission, there should be at least
     one staff member who can manage it (has both “manage staff” and this permission).
     """
-    group_users = group.user_set.all()
+    group_users = group.user_set.all()  # type: ignore[attr-defined]
     group_permissions = group.permissions.values_list("codename", flat=True)
     # if group has manage_staff permission and some users will stay in group
     # given users can me removed (permissions will be manageable)
@@ -219,7 +219,7 @@ def get_not_manageable_permissions_after_removing_users_from_group(
     # if True, all group permissions can be managed
     group_remaining_users = set(group_users) - set(users)
     manage_staff_permission = AccountPermissions.MANAGE_STAFF.value
-    if any(user.has_perm(manage_staff_permission) for user in group_remaining_users):
+    if any([user.has_perm(manage_staff_permission) for user in group_remaining_users]):
         return set()
 
     # if group and any of remaining group user doesn't have manage staff permission
@@ -293,9 +293,8 @@ def get_group_to_permissions_and_users_mapping():
                     "permissions__codename",
                 ),
                 filter=Q(permissions__isnull=False),
-                default=[],
             ),
-            users=ArrayAgg("user", filter=Q(user__is_active=True), default=[]),
+            users=ArrayAgg("user", filter=Q(user__is_active=True)),
         )
         .values("pk", "perm_codenames", "users")
     )
@@ -362,7 +361,7 @@ def look_for_permission_in_users_with_manage_staff(
 
 
 def is_owner_or_has_one_of_perms(
-    requestor: Union["User", "App", None], owner: Union["User", "App"] | None, *perms
+    requestor: Union["User", "App", None], owner: Optional[Union["User", "App"]], *perms
 ) -> bool:
     """Check if requestor can access data.
 
@@ -394,7 +393,7 @@ def check_is_owner_or_has_one_of_perms(
         raise PermissionDenied(permissions=list(perms) + [AuthorizationFilters.OWNER])
 
 
-def get_user_accessible_channels(info, user: User | None):
+def get_user_accessible_channels(info, user: Optional[User]):
     return (
         (AccessibleChannelsByUserIdLoader(info.context).load(user.id).get())
         if user is not None

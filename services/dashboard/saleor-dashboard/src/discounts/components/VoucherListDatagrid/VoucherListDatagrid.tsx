@@ -16,7 +16,7 @@ import useNavigator from "@dashboard/hooks/useNavigator";
 import { ChannelProps, ListProps, SortPage } from "@dashboard/types";
 import { Item } from "@glideapps/glide-data-grid";
 import { Box } from "@saleor/macaw-ui-next";
-import { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { useLocation } from "react-router";
 

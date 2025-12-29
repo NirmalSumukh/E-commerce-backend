@@ -4,7 +4,7 @@ from ...payment.models import Transaction, TransactionEvent, TransactionItem
 from ..core.dataloaders import DataLoader
 
 
-class TransactionEventByTransactionIdLoader(DataLoader[int, list[TransactionEvent]]):
+class TransactionEventByTransactionIdLoader(DataLoader):
     context_key = "transaction_event_by_transaction_id"
 
     def batch_load(self, keys):
@@ -19,7 +19,7 @@ class TransactionEventByTransactionIdLoader(DataLoader[int, list[TransactionEven
         return [event_map.get(transaction_id, []) for transaction_id in keys]
 
 
-class TransactionItemByIDLoader(DataLoader[int, TransactionItem]):
+class TransactionItemByIDLoader(DataLoader):
     context_key = "transaction_items_by_id"
 
     def batch_load(self, keys):
@@ -29,7 +29,7 @@ class TransactionItemByIDLoader(DataLoader[int, TransactionItem]):
         return [transactions.get(transaction_id) for transaction_id in keys]
 
 
-class TransactionByPaymentIdLoader(DataLoader[int, list[Transaction]]):
+class TransactionByPaymentIdLoader(DataLoader):
     context_key = "transaction_by_payment_id"
 
     def batch_load(self, keys):

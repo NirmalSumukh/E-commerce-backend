@@ -1,7 +1,7 @@
-import { AppManifestFragment } from "@dashboard/graphql";
+import { type AppFetchMutationVariables, AppManifestFragment } from "@dashboard/graphql";
 
 export type Manifest = AppManifestFragment;
-export { ExtensionInstallFormData } from "./schema";
+export type ExtensionInstallFormData = AppFetchMutationVariables;
 
 export type InstallDetailsManifestData = Pick<
   AppManifestFragment,

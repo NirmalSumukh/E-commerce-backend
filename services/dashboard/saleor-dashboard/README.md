@@ -9,18 +9,9 @@
 </div>
 
 <div align="center">
- Get to know Saleor: <br>
-  <a href="https://saleor.typeform.com/talk-with-us?utm_source=github&utm_medium=readme&utm_campaign=repo_dashboard">Talk to a human</a>
-  <span> | </span>
-  <a href="https://cloud.saleor.io/signup?utm_source=github&utm_medium=readme&utm_campaign=repo_dashboard">Talk to the API</a>
-</div>
-
-<br>
-
-<div align="center">
   <a href="https://saleor.io/">🏠 Website</a>
   <span> • </span>
-  <a href="https://docs.saleor.io/">📚 Docs</a>
+  <a href="https://docs.saleor.io/docs/3.x/">📚 Docs</a>
   <span> • </span>
   <a href="https://saleor.io/blog/">📰 Blog</a>
   <span> • </span>
@@ -71,7 +62,7 @@ npm run dev
 ```
 
 > Note:
-> If you see CORS errors, check [CORS configuration](https://docs.saleor.io/setup/configuration#allowed_client_hosts) of your Saleor instance or CORS settings in the Cloud Console.
+> If you see CORS errors, check [CORS configuration](https://docs.saleor.io/docs/3.x/developer/running-saleor/configuration#allowed_client_hosts) of your Saleor instance or CORS settings in the Cloud Console.
 
 ## Docs
 

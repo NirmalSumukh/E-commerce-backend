@@ -7,6 +7,7 @@ from ...discount import DiscountType
 if TYPE_CHECKING:
     from ...channel.models import Channel
     from ...checkout.models import CheckoutLine
+    from ...discount.interface import VariantPromotionRuleInfo
     from ...discount.models import CheckoutLineDiscount, OrderLineDiscount, Voucher
     from ...order.models import OrderLine
     from ...product.models import (
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
         Product,
         ProductType,
         ProductVariant,
+        ProductVariantChannelListing,
     )
 
 
@@ -24,10 +26,12 @@ class LineInfo:
     product: Optional["Product"]
     product_type: Optional["ProductType"]
     collections: list["Collection"]
+    channel_listing: Optional["ProductVariantChannelListing"]
     channel: "Channel"
     discounts: Iterable[Union["OrderLineDiscount", "CheckoutLineDiscount"]]
+    rules_info: list["VariantPromotionRuleInfo"]
     voucher: Optional["Voucher"]
-    voucher_code: str | None
+    voucher_code: Optional[str]
 
     @property
     def variant_discounted_price(self):

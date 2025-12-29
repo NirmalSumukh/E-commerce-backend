@@ -1,5 +1,5 @@
 import { Box, vars } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 interface OrderTransactionTileEventsProps {
   children: ReactNode;

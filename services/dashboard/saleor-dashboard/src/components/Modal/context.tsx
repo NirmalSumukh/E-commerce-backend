@@ -1,5 +1,4 @@
-import { createContext } from "react";
-import * as React from "react";
+import React, { createContext } from "react";
 
 interface ModalContextValues {
   open?: boolean;

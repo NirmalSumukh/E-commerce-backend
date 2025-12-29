@@ -1,22 +1,23 @@
+import decimal
 import json
 import logging
+from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional, cast, get_args, overload
+from typing import Any, Optional, Union, cast, overload
 from uuid import UUID
 
 import graphene
+from aniso8601 import parse_datetime
 from babel.numbers import get_currency_precision
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
-from pydantic import ValidationError
 
 from ..account.models import User
 from ..app.models import App
 from ..channel import TransactionFlowStrategy
-from ..checkout import calculations
 from ..checkout.actions import (
     transaction_amounts_for_checkout_updated,
     transaction_amounts_for_checkout_updated_without_price_recalculation,
@@ -28,7 +29,6 @@ from ..checkout.payment_utils import update_refundable_for_checkout
 from ..core.db.connection import allow_writer
 from ..core.prices import quantize_price
 from ..core.tracing import traced_atomic_transaction
-from ..core.utils.text import safe_truncate
 from ..graphql.core.utils import str_to_enum
 from ..order import OrderStatus
 from ..order.actions import order_transaction_updated
@@ -42,9 +42,8 @@ from ..order.utils import (
     updates_amounts_for_order,
 )
 from ..plugins.manager import PluginsManager, get_plugins_manager
-from ..webhook.response_schemas import transaction as transaction_schemas
-from ..webhook.response_schemas.utils.helpers import parse_validation_error
 from . import (
+    OPTIONAL_PSP_REFERENCE_EVENTS,
     ChargeStatus,
     GatewayError,
     PaymentError,
@@ -62,7 +61,6 @@ from .interface import (
     PaymentGatewayData,
     PaymentLineData,
     PaymentLinesData,
-    PaymentMethodDetails,
     PaymentMethodInfo,
     RefundData,
     StorePaymentMethodEnum,
@@ -71,7 +69,6 @@ from .interface import (
     TransactionRequestEventResponse,
     TransactionRequestResponse,
     TransactionSessionData,
-    TransactionSessionResponse,
 )
 from .lock_objects import (
     get_checkout_and_transaction_item_locked_for_update,
@@ -84,16 +81,15 @@ logger = logging.getLogger(__name__)
 
 GENERIC_TRANSACTION_ERROR = "Transaction was unsuccessful"
 ALLOWED_GATEWAY_KINDS = {choices[0] for choices in TransactionKind.CHOICES}
-TRANSACTION_EVENT_MSG_MAX_LENGTH: int = TransactionEvent._meta.get_field(  # type: ignore[assignment]
+TRANSACTION_EVENT_MSG_MAX_LENGTH: int = TransactionEvent._meta.get_field(  # type: ignore
     "message"
 ).max_length
-SESSION_REQUEST_EVENT_TYPE = "session-request"
 
 
 def _recalculate_last_refund_success_for_transaction(
     transaction_item: TransactionItem,
     request_event: TransactionEvent,
-    response_event: TransactionEvent | None = None,
+    response_event: Optional[TransactionEvent] = None,
 ) -> bool:
     """Recalculate last_refund_success for transaction.
 
@@ -138,7 +134,7 @@ def _recalculate_last_refund_success_for_transaction(
 def recalculate_refundable_for_checkout(
     transaction_item: TransactionItem,
     request_event: TransactionEvent,
-    response_event: TransactionEvent | None = None,
+    response_event: Optional[TransactionEvent] = None,
 ):
     last_refund_success_changed = _recalculate_last_refund_success_for_transaction(
         transaction_item,
@@ -161,7 +157,7 @@ def create_payment_lines_information(
 
     if checkout:
         return create_checkout_payment_lines_information(checkout, manager)
-    if order:
+    elif order:
         return create_order_payment_lines_information(order)
 
     return PaymentLinesData(
@@ -180,11 +176,11 @@ def create_checkout_payment_lines_information(
     address = checkout_info.shipping_address or checkout_info.billing_address
 
     for line_info in lines:
-        unit_price = calculations.checkout_line_unit_price(
-            manager=manager,
-            checkout_info=checkout_info,
-            lines=lines,
-            checkout_line_info=line_info,
+        unit_price = manager.calculate_checkout_line_unit_price(
+            checkout_info,
+            lines,
+            line_info,
+            address,
         )
         unit_gross = unit_price.gross.amount
 
@@ -200,12 +196,12 @@ def create_checkout_payment_lines_information(
                 amount=unit_gross,
             )
         )
-    shipping_amount = calculations.checkout_shipping_price(
-        manager=manager,
+    shipping_amount = manager.calculate_checkout_shipping(
         checkout_info=checkout_info,
         lines=lines,
         address=address,
     ).gross.amount
+
     voucher_amount = -checkout.discount_amount
 
     return PaymentLinesData(
@@ -262,13 +258,13 @@ def generate_transactions_data(payment: Payment) -> list[TransactionData]:
 
 def create_payment_information(
     payment: Payment,
-    payment_token: str | None = None,
-    amount: Decimal | None = None,
-    customer_id: str | None = None,
+    payment_token: Optional[str] = None,
+    amount: Optional[Decimal] = None,
+    customer_id: Optional[str] = None,
     store_source: bool = False,
-    refund_data: RefundData | None = None,
-    additional_data: dict | None = None,
-    manager: PluginsManager | None = None,
+    refund_data: Optional[RefundData] = None,
+    additional_data: Optional[dict] = None,
+    manager: Optional[PluginsManager] = None,
 ) -> PaymentData:
     """Extract order information along with payment details.
 
@@ -283,10 +279,7 @@ def create_payment_information(
         checkout_token = str(checkout.token)
         from ..checkout.utils import get_checkout_metadata
 
-        checkout_metadata = None
-        checkout_metadata_storage = get_checkout_metadata(checkout)
-        if checkout_metadata_storage:
-            checkout_metadata = checkout_metadata_storage.metadata
+        checkout_metadata = get_checkout_metadata(checkout).metadata
     elif order := payment.order:
         billing = order.billing_address
         shipping = order.shipping_address
@@ -351,15 +344,15 @@ def create_payment(
     total: Decimal,
     currency: str,
     email: str,
-    customer_ip_address: str | None = None,
-    payment_token: str | None = None,
-    extra_data: dict | None = None,
-    checkout: Checkout | None = None,
-    order: Order | None = None,
-    return_url: str | None = None,
-    external_reference: str | None = None,
+    customer_ip_address: Optional[str] = None,
+    payment_token: Optional[str] = None,
+    extra_data: Optional[dict] = None,
+    checkout: Optional[Checkout] = None,
+    order: Optional[Order] = None,
+    return_url: Optional[str] = None,
+    external_reference: Optional[str] = None,
     store_payment_method: str = StorePaymentMethod.NONE,
-    metadata: dict[str, str] | None = None,
+    metadata: Optional[dict[str, str]] = None,
 ) -> Payment:
     """Create a payment instance.
 
@@ -439,7 +432,7 @@ def create_transaction(
     kind: str,
     payment_information: PaymentData,
     action_required: bool = False,
-    gateway_response: GatewayResponse | None = None,
+    gateway_response: Optional[GatewayResponse] = None,
     error_msg=None,
     is_success=False,
 ) -> Transaction: ...
@@ -450,7 +443,7 @@ def create_transaction(
     payment: Payment,
     *,
     kind: str,
-    payment_information: PaymentData | None,
+    payment_information: Optional[PaymentData],
     action_required: bool = False,
     gateway_response: GatewayResponse,
     error_msg=None,
@@ -462,9 +455,9 @@ def create_transaction(
     payment: Payment,
     *,
     kind: str,
-    payment_information: PaymentData | None,
+    payment_information: Optional[PaymentData],
     action_required: bool = False,
-    gateway_response: GatewayResponse | None = None,
+    gateway_response: Optional[GatewayResponse] = None,
     error_msg=None,
     is_success=False,
 ) -> Transaction:
@@ -508,7 +501,7 @@ def get_already_processed_transaction_or_create_new_transaction(
     kind: str,
     payment_information: PaymentData,
     action_required: bool = False,
-    gateway_response: GatewayResponse | None = None,
+    gateway_response: Optional[GatewayResponse] = None,
     error_msg=None,
 ) -> Transaction:
     if gateway_response and gateway_response.transaction_already_processed:
@@ -553,8 +546,8 @@ def validate_gateway_response(response: GatewayResponse):
 
     try:
         json.dumps(response.raw_response, cls=DjangoJSONEncoder)
-    except (TypeError, ValueError) as e:
-        raise GatewayError("Gateway response needs to be json serializable") from e
+    except (TypeError, ValueError):
+        raise GatewayError("Gateway response needs to be json serializable")
 
 
 @traced_atomic_transaction()
@@ -708,7 +701,7 @@ def get_payment_token(payment: Payment):
 def is_currency_supported(currency: str, gateway_id: str, manager: "PluginsManager"):
     """Return true if the given gateway supports given currency."""
     available_gateways = manager.list_payment_gateways(currency=currency)
-    return any(gateway.id == gateway_id for gateway in available_gateways)
+    return any([gateway.id == gateway_id for gateway in available_gateways])
 
 
 def price_from_minor_unit(value: str, currency: str):
@@ -734,10 +727,10 @@ def price_to_minor_unit(value: Decimal, currency: str):
     precision = get_currency_precision(currency)
     number_places = Decimal("10.0") ** precision
     value_without_comma = value * number_places
-    return str(value_without_comma.quantize(Decimal(1)))
+    return str(value_without_comma.quantize(Decimal("1")))
 
 
-def get_channel_slug_from_payment(payment: Payment) -> str | None:
+def get_channel_slug_from_payment(payment: Payment) -> Optional[str]:
     channel_slug = None
 
     if payment.checkout:
@@ -829,218 +822,150 @@ def get_correct_event_types_based_on_request_type(request_type: str) -> list[str
     return type_map.get(request_type, [])
 
 
-ErrorMsg = str
+def parse_transaction_event_amount(
+    amount_data: Union[str, int, float, None],
+    parsed_event_data: dict,
+    error_field_msg: list[str],
+    invalid_msg: str,
+    missing_msg: str,
+):
+    if amount_data is not None:
+        amount_valid = True
+        try:
+            amount = decimal.Decimal(amount_data).quantize(
+                decimal.Decimal(10) ** (-settings.DEFAULT_DECIMAL_PLACES)
+            )
+            parsed_event_data["amount"] = amount
+            if not amount.is_finite():
+                amount_valid = False
+        except decimal.DecimalException:
+            amount_valid = False
+
+        if not amount_valid:
+            logger.warning(invalid_msg, "amount", amount_data)
+            error_field_msg.append(invalid_msg % ("amount", amount_data))
+    else:
+        logger.warning(missing_msg, "amount")
+        error_field_msg.append(missing_msg % "amount")
 
 
-def parse_transaction_action_data_for_action_webhook(
+def parse_transaction_event_data(
+    event_data: dict,
+    parsed_event_data: dict,
+    error_field_msg: list[str],
+    psp_reference: Optional[str],
+    request_type: str,
+    event_is_optional: bool = True,
+):
+    if (
+        event_is_optional
+        and event_data.get("amount") is None
+        and not event_data.get("result")
+    ):
+        return
+    missing_msg = (
+        "Missing value for field: %s in response of transaction action webhook."
+    )
+    invalid_msg = (
+        "Incorrect value for field: %s, value: %s in "
+        "response of transaction action webhook."
+    )
+
+    parsed_event_data["psp_reference"] = psp_reference
+
+    possible_event_types = {
+        str_to_enum(event_result): event_result
+        for event_result in get_correct_event_types_based_on_request_type(request_type)
+    }
+
+    result = event_data.get("result")
+    if result:
+        if result in possible_event_types:
+            parsed_event_data["type"] = possible_event_types[result]
+        else:
+            possible_types = ",".join(possible_event_types.keys())
+            msg = (
+                "Incorrect value: %s for field: `result` in the response. Request: %s "
+                "can accept only types: %s"
+            )
+            logger.warning(msg, result, request_type.upper(), possible_types)
+            error_field_msg.append(msg % (result, request_type.upper(), possible_types))
+    else:
+        logger.warning(missing_msg, "result")
+        error_field_msg.append(missing_msg % "result")
+
+    parsed_event_data["message"] = _clean_message(event_data)
+
+    amount_data = event_data.get("amount")
+    parse_transaction_event_amount(
+        amount_data,
+        parsed_event_data=parsed_event_data,
+        error_field_msg=error_field_msg,
+        invalid_msg=invalid_msg,
+        missing_msg=missing_msg,
+    )
+
+    if event_time_data := event_data.get("time"):
+        try:
+            parsed_event_data["time"] = (
+                datetime.fromisoformat(event_time_data) if event_time_data else None
+            )
+        except ValueError:
+            try:
+                # datetime.fromisoformat supports only formats of the objects that were
+                # created by date.isoformat() or datetime.isoformat(). It is fixed in
+                # 3.11
+                # This try except block can be removed after moving to python 3.11
+                # ref: https://docs.python.org/3/library/datetime.html#datetime.
+                # datetime.fromisoformat
+                parsed_event_data["time"] = parse_datetime(event_time_data)
+            except ValueError:
+                logger.warning(invalid_msg, "time", event_time_data)
+                error_field_msg.append(invalid_msg % ("time", event_time_data))
+    else:
+        parsed_event_data["time"] = timezone.now()
+
+    parsed_event_data["external_url"] = event_data.get("externalUrl", "")
+
+
+def _clean_message(event_data):
+    message = event_data.get("message") or ""
+    try:
+        message = str(message)
+    except (UnicodeEncodeError, TypeError, ValueError):
+        invalid_err_msg = (
+            "Incorrect value for field: %s in response of transaction action webhook."
+        )
+        logger.warning(invalid_err_msg, "message")
+        message = ""
+
+    if message and len(message) > TRANSACTION_EVENT_MSG_MAX_LENGTH:
+        message = truncate_transaction_event_message(message)
+        field_limit_exceeded_msg = (
+            "Value for field: %s in response of transaction action webhook "
+            "exceeds the character field limit. Message has been truncated."
+        )
+        logger.warning(field_limit_exceeded_msg, "message")
+
+    return message
+
+
+error_msg = str
+
+
+def parse_transaction_action_data(
     response_data: Any,
     request_type: str,
-    request_event_amount: Decimal,
-) -> tuple[Optional["TransactionRequestResponse"], ErrorMsg | None]:
+    event_is_optional: bool = True,
+) -> tuple[Optional["TransactionRequestResponse"], Optional[error_msg]]:
     """Parse response from transaction action webhook.
 
     It takes the recieved response from sync webhook and
     returns TransactionRequestResponse with all details.
     If unable to parse, None will be returned.
     """
-    if request_type not in [
-        TransactionEventType.CHARGE_REQUEST,
-        TransactionEventType.REFUND_REQUEST,
-        TransactionEventType.CANCEL_REQUEST,
-    ]:
-        logger.error(
-            "Request type %s not supported for parsing transaction action data.",
-            request_type,
-            extra={"request_type": request_type},
-        )
-        return None, "Request type not supported"
-
-    try:
-        response_data_model = _validate_transaction_action_data(
-            response_data,
-            request_type,
-        )
-    except ValidationError as error:
-        error_msg_response = parse_validation_error(error)
-        logger.warning(error_msg_response)
-        return None, truncate_transaction_event_message(error_msg_response)
-    except ValueError as error:
-        error_msg_response = str(error)
-        logger.warning(
-            "Error while parsing transaction action data: %s",
-            error_msg_response,
-            extra={"request_type": request_type},
-        )
-        return None, truncate_transaction_event_message(error_msg_response)
-
-    event = None
-    if isinstance(response_data_model, transaction_schemas.TransactionBaseSchema):
-        event = TransactionRequestEventResponse(
-            psp_reference=response_data_model.psp_reference,
-            type=response_data_model.result,
-            amount=response_data_model.amount or request_event_amount,
-            time=response_data_model.time,
-            external_url=str(response_data_model.external_url),
-            message=response_data_model.message,
-        )
-    return (
-        TransactionRequestResponse(
-            psp_reference=response_data_model.psp_reference,
-            available_actions=response_data_model.actions,
-            event=event,
-        ),
-        None,
-    )
-
-
-def parse_transaction_action_data_for_session_webhook(
-    response_data: Any,
-    request_event_amount: Decimal,
-) -> tuple[Optional["TransactionSessionResponse"], ErrorMsg | None]:
-    """Parse response from transaction session webhook.
-
-    It takes the recieved response from sync webhook and
-    returns TransactionRequestResponse with all details.
-    If unable to parse, None will be returned.
-    """
-    try:
-        response_data_model = _validate_transaction_session_action_data(
-            response_data,
-        )
-    except ValidationError as error:
-        error_msg_response = parse_validation_error(error)
-        logger.warning(error_msg_response)
-        return None, truncate_transaction_event_message(error_msg_response)
-    except ValueError as error:
-        error_msg_response = str(error)
-        logger.warning(
-            "Error while parsing transaction action data: %s",
-            error_msg_response,
-            extra={"request_type": SESSION_REQUEST_EVENT_TYPE},
-        )
-        return None, truncate_transaction_event_message(error_msg_response)
-
-    event = TransactionRequestEventResponse(
-        psp_reference=response_data_model.psp_reference,
-        type=response_data_model.result,
-        amount=response_data_model.amount or request_event_amount,
-        time=response_data_model.time,
-        external_url=str(response_data_model.external_url),
-        message=response_data_model.message,
-    )
-
-    payment_method_details = None
-    if parsed_payment_method_details := response_data_model.payment_method_details:
-        payment_method_details = PaymentMethodDetails(
-            type=parsed_payment_method_details.type,
-            name=parsed_payment_method_details.name,
-        )
-        if isinstance(
-            parsed_payment_method_details,
-            transaction_schemas.CardPaymentMethodDetails,
-        ):
-            payment_method_details.brand = parsed_payment_method_details.brand
-            payment_method_details.first_digits = (
-                parsed_payment_method_details.first_digits
-            )
-            payment_method_details.last_digits = (
-                parsed_payment_method_details.last_digits
-            )
-            payment_method_details.exp_month = parsed_payment_method_details.exp_month
-            payment_method_details.exp_year = parsed_payment_method_details.exp_year
-
-    return (
-        TransactionSessionResponse(
-            psp_reference=response_data_model.psp_reference,
-            available_actions=response_data_model.actions,
-            payment_method_details=payment_method_details,
-            event=event,
-        ),
-        None,
-    )
-
-
-def _validate_transaction_action_data(
-    response_data: Any,
-    request_type: str,
-) -> (
-    transaction_schemas.TransactionBaseSchema
-    | transaction_schemas.TransactionAsyncSchema
-):
-    request_type_to_schemas_map: dict[str, tuple] = {
-        TransactionEventType.CHARGE_REQUEST: (
-            transaction_schemas.TransactionChargeRequestedSyncSuccessSchema,
-            transaction_schemas.TransactionChargeRequestedSyncFailureSchema,
-            transaction_schemas.TransactionChargeRequestedAsyncSchema,
-        ),
-        TransactionEventType.REFUND_REQUEST: (
-            transaction_schemas.TransactionRefundRequestedSyncSuccessSchema,
-            transaction_schemas.TransactionRefundRequestedSyncFailureSchema,
-            transaction_schemas.TransactionRefundRequestedAsyncSchema,
-        ),
-        TransactionEventType.CANCEL_REQUEST: (
-            transaction_schemas.TransactionCancelationRequestedSyncSuccessSchema,
-            transaction_schemas.TransactionCancelationRequestedSyncFailureSchema,
-            transaction_schemas.TransactionCancelationRequestedAsyncSchema,
-        ),
-    }
-    success_schema, failure_schema, async_schema = request_type_to_schemas_map[
-        request_type
-    ]
-    result_value = response_data.get("result")
-    if result_value in get_args(success_schema.model_fields["result"].annotation):
-        return success_schema.model_validate(response_data)
-    if result_value in get_args(failure_schema.model_fields["result"].annotation):
-        return failure_schema.model_validate(response_data)
-    if result_value is None:
-        return async_schema.model_validate(response_data)
-    possible_values = ", ".join(
-        list(get_args(success_schema.model_fields["result"].annotation))
-        + list(get_args(failure_schema.model_fields["result"].annotation))
-    )
-    logger.warning(
-        "Invalid value for `result`: %s. Possible values: %s.",
-        result_value,
-        possible_values,
-    )
-    raise ValueError(
-        f"Missing or invalid value for `result`: {result_value}. Possible values: {possible_values}."
-    )
-
-
-def _validate_transaction_session_action_data(
-    response_data: Any,
-) -> transaction_schemas.TransactionSessionBaseSchema:
-    success_schema = transaction_schemas.TransactionSessionSuccessSchema
-    failure_schema = transaction_schemas.TransactionSessionFailureSchema
-    action_required_schema = transaction_schemas.TransactionSessionActionRequiredSchema
-
-    result_value = response_data.get("result")
-    if result_value in get_args(success_schema.model_fields["result"].annotation):
-        return success_schema.model_validate(response_data)
-    if result_value in get_args(failure_schema.model_fields["result"].annotation):
-        return failure_schema.model_validate(response_data)
-    if result_value in get_args(
-        action_required_schema.model_fields["result"].annotation
-    ):
-        return action_required_schema.model_validate(response_data)
-    possible_values = ", ".join(
-        [
-            value.name
-            for value in transaction_schemas.TransactionEventTypeEnum.__members__.values()
-        ]
-    )
-    logger.warning(
-        "Invalid value for `result`: %s. Possible values: %s.",
-        result_value,
-        possible_values,
-    )
-    raise ValueError(
-        f"Missing or invalid value for `result`: {result_value}. Possible values: {possible_values}."
-    )
-
-
-def parse_available_actions(available_actions):
+    psp_reference: str = response_data.get("pspReference")
+    available_actions = response_data.get("actions", None)
     if available_actions is not None:
         possible_actions = {
             str_to_enum(event_action): event_action
@@ -1051,11 +976,49 @@ def parse_available_actions(available_actions):
             for action in available_actions
             if action in possible_actions
         ]
-    return available_actions
+
+    parsed_event_data: dict = {}
+    error_field_msg: list[str] = []
+    parse_transaction_event_data(
+        event_data=response_data,
+        parsed_event_data=parsed_event_data,
+        error_field_msg=error_field_msg,
+        psp_reference=psp_reference,
+        request_type=request_type,
+        event_is_optional=event_is_optional,
+    )
+
+    if error_field_msg:
+        # error field msg can contain details of the value returned by payment app
+        # which means that we need to confirm that we don't exceed the field limit.
+        msg = "\n".join(error_field_msg)
+        msg = truncate_transaction_event_message(msg)
+        return None, msg
+
+    request_event_type = parsed_event_data.get("type", request_type)
+    if not psp_reference and request_event_type not in OPTIONAL_PSP_REFERENCE_EVENTS:
+        msg = f"Providing `pspReference` is required for {request_event_type.upper()}."
+        logger.warning(msg)
+        return None, msg
+
+    return (
+        TransactionRequestResponse(
+            psp_reference=psp_reference,
+            available_actions=available_actions,
+            event=TransactionRequestEventResponse(**parsed_event_data)
+            if parsed_event_data
+            else None,
+        ),
+        None,
+    )
 
 
 def truncate_transaction_event_message(message: str):
-    return safe_truncate(message, TRANSACTION_EVENT_MSG_MAX_LENGTH)
+    return (
+        message[: TRANSACTION_EVENT_MSG_MAX_LENGTH - 3] + "..."
+        if len(message) > TRANSACTION_EVENT_MSG_MAX_LENGTH
+        else message
+    )
 
 
 def get_failed_transaction_event_type_for_request_event(
@@ -1063,11 +1026,11 @@ def get_failed_transaction_event_type_for_request_event(
 ):
     if request_event.type == TransactionEventType.AUTHORIZATION_REQUEST:
         return TransactionEventType.AUTHORIZATION_FAILURE
-    if request_event.type == TransactionEventType.CHARGE_REQUEST:
+    elif request_event.type == TransactionEventType.CHARGE_REQUEST:
         return TransactionEventType.CHARGE_FAILURE
-    if request_event.type == TransactionEventType.REFUND_REQUEST:
+    elif request_event.type == TransactionEventType.REFUND_REQUEST:
         return TransactionEventType.REFUND_FAILURE
-    if request_event.type == TransactionEventType.CANCEL_REQUEST:
+    elif request_event.type == TransactionEventType.CANCEL_REQUEST:
         return TransactionEventType.CANCEL_FAILURE
     return None
 
@@ -1081,17 +1044,17 @@ def get_failed_type_based_on_event(event: TransactionEvent):
         TransactionEventType.AUTHORIZATION_ADJUSTMENT,
     ]:
         return TransactionEventType.AUTHORIZATION_FAILURE
-    if event.type in [
+    elif event.type in [
         TransactionEventType.CHARGE_BACK,
         TransactionEventType.CHARGE_SUCCESS,
     ]:
         return TransactionEventType.CHARGE_FAILURE
-    if event.type in [
+    elif event.type in [
         TransactionEventType.REFUND_REVERSE,
         TransactionEventType.REFUND_SUCCESS,
     ]:
         return TransactionEventType.REFUND_FAILURE
-    if event.type == TransactionEventType.CANCEL_SUCCESS:
+    elif event.type == TransactionEventType.CANCEL_SUCCESS:
         return TransactionEventType.CANCEL_FAILURE
     return event.type
 
@@ -1120,7 +1083,7 @@ def authorization_success_already_exists(transaction_id: int) -> bool:
     ).exists()
 
 
-def get_already_existing_event(event: TransactionEvent) -> TransactionEvent | None:
+def get_already_existing_event(event: TransactionEvent) -> Optional[TransactionEvent]:
     if event.type in [
         TransactionEventType.AUTHORIZATION_ACTION_REQUIRED,
         TransactionEventType.CHARGE_ACTION_REQUIRED,
@@ -1145,7 +1108,7 @@ def get_already_existing_event(event: TransactionEvent) -> TransactionEvent | No
 
 def deduplicate_event(
     event: TransactionEvent, app: App
-) -> tuple[TransactionEvent, ErrorMsg | None]:
+) -> tuple[TransactionEvent, Optional[error_msg]]:
     """Deduplicate the TransactionEvent.
 
     In case of having an existing event with the same type, psp reference
@@ -1195,8 +1158,8 @@ def _create_event_from_response(
     app: App,
     transaction_id: int,
     currency: str,
-    related_granted_refund_id: int | None = None,
-) -> tuple[TransactionEvent | None, ErrorMsg | None]:
+    related_granted_refund_id: Optional[int] = None,
+) -> tuple[Optional[TransactionEvent], Optional[error_msg]]:
     app_identifier = None
     if app and app.identifier:
         app_identifier = app.identifier
@@ -1228,38 +1191,18 @@ def _create_event_from_response(
     return event, None
 
 
-def _get_parsed_transaction_data_for_session_webhook(
-    transaction_webhook_response: dict[str, Any] | None,
-    request_event_amount: Decimal,
-) -> tuple[Optional["TransactionSessionResponse"], ErrorMsg | None]:
-    if transaction_webhook_response is None:
-        return None, "Failed to delivery request."
-
-    transaction_request_response, error_msg = (
-        parse_transaction_action_data_for_session_webhook(
-            transaction_webhook_response,
-            request_event_amount=request_event_amount,
-        )
-    )
-    if not transaction_request_response:
-        return None, error_msg or ""
-    return transaction_request_response, None
-
-
-def _get_parsed_transaction_data_for_action_webhook(
-    transaction_webhook_response: dict[str, Any] | None,
+def _get_parsed_transaction_action_data(
+    transaction_webhook_response: Optional[dict[str, Any]],
     event_type: str,
-    request_event_amount: Decimal,
-) -> tuple[Optional["TransactionRequestResponse"], ErrorMsg | None]:
+    event_is_optional: bool = True,
+) -> tuple[Optional["TransactionRequestResponse"], Optional[error_msg]]:
     if transaction_webhook_response is None:
         return None, "Failed to delivery request."
 
-    transaction_request_response, error_msg = (
-        parse_transaction_action_data_for_action_webhook(
-            transaction_webhook_response,
-            event_type,
-            request_event_amount=request_event_amount,
-        )
+    transaction_request_response, error_msg = parse_transaction_action_data(
+        transaction_webhook_response,
+        event_type,
+        event_is_optional=event_is_optional,
     )
     if not transaction_request_response:
         return None, error_msg or ""
@@ -1283,39 +1226,6 @@ def update_order_with_transaction_details(transaction: TransactionItem):
         )
 
 
-def update_transaction_item_with_payment_method_details(
-    transaction_item: TransactionItem,
-    payment_method_details: PaymentMethodDetails,
-) -> list[str]:
-    """Assign the payment method details to the transaction item.
-
-    Returns the list of updated fields.
-    """
-    updated_fields = []
-    if payment_method_details.type != transaction_item.payment_method_type:
-        transaction_item.payment_method_type = payment_method_details.type
-        updated_fields.append("payment_method_type")
-    if payment_method_details.name != transaction_item.payment_method_name:
-        transaction_item.payment_method_name = payment_method_details.name
-        updated_fields.append("payment_method_name")
-    if payment_method_details.brand != transaction_item.cc_brand:
-        transaction_item.cc_brand = payment_method_details.brand
-        updated_fields.append("cc_brand")
-    if payment_method_details.first_digits != transaction_item.cc_first_digits:
-        transaction_item.cc_first_digits = payment_method_details.first_digits
-        updated_fields.append("cc_first_digits")
-    if payment_method_details.last_digits != transaction_item.cc_last_digits:
-        transaction_item.cc_last_digits = payment_method_details.last_digits
-        updated_fields.append("cc_last_digits")
-    if payment_method_details.exp_month != transaction_item.cc_exp_month:
-        transaction_item.cc_exp_month = payment_method_details.exp_month
-        updated_fields.append("cc_exp_month")
-    if payment_method_details.exp_year != transaction_item.cc_exp_year:
-        transaction_item.cc_exp_year = payment_method_details.exp_year
-        updated_fields.append("cc_exp_year")
-    return updated_fields
-
-
 def process_order_with_transaction(
     transaction: TransactionItem,
     manager: "PluginsManager",
@@ -1324,7 +1234,7 @@ def process_order_with_transaction(
     previous_authorized_value: Decimal = Decimal(0),
     previous_charged_value: Decimal = Decimal(0),
     previous_refunded_value: Decimal = Decimal(0),
-    related_granted_refund: OrderGrantedRefund | None = None,
+    related_granted_refund: Optional[OrderGrantedRefund] = None,
 ):
     order = None
     # This is executed after we ensure that the transaction is not a checkout
@@ -1379,7 +1289,7 @@ def process_order_or_checkout_with_transaction(
     previous_authorized_value: Decimal = Decimal(0),
     previous_charged_value: Decimal = Decimal(0),
     previous_refunded_value: Decimal = Decimal(0),
-    related_granted_refund: OrderGrantedRefund | None = None,
+    related_granted_refund: Optional[OrderGrantedRefund] = None,
 ):
     checkout_deleted = False
     if transaction.checkout_id:
@@ -1414,13 +1324,14 @@ def create_transaction_event_for_transaction_session(
     request_event: TransactionEvent,
     app: App,
     manager: "PluginsManager",
-    transaction_webhook_response: dict[str, Any] | None = None,
+    transaction_webhook_response: Optional[dict[str, Any]] = None,
 ):
-    transaction_request_response, error_msg = (
-        _get_parsed_transaction_data_for_session_webhook(
-            transaction_webhook_response=transaction_webhook_response,
-            request_event_amount=request_event.amount_value,
-        )
+    request_event_type = "session-request"
+
+    transaction_request_response, error_msg = _get_parsed_transaction_action_data(
+        transaction_webhook_response=transaction_webhook_response,
+        event_type=request_event_type,
+        event_is_optional=False,
     )
     if not transaction_request_response or not transaction_request_response.event:
         return create_failed_transaction_event(request_event, cause=error_msg or "")
@@ -1472,14 +1383,6 @@ def create_transaction_event_for_transaction_session(
         request_event.save(update_fields=request_event_update_fields)
 
     transaction_item = event.transaction
-    transaction_item_updated_fields = []
-    if transaction_request_response.payment_method_details:
-        transaction_item_updated_fields.extend(
-            update_transaction_item_with_payment_method_details(
-                transaction_item, transaction_request_response.payment_method_details
-            )
-        )
-
     if event.type in [
         TransactionEventType.AUTHORIZATION_REQUEST,
         TransactionEventType.AUTHORIZATION_SUCCESS,
@@ -1510,7 +1413,6 @@ def create_transaction_event_for_transaction_session(
                 "available_actions",
                 "modified_at",
             ]
-            + transaction_item_updated_fields
         )
 
         process_order_or_checkout_with_transaction(
@@ -1525,15 +1427,10 @@ def create_transaction_event_for_transaction_session(
 
     elif event.psp_reference and transaction_item.psp_reference != event.psp_reference:
         transaction_item.psp_reference = event.psp_reference
-        transaction_item.save(
-            update_fields=["psp_reference", "modified_at"]
-            + transaction_item_updated_fields
-        )
+        transaction_item.save(update_fields=["psp_reference", "modified_at"])
         if transaction_item.checkout_id:
             checkout = cast(Checkout, transaction_item.checkout)
             update_last_transaction_modified_at_for_checkout(checkout, transaction_item)
-    elif transaction_item_updated_fields:
-        transaction_item.save(update_fields=transaction_item_updated_fields)
 
     return event
 
@@ -1547,14 +1444,11 @@ def update_order_granted_status_if_needed(request_event: TransactionEvent):
 def create_transaction_event_from_request_and_webhook_response(
     request_event: TransactionEvent,
     app: App,
-    transaction_webhook_response: dict[str, Any] | None = None,
+    transaction_webhook_response: Optional[dict[str, Any]] = None,
 ):
-    transaction_request_response, error_msg = (
-        _get_parsed_transaction_data_for_action_webhook(
-            transaction_webhook_response=transaction_webhook_response,
-            event_type=request_event.type,
-            request_event_amount=request_event.amount_value,
-        )
+    transaction_request_response, error_msg = _get_parsed_transaction_action_data(
+        transaction_webhook_response=transaction_webhook_response,
+        event_type=request_event.type,
     )
     transaction_item = request_event.transaction
     if not transaction_request_response:
@@ -1761,18 +1655,18 @@ def create_manual_adjustment_events(
 
 
 def get_transaction_item_params(
-    source_object: Checkout | Order,
-    user: User | None,
-    app: App | None,
-    psp_reference: str | None,
-    available_actions: list[str] | None = None,
+    source_object: Union[Checkout, Order],
+    user: Optional[User],
+    app: Optional[App],
+    psp_reference: Optional[str],
+    available_actions: Optional[list[str]] = None,
     name: str = "",
 ):
     return {
         "name": name,
-        "checkout_id": (
-            source_object.pk if isinstance(source_object, Checkout) else None
-        ),
+        "checkout_id": source_object.pk
+        if isinstance(source_object, Checkout)
+        else None,
         "order_id": source_object.pk if isinstance(source_object, Order) else None,
         "currency": source_object.currency,
         "app": app,
@@ -1788,9 +1682,9 @@ def create_transaction_for_order(
     order: "Order",
     user: Optional["User"],
     app: Optional["App"],
-    psp_reference: str | None,
+    psp_reference: Optional[str],
     charged_value: Decimal,
-    available_actions: list[str] | None = None,
+    available_actions: Optional[list[str]] = None,
     name: str = "",
 ) -> TransactionItem:
     transaction_defaults = get_transaction_item_params(
@@ -1814,11 +1708,11 @@ def create_transaction_for_order(
 
 @allow_writer()
 def handle_transaction_initialize_session(
-    source_object: Checkout | Order,
+    source_object: Union[Checkout, Order],
     payment_gateway_data: PaymentGatewayData,
     amount: Decimal,
     action: str,
-    customer_ip_address: str | None,
+    customer_ip_address: Optional[str],
     app: App,
     manager: PluginsManager,
     idempotency_key: str,
@@ -1848,18 +1742,16 @@ def handle_transaction_initialize_session(
             amount_value=amount,
             defaults={
                 "include_in_calculations": False,
-                "type": (
-                    TransactionEventType.CHARGE_REQUEST
-                    if action == TransactionFlowStrategy.CHARGE
-                    else TransactionEventType.AUTHORIZATION_REQUEST
-                ),
+                "type": TransactionEventType.CHARGE_REQUEST
+                if action == TransactionFlowStrategy.CHARGE
+                else TransactionEventType.AUTHORIZATION_REQUEST,
                 "currency": transaction_item.currency,
                 "amount_value": amount,
                 "idempotency_key": idempotency_key,
             },
         )
-    except IntegrityError as e:
-        raise TransactionItemIdempotencyUniqueError() from e
+    except IntegrityError:
+        raise TransactionItemIdempotencyUniqueError()
 
     session_data = TransactionSessionData(
         transaction=transaction_item,
@@ -1888,11 +1780,11 @@ def handle_transaction_initialize_session(
 
 def handle_transaction_process_session(
     transaction_item: TransactionItem,
-    source_object: Checkout | Order,
+    source_object: Union[Checkout, Order],
     payment_gateway_data: PaymentGatewayData,
     action: str,
     app: App,
-    customer_ip_address: str | None,
+    customer_ip_address: Optional[str],
     manager: PluginsManager,
     request_event: TransactionEvent,
 ):

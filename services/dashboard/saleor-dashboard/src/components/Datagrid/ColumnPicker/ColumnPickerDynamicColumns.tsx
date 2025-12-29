@@ -1,11 +1,11 @@
 import { Box, Button, PlusIcon, RemoveIcon, Text } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { AvailableColumn } from "../types";
 import messages from "./messages";
 
-interface ColumnPickerDynamicColumnsProps {
+export interface ColumnPickerDynamicColumnsProps {
   dynamicColumns?: AvailableColumn[] | null | undefined;
   setExpanded: (value: React.SetStateAction<boolean>) => void;
   onToggle: (id: string) => void;

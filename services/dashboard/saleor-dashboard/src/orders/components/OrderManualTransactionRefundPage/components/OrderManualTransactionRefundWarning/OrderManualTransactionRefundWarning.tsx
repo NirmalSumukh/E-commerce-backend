@@ -1,6 +1,6 @@
 import { ExternalLinkNext } from "@dashboard/components/ExternalLink";
-import { MANUAL_REFUND_DOCS_URL } from "@dashboard/links";
 import { Box, Text, useTheme } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { messages } from "../../messages";
@@ -22,7 +22,7 @@ export const OrderManualTransactionRefundWarning = () => {
           size={2}
           textDecoration="underline"
           color={textColor}
-          href={MANUAL_REFUND_DOCS_URL}
+          href="https://docs.saleor.io/docs/next/developer/payments#manual-refund"
           target="__blank"
         >
           <FormattedMessage {...messages.seeDocs} />

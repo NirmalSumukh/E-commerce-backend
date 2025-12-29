@@ -3,13 +3,13 @@ import { useAppListContext } from "@dashboard/apps/context";
 import { getAppDetails, resolveInstallationOfAppstoreApp } from "@dashboard/apps/utils";
 import { AppInstallationFragment } from "@dashboard/graphql";
 import { Box } from "@saleor/macaw-ui-next";
-import { useCallback } from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
-import { AppListCardActions } from "./AppListCardActions";
-import { AppListCardDescription } from "./AppListCardDescription";
-import { AppListCardIntegrations } from "./AppListCardIntegrations";
-import { AppListCardLinks } from "./AppListCardLinks";
+import AppListCardActions from "./AppListCardActions";
+import AppListCardDescription from "./AppListCardDescription";
+import AppListCardIntegrations from "./AppListCardIntegrations";
+import AppListCardLinks from "./AppListCardLinks";
 
 interface AppListRowProps {
   app: AppstoreApi.SaleorApp;
@@ -18,15 +18,15 @@ interface AppListRowProps {
   navigateToGithubForkPage?: (githubForkUrl: string) => void;
 }
 
-export const AppListRow = ({
+const AppListRow: React.FC<AppListRowProps> = ({
   app,
   appInstallationList,
   navigateToAppInstallPage,
   navigateToGithubForkPage,
-}: AppListRowProps) => {
+}) => {
   const intl = useIntl();
   const { retryAppInstallation, removeAppInstallation } = useAppListContext();
-  const appDetails = useCallback(
+  const appDetails = React.useCallback(
     (app: AppstoreApi.SaleorApp) =>
       getAppDetails({
         intl,
@@ -87,3 +87,4 @@ export const AppListRow = ({
 };
 
 AppListRow.displayName = "AppListRow";
+export default AppListRow;

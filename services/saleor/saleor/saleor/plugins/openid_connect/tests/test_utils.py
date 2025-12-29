@@ -1,14 +1,16 @@
-import datetime
 import json
 import time
 import warnings
+from datetime import datetime, timedelta
 from unittest import mock
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
+import pytz
 import requests
 from authlib.jose import JWTClaims
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from freezegun import freeze_time
 from requests import Response
 from requests_hardened import HTTPSession
@@ -22,6 +24,7 @@ from ....core.jwt import (
     jwt_user_payload,
 )
 from ....permission.models import Permission
+from ....tests.utils import flush_post_commit_hooks
 from ..exceptions import AuthenticationError
 from ..utils import (
     JWKS_CACHE_TIME,
@@ -63,7 +66,7 @@ def test_fetch_jwks_raises_error(monkeypatch, error):
         fetch_jwks(jwks_url)
 
 
-@pytest.mark.vcr(decode_compressed_response=True)
+@pytest.mark.vcr
 @mock.patch("saleor.plugins.openid_connect.utils.cache.set")
 def test_fetch_jwks(mocked_cache_set):
     jwks_url = "https://saleor.io/.well-known/jwks.json"
@@ -458,9 +461,10 @@ def test_get_or_create_user_from_payload_different_email(
 @mock.patch("saleor.plugins.openid_connect.utils.cache.set")
 @mock.patch("saleor.plugins.openid_connect.utils.cache.get")
 def test_get_or_create_user_from_payload_with_last_login(
-    mocked_cache_get, mocked_cache_set, customer_user
+    mocked_cache_get, mocked_cache_set, customer_user, settings
 ):
     # given
+    settings.TIME_ZONE = "UTC"
     current_ts = int(time.time())
 
     oauth_url = "https://saleor.io/oauth"
@@ -468,8 +472,8 @@ def test_get_or_create_user_from_payload_with_last_login(
 
     mocked_cache_get.side_effect = lambda cache_key: None
 
-    customer_user.last_login = datetime.datetime.fromtimestamp(
-        current_ts - 10, tz=datetime.UTC
+    customer_user.last_login = timezone.make_aware(
+        datetime.fromtimestamp(current_ts - 10), timezone=pytz.timezone("UTC")
     )
     customer_user.save()
 
@@ -487,8 +491,8 @@ def test_get_or_create_user_from_payload_with_last_login(
         cache_key, customer_user.id, OIDC_CACHE_TIMEOUT
     )
     customer_user.refresh_from_db()
-    assert customer_user.last_login == datetime.datetime.fromtimestamp(
-        current_ts, tz=datetime.UTC
+    assert customer_user.last_login == timezone.make_aware(
+        datetime.fromtimestamp(current_ts), timezone=pytz.timezone("UTC")
     )
     assert user_from_payload.email == customer_user.email
     assert user_from_payload.private_metadata[f"oidc:{oauth_url}"] == sub_id
@@ -562,7 +566,7 @@ def test_get_or_create_user_from_payload_last_login_stays_same(
     mocked_cache_get, mocked_cache_set, customer_user
 ):
     # given
-    last_login = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(minutes=14)
+    last_login = timezone.now() - timedelta(minutes=14)
     customer_user.last_login = last_login
     customer_user.save()
     oauth_url = "https://saleor.io/oauth"
@@ -587,7 +591,7 @@ def test_get_or_create_user_from_payload_last_login_modifies(
     mocked_cache_get, mocked_cache_set, customer_user
 ):
     # given
-    last_login = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(minutes=16)
+    last_login = timezone.now() - timedelta(minutes=16)
     customer_user.last_login = last_login
     customer_user.save()
     oauth_url = "https://saleor.io/oauth"
@@ -614,10 +618,7 @@ def test_get_or_create_user_from_payload_last_login_modifies(
 
 @patch("saleor.plugins.manager.PluginsManager.customer_created")
 def test_jwt_token_without_expiration_claim(
-    mocked_customer_created_webhook,
-    monkeypatch,
-    decoded_access_token,
-    django_capture_on_commit_callbacks,
+    mocked_customer_created_webhook, monkeypatch, decoded_access_token
 ):
     # given
     monkeypatch.setattr(
@@ -635,19 +636,19 @@ def test_jwt_token_without_expiration_claim(
     )
 
     # when
-    with django_capture_on_commit_callbacks(execute=True):
-        user = get_user_from_oauth_access_token_in_jwt_format(
-            token_payload,
-            "https://example.com",
-            access_token="fake-token",
-            use_scope_permissions=False,
-            audience="",
-            staff_user_domains=[],
-            staff_default_group_name="",
-        )
+    user = get_user_from_oauth_access_token_in_jwt_format(
+        token_payload,
+        "https://example.com",
+        access_token="fake-token",
+        use_scope_permissions=False,
+        audience="",
+        staff_user_domains=[],
+        staff_default_group_name="",
+    )
 
     # then
     assert user.email == "test@example.org"
+    flush_post_commit_hooks()
     mocked_customer_created_webhook.assert_called_once_with(user)
 
 
@@ -662,7 +663,6 @@ def test_jwt_token_without_expiration_claim_mixed_permissions_from_group(
     monkeypatch,
     decoded_access_token,
     permission_group_manage_shipping,
-    django_capture_on_commit_callbacks,
 ):
     # given
     customer_user.groups.add(permission_group_manage_shipping)
@@ -683,16 +683,15 @@ def test_jwt_token_without_expiration_claim_mixed_permissions_from_group(
     mocked_cache_get.side_effect = lambda cache_key: None
 
     # when
-    with django_capture_on_commit_callbacks(execute=True):
-        user = get_user_from_oauth_access_token_in_jwt_format(
-            token_payload,
-            "https://example.com",
-            access_token="fake-token",
-            use_scope_permissions=True,
-            audience="",
-            staff_user_domains=[customer_user.email.split("@")[1]],
-            staff_default_group_name="",
-        )
+    user = get_user_from_oauth_access_token_in_jwt_format(
+        token_payload,
+        "https://example.com",
+        access_token="fake-token",
+        use_scope_permissions=True,
+        audience="",
+        staff_user_domains=[customer_user.email.split("@")[1]],
+        staff_default_group_name="",
+    )
 
     # then
     manage_shipping = permission_group_manage_shipping.permissions.first()
@@ -701,6 +700,7 @@ def test_jwt_token_without_expiration_claim_mixed_permissions_from_group(
     assert len(user.effective_permissions) > 1
     # ensure that manage_shipping is not from openID scope permissions
     assert "saleor:manage_shipping" not in token_payload["scope"]
+    flush_post_commit_hooks()
     mocked_customer_created_webhook.assert_not_called()
 
 
@@ -1070,7 +1070,7 @@ def test_update_user_details_nothing_changed(
     customer_user,
 ):
     # given
-    last_login = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(minutes=14)
+    last_login = timezone.now() - timedelta(minutes=14)
     customer_user.last_login = last_login
     customer_user.search_document = "abc"
     customer_user.save(update_fields=["search_document", "last_login"])

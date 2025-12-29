@@ -1,17 +1,21 @@
-import { FilterElement, FilterElementRegular } from "@dashboard/components/Filter/types";
+import { FilterElement, FilterElementRegular } from "@dashboard/components/Filter";
 import { StaffMemberStatus, StaffUserInput } from "@dashboard/graphql";
 import { findValueInEnum } from "@dashboard/misc";
 import { StaffFilterKeys, StaffListFilterOpts } from "@dashboard/staff/components/StaffListPage";
 
-import { createFilterTabUtils, getSingleEnumValueQueryParam } from "../../../utils/filters";
-import { StaffListUrlFilters, StaffListUrlFiltersEnum } from "../../urls";
+import {
+  createFilterTabUtils,
+  createFilterUtils,
+  getSingleEnumValueQueryParam,
+} from "../../../utils/filters";
+import { StaffListUrlFilters, StaffListUrlFiltersEnum, StaffListUrlQueryParams } from "../../urls";
 
-const STAFF_FILTERS_KEY = "staffFilters";
+export const STAFF_FILTERS_KEY = "staffFilters";
 
 export function getFilterOpts(params: StaffListUrlFilters): StaffListFilterOpts {
   return {
     status: {
-      active: params?.status !== undefined,
+      active: params?.status !== undefined ?? false,
       value: params?.status ? findValueInEnum(params.status, StaffMemberStatus) : null,
     },
   };
@@ -38,3 +42,8 @@ export function getFilterQueryParam(filter: FilterElement<StaffFilterKeys>): Sta
 }
 
 export const storageUtils = createFilterTabUtils<string>(STAFF_FILTERS_KEY);
+
+export const { areFiltersApplied, getActiveFilters, getFiltersCurrentTab } = createFilterUtils<
+  StaffListUrlQueryParams,
+  StaffListUrlFilters
+>(StaffListUrlFiltersEnum);

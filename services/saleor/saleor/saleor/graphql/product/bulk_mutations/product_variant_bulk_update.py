@@ -16,14 +16,14 @@ from ....warehouse import models as warehouse_models
 from ....warehouse.management import delete_stocks, stock_bulk_update
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
-from ...attribute.utils.attribute_assignment import AttributeAssignmentMixin
+from ...attribute.utils import AttributeAssignmentMixin
+from ...core.descriptions import ADDED_IN_311, ADDED_IN_312, PREVIEW_FEATURE
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.enums import ErrorPolicyEnum
-from ...core.mutations import BaseMutation, DeprecatedModelMutation
+from ...core.mutations import BaseMutation, ModelMutation
 from ...core.scalars import PositiveDecimal
 from ...core.types import BaseInputObjectType, NonNullList, ProductVariantBulkError
 from ...core.utils import get_duplicated_values
-from ...meta.inputs import MetadataInput
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...utils import get_user_or_app_from_context
 from ...webhook.subscription_payload import generate_pre_save_payloads
@@ -65,7 +65,6 @@ class ChannelListingUpdateInput(BaseInputObjectType):
     channel_listing = graphene.ID(required=True, description="ID of a channel listing.")
     price = PositiveDecimal(description="Price of the particular variant in channel.")
     cost_price = PositiveDecimal(description="Cost price of the variant in channel.")
-    prior_price = PositiveDecimal(description="Price of the variant before discount.")
     preorder_threshold = graphene.Int(
         description="The threshold for preorder variant in channel."
     )
@@ -104,18 +103,18 @@ class ProductVariantBulkUpdateInput(ProductVariantBulkCreateInput):
     )
     stocks = graphene.Field(
         ProductVariantStocksUpdateInput,
-        description="Stocks input.",
+        description="Stocks input." + ADDED_IN_312 + PREVIEW_FEATURE,
         required=False,
     )
 
     channel_listings = graphene.Field(
         ProductVariantChannelListingUpdateInput,
-        description="Channel listings input.",
+        description="Channel listings input." + ADDED_IN_312 + PREVIEW_FEATURE,
         required=False,
     )
 
     class Meta:
-        description = "Input fields to update product variants."
+        description = "Input fields to update product variants." + ADDED_IN_311
         doc_category = DOC_CATEGORY_PRODUCTS
 
 
@@ -152,7 +151,9 @@ class ProductVariantBulkUpdate(BaseMutation):
         )
 
     class Meta:
-        description = "Updates multiple product variants."
+        description = (
+            "Update multiple product variants." + ADDED_IN_311 + PREVIEW_FEATURE
+        )
         doc_category = DOC_CATEGORY_PRODUCTS
         permissions = (ProductPermissions.MANAGE_PRODUCTS,)
         error_type_class = ProductVariantBulkError
@@ -176,7 +177,6 @@ class ProductVariantBulkUpdate(BaseMutation):
         cls,
         price,
         cost_price,
-        prior_price,
         currency_code,
         channel_id,
         variant_index,
@@ -198,17 +198,6 @@ class ProductVariantBulkUpdate(BaseMutation):
         clean_price(
             cost_price,
             "cost_price",
-            currency_code,
-            channel_id,
-            variant_index,
-            listing_index,
-            None,
-            index_error_map,
-            path_prefix,
-        )
-        clean_price(
-            prior_price,
-            "prior_price",
             currency_code,
             channel_id,
             variant_index,
@@ -257,7 +246,6 @@ class ProductVariantBulkUpdate(BaseMutation):
                 channel_listing = listings_global_id_to_instance_map[listing_id]
                 price = listing_data.get("price")
                 cost_price = listing_data.get("cost_price")
-                prior_price = listing_data.get("prior_price")
                 currency_code = channel_listing.currency
                 channel_id = channel_listing.channel_id
                 errors_count_before_prices = len(index_error_map[variant_index])
@@ -265,7 +253,6 @@ class ProductVariantBulkUpdate(BaseMutation):
                 cls.clean_prices(
                     price,
                     cost_price,
-                    prior_price,
                     currency_code,
                     channel_id,
                     variant_index,
@@ -393,7 +380,7 @@ class ProductVariantBulkUpdate(BaseMutation):
         index_error_map,
         index,
     ):
-        cleaned_input = DeprecatedModelMutation.clean_input(
+        cleaned_input = ModelMutation.clean_input(
             info, None, variant_data, input_cls=ProductVariantBulkUpdateInput
         )
 
@@ -568,23 +555,12 @@ class ProductVariantBulkUpdate(BaseMutation):
                 )
                 continue
             try:
-                metadata_list: list[MetadataInput] = cleaned_input.pop("metadata", None)
-                private_metadata_list: list[MetadataInput] = cleaned_input.pop(
-                    "private_metadata", None
-                )
-
-                metadata_collection = cls.create_metadata_from_graphql_input(
-                    metadata_list, error_field_name="metadata"
-                )
-                private_metadata_collection = cls.create_metadata_from_graphql_input(
-                    private_metadata_list,
-                    error_field_name="private_metadata",
-                )
-
+                metadata_list = cleaned_input.pop("metadata", None)
+                private_metadata_list = cleaned_input.pop("private_metadata", None)
                 instance = cleaned_input.pop("id")
                 instance = cls.construct_instance(instance, cleaned_input)
                 cls.validate_and_update_metadata(
-                    instance, metadata_collection, private_metadata_collection
+                    instance, metadata_list, private_metadata_list
                 )
                 cls.clean_instance(info, instance)
                 instances_data_and_errors_list.append(
@@ -637,7 +613,6 @@ class ProductVariantBulkUpdate(BaseMutation):
                     # value will be calculated asynchronously in the celery task
                     discounted_price_amount=listing_data["price"],
                     cost_price_amount=listing_data.get("cost_price"),
-                    prior_price_amount=listing_data.get("prior_price"),
                     currency=listing_data["channel"].currency_code,
                     preorder_quantity_threshold=listing_data.get("preorder_threshold"),
                 )
@@ -658,8 +633,6 @@ class ProductVariantBulkUpdate(BaseMutation):
                     listing.discounted_price_amount = listing_data["price"]
                 if "cost_price" in listing_data:
                     listing.cost_price_amount = listing_data["cost_price"]
-                if "prior_price" in listing_data:
-                    listing.prior_price_amount = listing_data["prior_price"]
                 listings_to_update.append(listing)
 
     @classmethod
@@ -734,7 +707,6 @@ class ProductVariantBulkUpdate(BaseMutation):
                 "price_amount",
                 "discounted_price_amount",
                 "cost_price_amount",
-                "prior_price_amount",
                 "preorder_quantity_threshold",
             ],
         )
@@ -852,7 +824,7 @@ class ProductVariantBulkUpdate(BaseMutation):
         )
 
         # check error policy
-        if any(bool(error) for error in index_error_map.values()):
+        if any([bool(error) for error in index_error_map.values()]):
             if error_policy == ErrorPolicyEnum.REJECT_EVERYTHING.value:
                 results = get_results(instances_data_with_errors_list, True)
                 return ProductVariantBulkUpdate(count=0, results=results)

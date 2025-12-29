@@ -2,8 +2,10 @@ import datetime
 from decimal import Decimal
 from unittest import mock
 
+import before_after
 import graphene
 import pytest
+import pytz
 from django.test import override_settings
 from django.utils import timezone
 from freezegun import freeze_time
@@ -29,7 +31,6 @@ from .....payment.lock_objects import (
     get_order_and_transaction_item_locked_for_update,
 )
 from .....payment.models import Payment, TransactionEvent
-from .....tests import race_condition
 from .....webhook.event_types import WebhookEventSyncType
 from ....core.enums import TransactionProcessErrorCode
 from ....core.utils import to_global_id_or_none
@@ -445,7 +446,7 @@ def test_order_status_with_order_confirmation(
 
 
 @pytest.mark.parametrize(
-    "auto_order_confirmation",
+    ("auto_order_confirmation"),
     [True, False],
 )
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
@@ -947,7 +948,7 @@ def test_transaction_already_processed(
     webhook_app.save()
 
     transaction_item = transaction_item_generator(
-        order_id=order.pk, app=webhook_app, charged_value=Decimal(10)
+        order_id=order.pk, app=webhook_app, charged_value=Decimal("10")
     )
     transaction_event = transaction_item.events.get()
 
@@ -1023,7 +1024,7 @@ def test_transaction_doesnt_have_source_object(
     )
     TransactionEvent.objects.create(
         transaction=transaction_item,
-        amount_value=Decimal(10),
+        amount_value=Decimal("10"),
         currency=transaction_item.currency,
         type=TransactionEventType.CHARGE_REQUEST,
     )
@@ -1055,7 +1056,7 @@ def test_transaction_doesnt_have_app_identifier(
     transaction_item = transaction_item_generator(order_id=order_with_lines.pk)
     TransactionEvent.objects.create(
         transaction=transaction_item,
-        amount_value=Decimal(10),
+        amount_value=Decimal("10"),
         currency=transaction_item.currency,
         type=TransactionEventType.CHARGE_REQUEST,
     )
@@ -1096,7 +1097,7 @@ def test_app_attached_to_transaction_doesnt_exist(
     )
     TransactionEvent.objects.create(
         transaction=transaction_item,
-        amount_value=Decimal(10),
+        amount_value=Decimal("10"),
         currency=transaction_item.currency,
         type=TransactionEventType.CHARGE_REQUEST,
     )
@@ -1125,11 +1126,9 @@ def test_app_attached_to_transaction_doesnt_exist(
 )
 @mock.patch("saleor.checkout.tasks.automatic_checkout_completion_task.delay")
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_paid(
     mocked_process,
-    mocked_fully_authorized,
     mocked_fully_paid,
     mocked_automatic_checkout_completion_task,
     result,
@@ -1186,18 +1185,15 @@ def test_checkout_fully_paid(
 
     checkout.refresh_from_db()
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_automatic_checkout_completion_task.assert_not_called()
     assert checkout.charge_status == CheckoutChargeStatus.FULL
     assert checkout.authorize_status == CheckoutAuthorizeStatus.FULL
 
 
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_paid_automatic_completion(
     mocked_process,
-    mocked_fully_authorized,
     mocked_fully_paid,
     user_api_client,
     checkout_with_prices,
@@ -1262,16 +1258,13 @@ def test_checkout_fully_paid_automatic_completion(
     assert order.events.filter(
         type=OrderEvents.PLACED_AUTOMATICALLY_FROM_PAID_CHECKOUT
     ).exists()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
 
 
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_paid_pending_automatic_completion(
     mocked_process,
-    mocked_fully_authorized,
     mocked_fully_paid,
     user_api_client,
     checkout_with_prices,
@@ -1334,7 +1327,6 @@ def test_checkout_fully_paid_pending_automatic_completion(
     assert order.charge_status == CheckoutChargeStatus.NONE
     assert order.authorize_status == CheckoutAuthorizeStatus.NONE
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
 @pytest.mark.parametrize(
@@ -1345,13 +1337,11 @@ def test_checkout_fully_paid_pending_automatic_completion(
     ],
 )
 @mock.patch("saleor.checkout.tasks.automatic_checkout_completion_task.delay")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_authorized(
     mocked_process,
     mocked_fully_paid,
-    mocked_fully_authorized,
     mocked_automatic_checkout_completion_task,
     result,
     user_api_client,
@@ -1408,17 +1398,14 @@ def test_checkout_fully_authorized(
     checkout.refresh_from_db()
     mocked_fully_paid.assert_not_called()
     mocked_automatic_checkout_completion_task.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     assert checkout.charge_status == CheckoutChargeStatus.NONE
     assert checkout.authorize_status == CheckoutAuthorizeStatus.FULL
 
 
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_authorized_automatic_completion(
     mocked_process,
-    mocked_fully_authorized,
     mocked_fully_paid,
     user_api_client,
     checkout_with_prices,
@@ -1484,15 +1471,12 @@ def test_checkout_fully_authorized_automatic_completion(
         type=OrderEvents.PLACED_AUTOMATICALLY_FROM_PAID_CHECKOUT
     ).exists()
     mocked_fully_paid.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
 def test_checkout_fully_authorized_pending_automatic_completion(
     mocked_process,
-    mocked_fully_authorized,
     mocked_fully_paid,
     user_api_client,
     checkout_with_prices,
@@ -1555,7 +1539,6 @@ def test_checkout_fully_authorized_pending_automatic_completion(
     assert order.charge_status == CheckoutChargeStatus.NONE
     assert order.authorize_status == CheckoutAuthorizeStatus.NONE
     mocked_fully_paid.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
 def test_transaction_process_doesnt_accept_old_id(
@@ -1986,7 +1969,7 @@ def test_transaction_process_for_disabled_app(
 @freeze_time("2023-03-18 12:00:00")
 @pytest.mark.parametrize(
     "previous_last_transaction_modified_at",
-    [None, datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)],
+    [None, datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)],
 )
 @mock.patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 @mock.patch("saleor.plugins.manager.PluginsManager.transaction_process_session")
@@ -2256,7 +2239,7 @@ def test_for_checkout_with_payments_transaction_process_failure(
         response_event_type=TransactionEventType.CHARGE_FAILURE,
         app_identifier=webhook_app.identifier,
         mocked_process=mocked_process,
-        charged_value=Decimal(0),
+        charged_value=Decimal("0"),
         data=None,
         returned_data=None,
     )
@@ -2325,7 +2308,7 @@ def test_for_order_too_long_message_in_response(
         mocked_process=mocked_process,
         charged_value=expected_amount,
         returned_data=None,
-        expected_message=expected_response["message"][:511] + "…",
+        expected_message=expected_response["message"][:509] + "...",
     )
     assert (
         "Value for field: message in response of transaction action webhook "
@@ -2790,7 +2773,7 @@ def test_transaction_initialize_checkout_completed_race_condition(
             checkout_info, plugins_manager, user=user_api_client.user, app=None
         )
 
-    with race_condition.RunBefore(
+    with before_after.after(
         "saleor.payment.utils.recalculate_transaction_amounts",
         complete_checkout,
     ):

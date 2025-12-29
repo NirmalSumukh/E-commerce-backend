@@ -1,16 +1,18 @@
 // @ts-strict-ignore
 import compact from "lodash/compact";
 
-import { FieldType, FilterElement, InvalidFilters, ValidationErrorCode } from "./types";
+import { FieldType, FilterElement, IFilter, InvalidFilters, ValidationErrorCode } from "./types";
 
 export const getByName = (nameToCompare: string) => (obj: { name: string }) =>
   obj.name === nameToCompare;
 
-const isAutocompleteFilterFieldValid = function <T extends string>({ value }: FilterElement<T>) {
+export const isAutocompleteFilterFieldValid = function <T extends string>({
+  value,
+}: FilterElement<T>) {
   return !!compact(value).length;
 };
 
-const isNumberFilterFieldValid = function <T extends string>({ value }: FilterElement<T>) {
+export const isNumberFilterFieldValid = function <T extends string>({ value }: FilterElement<T>) {
   const [min, max] = value;
 
   if (!min && !max) {
@@ -20,7 +22,7 @@ const isNumberFilterFieldValid = function <T extends string>({ value }: FilterEl
   return true;
 };
 
-const isFilterFieldValid = function <T extends string>(filter: FilterElement<T>) {
+export const isFilterFieldValid = function <T extends string>(filter: FilterElement<T>) {
   const { type } = filter;
 
   switch (type) {
@@ -37,7 +39,7 @@ const isFilterFieldValid = function <T extends string>(filter: FilterElement<T>)
   }
 };
 
-const isFilterValid = function <T extends string>(filter: FilterElement<T>) {
+export const isFilterValid = function <T extends string>(filter: FilterElement<T>) {
   const { required, active } = filter;
 
   if (!required && !active) {
@@ -104,3 +106,17 @@ export const extractInvalidFilters = function <T extends string>(
     };
   }, {} as InvalidFilters<T>);
 };
+
+export const getSelectedFiltersAmount = <TFilterKeys extends string = string>(
+  menu: IFilter<TFilterKeys>,
+  data: Array<FilterElement<string>>,
+) =>
+  menu.reduce((acc, filterElement) => {
+    const dataFilterElement = data.find(({ name }) => name === filterElement.name);
+
+    if (!dataFilterElement) {
+      return acc;
+    }
+
+    return acc + (dataFilterElement.active ? 1 : 0);
+  }, 0);

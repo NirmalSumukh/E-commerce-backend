@@ -1,11 +1,10 @@
-import datetime
+from datetime import timedelta
 
 import pytest
 from django.utils import timezone
 from freezegun import freeze_time
 
 from ....product.models import Product, ProductVariant
-from ....product.search import update_products_search_vector
 from ...tests.utils import get_graphql_content
 
 QUERY_VARIANTS_FILTER = """
@@ -106,17 +105,16 @@ def products_for_variant_filtering(product_type, category):
                 product=products[6],
                 sku="Preorder-V2",
                 is_preorder=True,
-                preorder_end_date=timezone.now() + datetime.timedelta(days=1),
+                preorder_end_date=timezone.now() + timedelta(days=1),
             ),
             ProductVariant(
                 product=products[6],
                 sku="Preorder-V3",
                 is_preorder=True,
-                preorder_end_date=timezone.now() - datetime.timedelta(days=1),
+                preorder_end_date=timezone.now() - timedelta(days=1),
             ),
         ]
     )
-    update_products_search_vector([product.id for product in products])
     return products
 
 

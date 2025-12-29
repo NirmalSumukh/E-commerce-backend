@@ -12,13 +12,14 @@ import { buttonMessages } from "@dashboard/intl";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getOrderErrorMessage from "@dashboard/utils/errors/order";
 import { Box, Option, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-interface FormData {
+export interface FormData {
   shippingMethod: string;
 }
 
-interface OrderShippingMethodEditDialogProps {
+export interface OrderShippingMethodEditDialogProps {
   confirmButtonState: ConfirmButtonTransitionState;
   errors: OrderErrorFragment[];
   open: boolean;
@@ -28,7 +29,7 @@ interface OrderShippingMethodEditDialogProps {
   onSubmit?: (data: FormData) => any;
 }
 
-const OrderShippingMethodEditDialog = (props: OrderShippingMethodEditDialogProps) => {
+const OrderShippingMethodEditDialog: React.FC<OrderShippingMethodEditDialogProps> = props => {
   const {
     confirmButtonState,
     errors: apiErrors,

@@ -6,7 +6,7 @@ from ....webhook.event_types import WebhookEventAsyncType
 from ...core.descriptions import ADDED_IN_319
 from ...core.doc_category import DOC_CATEGORY_APPS
 from ...core.enums import PermissionEnum
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import AppError, BaseInputObjectType, NonNullList
 from ...core.utils import WebhookEventInfo
 from ...decorators import staff_member_required
@@ -33,7 +33,7 @@ class AppInput(BaseInputObjectType):
         doc_category = DOC_CATEGORY_APPS
 
 
-class AppCreate(DeprecatedModelMutation):
+class AppCreate(ModelMutation):
     auth_token = graphene.types.String(
         description="The newly created authentication token."
     )
@@ -90,7 +90,7 @@ class AppCreate(DeprecatedModelMutation):
         return response
 
     @classmethod
-    def save(cls, info, instance, cleaned_input, instance_tracker=None):
+    def save(cls, info, instance, cleaned_input):
         instance.save()
         if not instance.identifier:
             instance.identifier = graphene.Node.to_global_id("App", instance.pk)

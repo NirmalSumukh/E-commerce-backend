@@ -3,6 +3,7 @@
 
 import gzip
 import io
+from typing import Optional
 
 from asgiref.typing import (
     ASGI3Application,
@@ -30,7 +31,7 @@ def gzip_compression(
                 b"",
             )
             if b"gzip" in accepted_encoding:
-                start_message: HTTPResponseStartEvent | None = None
+                start_message: Optional[HTTPResponseStartEvent] = None
                 content_encoding_set = False
                 started = False
                 gzip_buffer = io.BytesIO()

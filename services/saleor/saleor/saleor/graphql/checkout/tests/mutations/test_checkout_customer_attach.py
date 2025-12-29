@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import graphene
 import pytest
@@ -18,7 +18,6 @@ MUTATION_CHECKOUT_CUSTOMER_ATTACH = """
         checkoutCustomerAttach(id: $id, customerId: $customerId) {
             checkout {
                 token
-                email
             }
             errors {
                 code
@@ -50,7 +49,6 @@ def test_checkout_customer_attach(
 
     data = content["data"]["checkoutCustomerAttach"]
     assert not data["errors"]
-    assert data["checkout"]["email"] == customer_user2.email
     checkout.refresh_from_db()
     assert checkout.user == customer_user2
     assert checkout.email == customer_user2.email
@@ -307,7 +305,6 @@ def test_checkout_customer_triggers_webhooks(
     checkout_with_item,
     customer_user2,
     permission_impersonate_user,
-    address,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -320,11 +317,6 @@ def test_checkout_customer_triggers_webhooks(
 
     checkout = checkout_with_item
     checkout.email = "old@email.com"
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout.shipping_address = address
-    checkout.billing_address = address
-
     checkout.save()
 
     query = MUTATION_CHECKOUT_CUSTOMER_ATTACH
@@ -347,12 +339,11 @@ def test_checkout_customer_triggers_webhooks(
         webhook_id=checkout_updated_webhook.id
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": checkout_update_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": checkout_update_delivery.id},
         queue=settings.CHECKOUT_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

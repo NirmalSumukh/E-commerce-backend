@@ -234,7 +234,7 @@ def test_get_default_order_payload(order_line):
     order.total = subtotal + order.shipping_price
     tax = order.total_gross_amount - order.total_net_amount
 
-    value = Decimal(20)
+    value = Decimal("20")
     discount = partial(fixed_discount, discount=Money(value, order.currency))
     order.undiscounted_total = order.total
     order.total = discount(order.total)
@@ -427,6 +427,33 @@ def test_send_email_order_confirmation_for_cc(
     assert called_kwargs["channel_slug"] == order_with_lines_for_cc.channel.slug
 
     assert expected_payload["order"]["collection_point_name"] == warehouse_for_cc.name
+
+
+@mock.patch("saleor.plugins.manager.PluginsManager.notify")
+def test_send_email_order_confirmation_with_staff_recipients(
+    mocked_notify, order, site_settings, staff_notification_recipient
+):
+    # given
+    manager = get_plugins_manager(allow_replica=False)
+    redirect_url = "https://www.example.com"
+    order_info = fetch_order_info(order)
+
+    # when
+    notifications.send_order_confirmation(order_info, redirect_url, manager)
+
+    # then
+    expected_payload = {
+        "order": get_default_order_payload(order, redirect_url),
+        "recipient_list": [staff_notification_recipient.get_email()],
+        **get_site_context_payload(site_settings.site),
+    }
+    assert mocked_notify.call_count == 2
+    call_args = mocked_notify.call_args_list[1]
+    called_args = call_args.args
+    called_kwargs = call_args.kwargs
+    assert called_args[0] == NotifyEventType.STAFF_ORDER_CONFIRMATION
+    assert len(called_kwargs) == 1
+    assert called_kwargs["payload_func"]() == expected_payload
 
 
 @mock.patch("saleor.plugins.manager.PluginsManager.notify")
@@ -773,5 +800,5 @@ def test_get_default_images_payload(product_with_image):
     for th_size in THUMBNAIL_SIZES:
         assert (
             images_payload[str(th_size)]
-            == f"https://example.com/thumbnail/{media_id}/{th_size}/"
+            == f"http://mirumee.com/thumbnail/{media_id}/{th_size}/"
         )

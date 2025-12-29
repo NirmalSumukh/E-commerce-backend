@@ -5,9 +5,9 @@ from ....menu import models
 from ....menu.error_codes import MenuErrorCode
 from ....permission.enums import MenuPermissions
 from ....webhook.event_types import WebhookEventAsyncType
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.types import MenuError, NonNullList
 from ...core.utils import WebhookEventInfo
 from ...core.validators import validate_slug_and_generate_if_needed
@@ -27,7 +27,7 @@ class MenuCreateInput(graphene.InputObjectType):
     items = NonNullList(MenuItemInput, description="List of menu items.")
 
 
-class MenuCreate(DeprecatedModelMutation):
+class MenuCreate(ModelMutation):
     class Arguments:
         input = MenuCreateInput(
             required=True, description="Fields required to create a menu."
@@ -54,9 +54,9 @@ class MenuCreate(DeprecatedModelMutation):
             cleaned_input = validate_slug_and_generate_if_needed(
                 instance, "name", cleaned_input
             )
-        except ValidationError as e:
-            e.code = MenuErrorCode.REQUIRED.value
-            raise ValidationError({"slug": e}) from e
+        except ValidationError as error:
+            error.code = MenuErrorCode.REQUIRED.value
+            raise ValidationError({"slug": error})
 
         items = []
         for item in cleaned_input.get("items", []):

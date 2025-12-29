@@ -3,6 +3,7 @@ import graphene
 from ...permission.enums import OrderPermissions, PaymentPermissions
 from ..core import ResolveInfo
 from ..core.connection import create_connection_slice, filter_connection_queryset
+from ..core.descriptions import ADDED_IN_36, PREVIEW_FEATURE
 from ..core.doc_category import DOC_CATEGORY_PAYMENTS
 from ..core.fields import FilterConnectionField, PermissionsField
 from ..core.scalars import UUID
@@ -28,18 +29,7 @@ from .mutations import (
     TransactionUpdate,
 )
 from .resolvers import resolve_payment_by_id, resolve_payments, resolve_transaction
-from .types import (
-    CardPaymentMethodDetails,
-    OtherPaymentMethodDetails,
-    Payment,
-    PaymentCountableConnection,
-    TransactionItem,
-)
-
-PAYMENT_ADDITIONAL_TYPES = [
-    CardPaymentMethodDetails,
-    OtherPaymentMethodDetails,
-]
+from .types import Payment, PaymentCountableConnection, TransactionItem
 
 
 class PaymentQueries(graphene.ObjectType):
@@ -65,7 +55,7 @@ class PaymentQueries(graphene.ObjectType):
     )
     transaction = PermissionsField(
         TransactionItem,
-        description="Look up a transaction by ID.",
+        description="Look up a transaction by ID." + ADDED_IN_36 + PREVIEW_FEATURE,
         id=graphene.Argument(
             graphene.ID,
             description=(

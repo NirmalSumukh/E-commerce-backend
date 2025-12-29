@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from typing import Callable, Optional
 
 from django.apps import AppConfig
 from django.conf import settings
@@ -27,9 +27,9 @@ class CoreAppConfig(AppConfig):
         try:
             jwt_manager = import_string(jwt_manager_path)
         except ImportError as e:
-            raise ImportError(f"Failed to import JWT manager: {e}.") from e
+            raise ImportError(f"Failed to import JWT manager: {e}.")
 
-        validate_method: Callable[[], None] | None = getattr(
+        validate_method: Optional[Callable[[], None]] = getattr(
             jwt_manager, "validate_configuration", None
         )
         if validate_method is None:

@@ -17,7 +17,7 @@ export interface NewPasswordUrlQueryParams {
 export const newPasswordUrl = (params?: NewPasswordUrlQueryParams) =>
   newPasswordPath + "?" + stringifyQs(params);
 
-interface LoginOpenidconnectUrlQueryParams {
+export interface LoginOpenidconnectUrlQueryParams {
   code: string;
   state: string;
 }

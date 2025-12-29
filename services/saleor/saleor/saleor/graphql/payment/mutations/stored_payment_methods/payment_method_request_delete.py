@@ -8,6 +8,7 @@ from .....payment.interface import (
 from .....permission.auth_filters import AuthorizationFilters
 from .....webhook.event_types import WebhookEventSyncType
 from ....channel.utils import validate_channel
+from ....core.descriptions import ADDED_IN_316, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_PAYMENTS
 from ....core.enums import StoredPaymentMethodRequestDeleteErrorCode
 from ....core.mutations import BaseMutation
@@ -35,6 +36,8 @@ class StoredPaymentMethodRequestDelete(BaseMutation):
         doc_category = DOC_CATEGORY_PAYMENTS
         description = (
             "Request to delete a stored payment method on payment provider side."
+            + ADDED_IN_316
+            + PREVIEW_FEATURE
         )
 
         error_type_class = PaymentMethodRequestDeleteError
@@ -47,7 +50,7 @@ class StoredPaymentMethodRequestDelete(BaseMutation):
         ]
 
     @classmethod
-    def perform_mutation(cls, root, info, id, channel):  # type: ignore[override]
+    def perform_mutation(cls, root, info, id, channel):
         try:
             return cls._perform_mutation(root, info, id, channel)
         except ValidationError as error:

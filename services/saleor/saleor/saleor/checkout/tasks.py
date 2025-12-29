@@ -12,7 +12,6 @@ from django.utils import timezone
 from ..account.models import User
 from ..app.models import App
 from ..celeryconf import app
-from ..core.db.connection import allow_writer
 from ..payment.models import TransactionItem
 from ..plugins.manager import get_plugins_manager
 from .complete_checkout import complete_checkout
@@ -87,9 +86,7 @@ def delete_expired_checkouts(
         )
     )
 
-    qs: QuerySet[Checkout] = Checkout.objects.using(
-        settings.DATABASE_CONNECTION_REPLICA_NAME
-    ).filter(
+    qs: QuerySet[Checkout] = Checkout.objects.filter(
         (empty_checkouts | expired_anonymous_checkouts | expired_user_checkout)
         & ~Q(Exists(with_transactions))
     )
@@ -97,10 +94,9 @@ def delete_expired_checkouts(
 
     total_deleted: int = 0
     has_more: bool = True
-    for _batch_number in range(batch_count):
+    for batch_number in range(batch_count):
         checkout_ids = list(qs.values_list("pk", flat=True))
-        with allow_writer():
-            deleted_count = delete_checkouts(checkout_ids)
+        deleted_count = delete_checkouts(checkout_ids)
         total_deleted += deleted_count
 
         # Stop deleting inactive checkouts if there was no match.
@@ -131,7 +127,6 @@ def delete_expired_checkouts(
     default_retry_delay=60,
     retry_kwargs={"max_retries": 5},
 )
-@allow_writer()
 def automatic_checkout_completion_task(
     self,
     checkout_pk,
@@ -150,7 +145,6 @@ def automatic_checkout_completion_task(
 
     user = User.objects.filter(pk=user_id).first()
     app = App.objects.filter(pk=app_id).first()
-
     manager = get_plugins_manager(allow_replica=False)
     lines, unavailable_variant_pks = fetch_checkout_lines(checkout)
     checkout_info = fetch_checkout_info(checkout, lines, manager)
@@ -218,7 +212,7 @@ def automatic_checkout_completion_task(
                 checkout_id,
                 extra={"checkout_id": checkout_id},
             )
-            raise self.retry() from error
+            raise self.retry()
     else:
         task_logger.info(
             "Automatic checkout completion succeeded for checkout: %s.",

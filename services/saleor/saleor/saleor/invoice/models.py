@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.postgres.indexes import BTreeIndex
 from django.db import models
 from django.db.models import JSONField
 from django.utils.timezone import now
@@ -53,10 +52,6 @@ class Invoice(ModelWithMetadata, Job):
 
     class Meta(ModelWithMetadata.Meta):
         ordering = ("pk",)
-        indexes = [
-            *ModelWithMetadata.Meta.indexes,
-            BTreeIndex(fields=["created_at"], name="invoice_created_at_idx"),
-        ]
 
 
 class InvoiceEvent(models.Model):

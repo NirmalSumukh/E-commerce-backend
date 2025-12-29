@@ -1,7 +1,7 @@
 import { Table } from "@material-ui/core";
 import { makeStyles } from "@saleor/macaw-ui";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 
 const useStyles = makeStyles(
   theme => ({
@@ -28,7 +28,7 @@ interface ResponsiveTableProps {
   key?: string;
 }
 
-const ResponsiveTable = (props: ResponsiveTableProps) => {
+const ResponsiveTable: React.FC<ResponsiveTableProps> = props => {
   const { children, className, onMouseLeave } = props;
   const classes = useStyles(props);
 

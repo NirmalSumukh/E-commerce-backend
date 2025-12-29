@@ -19,9 +19,4 @@ export const messages = defineMessages({
     id: "SHm7ee",
     defaultMessage: "Search by product name, attribute, product type etc...",
   },
-  noProductsFound: {
-    id: "wWELJW",
-    defaultMessage: "No products found",
-    description: "search results",
-  },
 });

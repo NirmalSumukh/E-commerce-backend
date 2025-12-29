@@ -2,6 +2,7 @@
 import CardSpacer from "@dashboard/components/CardSpacer";
 import { OrderDetailsFragment, OrderDetailsQuery, TransactionActionEnum } from "@dashboard/graphql";
 import { orderShouldUseTransactions } from "@dashboard/orders/types";
+import React from "react";
 
 import OrderPayment from "../OrderPayment/OrderPayment";
 import { OrderTransactionsWrapper } from "./OrderTransactionsWrapper";
@@ -18,7 +19,7 @@ export interface OrderPaymentOrTransactionProps {
   onRefundAdd: () => void;
 }
 
-export const OrderPaymentOrTransaction = ({
+export const OrderPaymentOrTransaction: React.FC<OrderPaymentOrTransactionProps> = ({
   order,
   shop,
   onTransactionAction,
@@ -28,7 +29,7 @@ export const OrderPaymentOrTransaction = ({
   onMarkAsPaid,
   onAddManualTransaction,
   onRefundAdd,
-}: OrderPaymentOrTransactionProps) => {
+}) => {
   if (orderShouldUseTransactions(order)) {
     return (
       <OrderTransactionsWrapper

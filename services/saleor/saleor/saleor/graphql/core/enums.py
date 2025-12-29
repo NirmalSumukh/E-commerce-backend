@@ -45,7 +45,6 @@ from .doc_category import (
     DOC_CATEGORY_PAYMENTS,
     DOC_CATEGORY_PRODUCTS,
     DOC_CATEGORY_SHIPPING,
-    DOC_CATEGORY_SHOP,
     DOC_CATEGORY_USERS,
     DOC_CATEGORY_WEBHOOKS,
 )
@@ -88,6 +87,8 @@ def to_enum(enum_cls, *, type_name=None, **options) -> graphene.Enum:
     :return:
     """
 
+    # note this won't work until
+    # https://github.com/graphql-python/graphene/issues/956 is fixed
     deprecation_reason = getattr(enum_cls, "__deprecation_reason__", None)
     if deprecation_reason:
         options.setdefault("deprecation_reason", deprecation_reason)
@@ -224,11 +225,6 @@ GiftCardSettingsErrorCode = graphene.Enum.from_enum(
     site_error_codes.GiftCardSettingsErrorCode
 )
 GiftCardSettingsErrorCode.doc_category = DOC_CATEGORY_GIFT_CARDS
-
-RefundSettingsErrorCode = graphene.Enum.from_enum(
-    site_error_codes.RefundSettingsErrorCode
-)
-RefundSettingsErrorCode.doc_category = DOC_CATEGORY_SHOP
 
 MetadataErrorCode = graphene.Enum.from_enum(core_error_codes.MetadataErrorCode)
 

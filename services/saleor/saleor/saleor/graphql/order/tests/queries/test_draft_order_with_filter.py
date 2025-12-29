@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta
 from decimal import Decimal
 
 import graphene
@@ -18,53 +18,49 @@ from ....core.connection import where_filter_qs
 from ....tests.utils import get_graphql_content
 from ...filters import OrderDiscountedObjectWhere
 
-DRAFT_ORDERS_QUERY_WITH_FILTER = """
-  query ($filter: OrderDraftFilterInput!, ) {
-    draftOrders(first: 5, filter:$filter) {
-      totalCount
-      edges {
-        node {
-          id
+
+@pytest.fixture
+def draft_orders_query_with_filter():
+    query = """
+      query ($filter: OrderDraftFilterInput!, ) {
+        draftOrders(first: 5, filter:$filter) {
+          totalCount
+          edges {
+            node {
+              id
+            }
+          }
         }
       }
-    }
-  }
-"""
+    """
+    return query
 
 
 def test_draft_orders_query_with_filter_search_by_number(
+    draft_orders_query_with_filter,
     draft_order,
     staff_api_client,
     permission_group_manage_orders,
 ):
-    # given
     update_order_search_vector(draft_order)
     variables = {"filter": {"search": draft_order.number}}
     permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDERS_QUERY_WITH_FILTER, variables)
+    response = staff_api_client.post_graphql(draft_orders_query_with_filter, variables)
     content = get_graphql_content(response)
-
-    # then
     assert content["data"]["draftOrders"]["totalCount"] == 1
 
 
 def test_draft_orders_query_with_filter_search_by_number_with_hash(
+    draft_orders_query_with_filter,
     draft_order,
     staff_api_client,
     permission_group_manage_orders,
 ):
-    # given
     update_order_search_vector(draft_order)
     variables = {"filter": {"search": f"#{draft_order.number}"}}
     permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDERS_QUERY_WITH_FILTER, variables)
+    response = staff_api_client.post_graphql(draft_orders_query_with_filter, variables)
     content = get_graphql_content(response)
-
-    # then
     assert content["data"]["draftOrders"]["totalCount"] == 1
 
 
@@ -80,12 +76,12 @@ def test_draft_order_query_with_filter_customer_fields(
     orders_filter,
     user_field,
     user_value,
+    draft_orders_query_with_filter,
     staff_api_client,
     permission_group_manage_orders,
     customer_user,
     channel_USD,
 ):
-    # given
     setattr(customer_user, user_field, user_value)
     customer_user.save()
     customer_user.refresh_from_db()
@@ -94,25 +90,21 @@ def test_draft_order_query_with_filter_customer_fields(
         status=OrderStatus.DRAFT,
         user=customer_user,
         channel=channel_USD,
-        lines_count=0,
     )
     Order.objects.bulk_create(
         [
             order,
-            Order(status=OrderStatus.DRAFT, channel=channel_USD, lines_count=0),
+            Order(status=OrderStatus.DRAFT, channel=channel_USD),
         ]
     )
 
     variables = {"filter": orders_filter}
     permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDERS_QUERY_WITH_FILTER, variables)
+    response = staff_api_client.post_graphql(draft_orders_query_with_filter, variables)
     content = get_graphql_content(response)
-
-    # then
     orders = content["data"]["draftOrders"]["edges"]
     order_id = graphene.Node.to_global_id("Order", order.pk)
+
     assert len(orders) == 1
     assert orders[0]["node"]["id"] == order_id
 
@@ -123,49 +115,16 @@ def test_draft_order_query_with_filter_customer_fields(
         (
             {
                 "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    ),
-                    "lte": str(datetime.datetime.now(tz=datetime.UTC).date()),
+                    "gte": str(date.today() - timedelta(days=3)),
+                    "lte": str(date.today()),
                 }
             },
             1,
         ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            1,
-        ),
-        ({"created": {"lte": str(datetime.datetime.now(tz=datetime.UTC).date())}}, 2),
-        (
-            {
-                "created": {
-                    "lte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        - datetime.timedelta(days=3)
-                    )
-                }
-            },
-            1,
-        ),
-        (
-            {
-                "created": {
-                    "gte": str(
-                        datetime.datetime.now(tz=datetime.UTC).date()
-                        + datetime.timedelta(days=1)
-                    )
-                }
-            },
-            0,
-        ),
+        ({"created": {"gte": str(date.today() - timedelta(days=3))}}, 1),
+        ({"created": {"lte": str(date.today())}}, 2),
+        ({"created": {"lte": str(date.today() - timedelta(days=3))}}, 1),
+        ({"created": {"gte": str(date.today() + timedelta(days=1))}}, 0),
         ({"created": {"gte": None}}, 2),
         ({"created": {"lte": None}}, 2),
     ],
@@ -173,25 +132,20 @@ def test_draft_order_query_with_filter_customer_fields(
 def test_draft_order_query_with_filter_created(
     orders_filter,
     count,
+    draft_orders_query_with_filter,
     staff_api_client,
     permission_group_manage_orders,
     channel_USD,
 ):
-    # given
-    Order.objects.create(status=OrderStatus.DRAFT, channel=channel_USD, lines_count=0)
+    Order.objects.create(status=OrderStatus.DRAFT, channel=channel_USD)
     with freeze_time("2012-01-14"):
-        Order.objects.create(
-            status=OrderStatus.DRAFT, channel=channel_USD, lines_count=0
-        )
+        Order.objects.create(status=OrderStatus.DRAFT, channel=channel_USD)
     variables = {"filter": orders_filter}
     permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDERS_QUERY_WITH_FILTER, variables)
+    response = staff_api_client.post_graphql(draft_orders_query_with_filter, variables)
     content = get_graphql_content(response)
-
-    # then
     orders = content["data"]["draftOrders"]["edges"]
+
     assert len(orders) == count
 
 
@@ -211,12 +165,12 @@ def test_draft_order_query_with_filter_created(
 def test_draft_orders_query_with_filter_search(
     draft_orders_filter,
     count,
+    draft_orders_query_with_filter,
     staff_api_client,
     permission_group_manage_orders,
     customer_user,
     channel_USD,
 ):
-    # given
     orders = Order.objects.bulk_create(
         [
             Order(
@@ -224,19 +178,16 @@ def test_draft_orders_query_with_filter_search(
                 user_email="test@mirumee.com",
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email1@example.com",
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
-                lines_count=0,
             ),
             Order(
                 user_email="user_email2@example.com",
                 status=OrderStatus.DRAFT,
                 channel=channel_USD,
-                lines_count=0,
             ),
         ]
     )
@@ -245,15 +196,15 @@ def test_draft_orders_query_with_filter_search(
             OrderDiscount(
                 order=orders[0],
                 name="Some discount name",
-                value=Decimal(1),
-                amount_value=Decimal(1),
+                value=Decimal("1"),
+                amount_value=Decimal("1"),
                 translated_name="translated",
             ),
             OrderDiscount(
                 order=orders[2],
                 name="Some other discount name",
-                value=Decimal(10),
-                amount_value=Decimal(10),
+                value=Decimal("10"),
+                amount_value=Decimal("10"),
                 translated_name="PL_name",
             ),
         ]
@@ -262,16 +213,13 @@ def test_draft_orders_query_with_filter_search(
         order.search_vector = FlatConcatSearchVector(
             *prepare_order_search_vector_value(order)
         )
-
     Order.objects.bulk_update(orders, ["search_vector"])
+
     variables = {"filter": draft_orders_filter}
+
     permission_group_manage_orders.user_set.add(staff_api_client.user)
-
-    # when
-    response = staff_api_client.post_graphql(DRAFT_ORDERS_QUERY_WITH_FILTER, variables)
+    response = staff_api_client.post_graphql(draft_orders_query_with_filter, variables)
     content = get_graphql_content(response)
-
-    # then
     assert content["data"]["draftOrders"]["totalCount"] == count
 
 
@@ -280,7 +228,7 @@ def test_draft_orders_query_with_filter_base_total_price_range(draft_order, gte,
     # given
     order = draft_order
     currency = order.currency
-    order.total_net_amount = Decimal(20)
+    order.total_net_amount = Decimal("20")
     order.save(update_fields=["total_net_amount"])
 
     qs = Order.objects.all()
@@ -315,7 +263,7 @@ def test_draft_orders_query_with_filter_base_subtotal_price_range(
     # given
     order = draft_order
     currency = order.currency
-    order.subtotal_net_amount = Decimal(20)
+    order.subtotal_net_amount = Decimal("20")
     order.save(update_fields=["subtotal_net_amount"])
 
     qs = Order.objects.all()
@@ -352,7 +300,7 @@ def test_draft_orders_query_with_filter_base_total_price_one_of(
     # given
     order = draft_order
     currency = order.currency
-    order.total_net_amount = Decimal(20)
+    order.total_net_amount = Decimal("20")
     order.save(update_fields=["total_net_amount"])
 
     qs = Order.objects.all()
@@ -385,7 +333,7 @@ def test_draft_orders_query_with_filter_base_subtotal_price_one_of(
     # given
     order = draft_order
     currency = order.currency
-    order.subtotal_net_amount = Decimal(20)
+    order.subtotal_net_amount = Decimal("20")
     order.save(update_fields=["subtotal_net_amount"])
 
     qs = Order.objects.all()
@@ -412,7 +360,7 @@ def test_draft_orders_query_with_filter_base_subtotal_price_one_of(
 def test_draft_orders_query_with_filter_base_total_price_missing_currency(draft_order):
     # given
     order = draft_order
-    order.total_net_amount = Decimal(20)
+    order.total_net_amount = Decimal("20")
     order.save(update_fields=["total_net_amount"])
 
     qs = Order.objects.all()
@@ -443,7 +391,7 @@ def test_draft_orders_query_with_filter_base_subtotal_price_missing_currency(
 ):
     # given
     order = draft_order
-    order.subtotal_net_amount = Decimal(20)
+    order.subtotal_net_amount = Decimal("20")
     order.save(update_fields=["subtotal_net_amount"])
 
     qs = Order.objects.all()
@@ -473,7 +421,7 @@ def test_draft_orders_query_with_filter_price_with_and_or(draft_order):
     # given
     order = draft_order
     currency = order.currency
-    order.total_net_amount = Decimal(20)
+    order.total_net_amount = Decimal("20")
     order.save(update_fields=["total_net_amount"])
 
     qs = Order.objects.all()

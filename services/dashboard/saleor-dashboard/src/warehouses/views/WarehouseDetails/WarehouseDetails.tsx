@@ -26,14 +26,15 @@ import {
   warehouseUrl,
   WarehouseUrlQueryParams,
 } from "@dashboard/warehouses/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface WarehouseDetailsProps {
+export interface WarehouseDetailsProps {
   id: string;
   params: WarehouseUrlQueryParams;
 }
 
-const WarehouseDetails = ({ id, params }: WarehouseDetailsProps) => {
+const WarehouseDetails: React.FC<WarehouseDetailsProps> = ({ id, params }) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const notify = useNotifier();

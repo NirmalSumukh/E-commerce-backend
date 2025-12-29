@@ -5,7 +5,7 @@ exclude: ^(.semgrep|vendored)/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
         exclude: ^templates/templated_email/compiled/
@@ -15,27 +15,25 @@ repos:
         exclude_types: [svg]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.11
+    rev: v0.4.10
     hooks:
       - id: ruff
-        args: [ --fix ]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+    rev: v1.10.0
     hooks:
       - id: mypy
-        args: [--cache-dir=/dev/null] # Disable cache to avoid issues with pre-commit
         language: system
         exclude: (tests|vendored)/
 
   - repo: https://github.com/fpgmaas/deptry.git
-    rev: "0.23.1"
+    rev: "0.16.1"
     hooks:
       - id: deptry
 
   - repo: https://github.com/returntocorp/semgrep
-    rev: v1.89.0
+    rev: v1.73.0
     hooks:
     - id: semgrep
       exclude_types:
@@ -54,12 +52,6 @@ repos:
         # Quiet mode in order to not pollute the pre-commit outputs.
         # Replace --quiet with --verbose to debug issues.
         - --quiet
-
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    # uv version.
-    rev: 0.8.14
-    hooks:
-      - id: uv-lock
 
   - repo: local
     hooks:

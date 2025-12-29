@@ -21,7 +21,7 @@ class WebhookDelete(ModelDeleteMutation):
 
     class Meta:
         description = (
-            "Deletes a webhook. Before the deletion, the webhook is deactivated to "
+            "Delete a webhook. Before the deletion, the webhook is deactivated to "
             "pause any deliveries that are already scheduled. The deletion might fail "
             "if delivery is in progress. In such a case, the webhook is not deleted "
             "but remains deactivated."
@@ -63,11 +63,11 @@ class WebhookDelete(ModelDeleteMutation):
 
         try:
             response = super().perform_mutation(_root, info, **data)
-        except IntegrityError as e:
+        except IntegrityError:
             raise ValidationError(
                 "Webhook couldn't be deleted at this time due to running task."
                 "Webhook deactivated. Try deleting Webhook later",
                 code=WebhookErrorCode.DELETE_FAILED.value,
-            ) from e
+            )
 
         return response

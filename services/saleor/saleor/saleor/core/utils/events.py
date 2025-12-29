@@ -27,8 +27,10 @@ def any_webhook_has_subscription(
     event_has_subscription = False
     for event in events:
         event_has_subscription = any(
-            bool(webhook.subscription_query)
-            for webhook in webhook_event_map.get(event, [])
+            [
+                bool(webhook.subscription_query)
+                for webhook in webhook_event_map.get(event, [])
+            ]
         )
         if event_has_subscription:
             break
@@ -40,9 +42,9 @@ def any_webhook_is_active_for_events(
 ) -> bool:
     """Check if any webhook is active for given events."""
 
-    active_webhook_events = {
-        event for event, webhooks in webhook_event_map.items() if webhooks
-    }
+    active_webhook_events = set(
+        [event for event, webhooks in webhook_event_map.items() if webhooks]
+    )
     if not active_webhook_events.intersection(events):
         return False
     return True
@@ -127,8 +129,10 @@ def call_event(func_obj, *func_args, **func_kwargs):
     Ensures that in atomic transaction event is called on_commit.
     """
     is_protected_instance = any(
-        isinstance(arg, Checkout | CheckoutInfo | Order | OrderInfo)
-        for arg in func_args
+        [
+            isinstance(arg, (Checkout, CheckoutInfo, Order, OrderInfo))
+            for arg in func_args
+        ]
     )
     func_obj_self = getattr(func_obj, "__self__", None)
     is_plugin_manager_method = "PluginsManager" in str(

@@ -1,12 +1,15 @@
 import { ATTRIBUTE_TYPES_WITH_CONFIGURABLE_FACED_NAVIGATION } from "@dashboard/attributes/utils/data";
 import { DashboardCard } from "@dashboard/components/Card";
+import ControlledCheckbox from "@dashboard/components/ControlledCheckbox";
+import ControlledSwitch from "@dashboard/components/ControlledSwitch";
 import FormSpacer from "@dashboard/components/FormSpacer";
 import { AttributeErrorFragment, AttributeTypeEnum } from "@dashboard/graphql";
-import { FormChange } from "@dashboard/hooks/useForm";
 import { commonMessages } from "@dashboard/intl";
 import { getFormErrors } from "@dashboard/utils/errors";
 import getAttributeErrorMessage from "@dashboard/utils/errors/attribute";
-import { Box, Checkbox, Input, Paragraph, Text, Toggle } from "@saleor/macaw-ui-next";
+import { TextField } from "@material-ui/core";
+import { Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { defineMessages, FormattedMessage, useIntl } from "react-intl";
 
 import { AttributePageFormData } from "../AttributePage";
@@ -65,14 +68,19 @@ const messages = defineMessages({
   },
 });
 
-interface AttributePropertiesProps {
+export interface AttributePropertiesProps {
   data: AttributePageFormData;
   disabled: boolean;
   errors: AttributeErrorFragment[];
-  onChange: FormChange;
+  onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const AttributeProperties = ({ data, errors, disabled, onChange }: AttributePropertiesProps) => {
+const AttributeProperties: React.FC<AttributePropertiesProps> = ({
+  data,
+  errors,
+  disabled,
+  onChange,
+}) => {
   const intl = useIntl();
   const formErrors = getFormErrors(["storefrontSearchPosition"], errors);
   const storefrontFacetedNavigationProperties =
@@ -88,31 +96,20 @@ const AttributeProperties = ({ data, errors, disabled, onChange }: AttributeProp
       <DashboardCard.Content>
         {storefrontFacetedNavigationProperties && (
           <>
-            <Checkbox
+            <ControlledCheckbox
               name={"filterableInStorefront" as keyof FormData}
+              label={intl.formatMessage(messages.filterableInStorefront)}
               checked={data.filterableInStorefront}
-              onCheckedChange={checked =>
-                onChange({
-                  target: {
-                    name: "filterableInStorefront",
-                    value: checked as boolean,
-                  },
-                })
-              }
+              onChange={onChange}
               disabled={disabled}
-            >
-              <Text fontWeight="medium" fontSize={3} display="block">
-                {intl.formatMessage(messages.filterableInStorefront)}
-              </Text>
-            </Checkbox>
-
+            />
             {data.filterableInStorefront && (
               <>
                 <FormSpacer />
-                <Input
+                <TextField
                   disabled={disabled}
                   error={!!formErrors.storefrontSearchPosition}
-                  width="100%"
+                  fullWidth
                   helperText={getAttributeErrorMessage(formErrors.storefrontSearchPosition, intl)}
                   name={"storefrontSearchPosition" as keyof AttributePageFormData}
                   label={intl.formatMessage(messages.storefrontSearchPosition)}
@@ -124,29 +121,20 @@ const AttributeProperties = ({ data, errors, disabled, onChange }: AttributeProp
             <FormSpacer />
           </>
         )}
-
-        <Box className="multiline-toggle-wrapper">
-          <Toggle
-            name={"visibleInStorefront" as keyof FormData}
-            pressed={data.visibleInStorefront}
-            onPressedChange={pressed =>
-              onChange({
-                target: {
-                  name: "visibleInStorefront" as keyof FormData,
-                  value: pressed as boolean,
-                },
-              })
-            }
-            disabled={disabled}
-          >
-            <Paragraph fontWeight="medium" fontSize={3}>
+        <ControlledSwitch
+          name={"visibleInStorefront" as keyof FormData}
+          label={
+            <>
               <FormattedMessage {...messages.visibleInStorefront} />
-              <Text size={2} fontWeight="light" color="default2" display="block">
+              <Text fontWeight="medium" fontSize={3} display="block">
                 <FormattedMessage {...messages.visibleInStorefrontCaption} />
               </Text>
-            </Paragraph>
-          </Toggle>
-        </Box>
+            </>
+          }
+          checked={data.visibleInStorefront}
+          onChange={onChange}
+          disabled={disabled}
+        />
       </DashboardCard.Content>
     </DashboardCard>
   );

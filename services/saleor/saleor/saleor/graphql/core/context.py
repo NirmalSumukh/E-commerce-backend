@@ -1,26 +1,25 @@
 import datetime
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from django.conf import settings
-from django.db.models import Model, QuerySet
 from django.http import HttpRequest
 from django.utils.functional import empty
 
+from ...account.models import User
+from ...app.models import App
+
 if TYPE_CHECKING:
-    from ...account.models import User
-    from ...app.models import App
     from .dataloaders import DataLoader
 
 
 class SaleorContext(HttpRequest):
-    _cached_user: "User | None"
-    decoded_auth_token: dict[str, Any] | None
+    _cached_user: Optional[User]
+    decoded_auth_token: Optional[dict[str, Any]]
     allow_replica: bool = True
     dataloaders: dict[str, "DataLoader"]
-    app: "App | None"
-    user: "User | None"  # type: ignore[assignment]
-    requestor: "App | User | None"
+    app: Optional[App]
+    user: Optional[User]  # type: ignore[assignment]
+    requestor: Union[App, User, None]
     request_time: datetime.datetime
 
     def __init__(self, *args, **kwargs):
@@ -61,38 +60,7 @@ def get_database_connection_name(context: SaleorContext) -> str:
 
 def setup_context_user(context: SaleorContext) -> None:
     if hasattr(context.user, "_wrapped") and (
-        context.user._wrapped is empty or context.user._wrapped is None  # type: ignore[union-attr]
+        context.user._wrapped is empty or context.user._wrapped is None  # type: ignore
     ):
-        context.user._setup()  # type: ignore[union-attr]
-        context.user = context.user._wrapped  # type: ignore[union-attr]
-
-
-N = TypeVar("N")
-
-
-@dataclass
-class BaseContext[N]:
-    node: N
-
-
-@dataclass
-class SyncWebhookControlContext(BaseContext[N]):
-    allow_sync_webhooks: bool = True
-
-    def __init__(self, node: N, allow_sync_webhooks: bool = True):
-        self.node = node
-        self.allow_sync_webhooks = allow_sync_webhooks
-
-
-@dataclass
-class ChannelContext(BaseContext[N]):
-    channel_slug: str | None
-
-
-M = TypeVar("M", bound=Model)
-
-
-@dataclass
-class ChannelQsContext(Generic[M]):
-    qs: QuerySet[M]
-    channel_slug: str | None
+        context.user._setup()  # type: ignore
+        context.user = context.user._wrapped  # type: ignore

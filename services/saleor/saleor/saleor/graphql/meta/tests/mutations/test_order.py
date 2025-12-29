@@ -1,4 +1,4 @@
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import graphene
 from django.test import override_settings
@@ -27,9 +27,7 @@ from .test_update_private_metadata import (
 )
 
 
-def test_delete_public_metadata_for_order_by_id(
-    staff_api_client, order, permission_manage_orders
-):
+def test_delete_public_metadata_for_order_by_id(api_client, order):
     # given
     order.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     order.save(update_fields=["metadata"])
@@ -37,7 +35,7 @@ def test_delete_public_metadata_for_order_by_id(
 
     # when
     response = execute_clear_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_id, "Order"
+        api_client, None, order_id, "Order"
     )
 
     # then
@@ -46,9 +44,7 @@ def test_delete_public_metadata_for_order_by_id(
     )
 
 
-def test_delete_public_metadata_for_order_by_token(
-    staff_api_client, order, permission_manage_orders
-):
+def test_delete_public_metadata_for_order_by_token(api_client, order):
     # given
     order.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     order.save(update_fields=["metadata"])
@@ -56,7 +52,7 @@ def test_delete_public_metadata_for_order_by_token(
 
     # when
     response = execute_clear_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order.id, "Order"
+        api_client, None, order.id, "Order"
     )
 
     # then
@@ -65,9 +61,7 @@ def test_delete_public_metadata_for_order_by_token(
     )
 
 
-def test_delete_public_metadata_for_draft_order_by_id(
-    staff_api_client, draft_order, permission_manage_orders
-):
+def test_delete_public_metadata_for_draft_order_by_id(api_client, draft_order):
     # given
     draft_order.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     draft_order.save(update_fields=["metadata"])
@@ -75,7 +69,7 @@ def test_delete_public_metadata_for_draft_order_by_id(
 
     # when
     response = execute_clear_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, draft_order_id, "Order"
+        api_client, None, draft_order_id, "Order"
     )
 
     # then
@@ -84,9 +78,7 @@ def test_delete_public_metadata_for_draft_order_by_id(
     )
 
 
-def test_delete_public_metadata_for_draft_order_by_token(
-    staff_api_client, draft_order, permission_manage_orders
-):
+def test_delete_public_metadata_for_draft_order_by_token(api_client, draft_order):
     # given
     draft_order.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     draft_order.save(update_fields=["metadata"])
@@ -94,7 +86,7 @@ def test_delete_public_metadata_for_draft_order_by_token(
 
     # when
     response = execute_clear_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, draft_order.id, "Order"
+        api_client, None, draft_order.id, "Order"
     )
 
     # then
@@ -103,9 +95,7 @@ def test_delete_public_metadata_for_draft_order_by_token(
     )
 
 
-def test_delete_public_metadata_for_order_line(
-    staff_api_client, order_line, permission_manage_orders
-):
+def test_delete_public_metadata_for_order_line(api_client, order_line):
     # given
     order_line.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     order_line.save(update_fields=["metadata"])
@@ -113,7 +103,7 @@ def test_delete_public_metadata_for_order_line(
 
     # when
     response = execute_clear_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_line_id, "OrderLine"
+        api_client, None, order_line_id, "OrderLine"
     )
 
     # then
@@ -217,15 +207,13 @@ def test_delete_private_metadata_for_order_line(
     )
 
 
-def test_add_public_metadata_for_order_by_id(
-    staff_api_client, order, permission_manage_orders
-):
+def test_add_public_metadata_for_order_by_id(api_client, order):
     # given
     order_id = graphene.Node.to_global_id("Order", order.pk)
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_id, "Order"
+        api_client, None, order_id, "Order"
     )
 
     # then
@@ -234,15 +222,13 @@ def test_add_public_metadata_for_order_by_id(
     )
 
 
-def test_add_public_metadata_for_order_by_token(
-    staff_api_client, order, permission_manage_orders
-):
+def test_add_public_metadata_for_order_by_token(api_client, order):
     # given
     order_id = graphene.Node.to_global_id("Order", order.pk)
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order.id, "Order"
+        api_client, None, order.id, "Order"
     )
 
     # then
@@ -251,15 +237,13 @@ def test_add_public_metadata_for_order_by_token(
     )
 
 
-def test_add_public_metadata_for_draft_order_by_id(
-    staff_api_client, draft_order, permission_manage_orders
-):
+def test_add_public_metadata_for_draft_order_by_id(api_client, draft_order):
     # given
     draft_order_id = graphene.Node.to_global_id("Order", draft_order.pk)
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, draft_order_id, "Order"
+        api_client, None, draft_order_id, "Order"
     )
 
     # then
@@ -268,15 +252,13 @@ def test_add_public_metadata_for_draft_order_by_id(
     )
 
 
-def test_add_public_metadata_for_draft_order_by_token(
-    staff_api_client, draft_order, permission_manage_orders
-):
+def test_add_public_metadata_for_draft_order_by_token(api_client, draft_order):
     # given
     draft_order_id = graphene.Node.to_global_id("Order", draft_order.pk)
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, draft_order.id, "Order"
+        api_client, None, draft_order.id, "Order"
     )
 
     # then
@@ -285,15 +267,13 @@ def test_add_public_metadata_for_draft_order_by_token(
     )
 
 
-def test_add_public_metadata_for_order_line(
-    staff_api_client, order_line, permission_manage_orders
-):
+def test_add_public_metadata_for_order_line(api_client, order_line):
     # given
     order_line_id = graphene.Node.to_global_id("OrderLine", order_line.pk)
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_line_id, "OrderLine"
+        api_client, None, order_line_id, "OrderLine"
     )
 
     # then
@@ -302,9 +282,7 @@ def test_add_public_metadata_for_order_line(
     )
 
 
-def test_update_public_metadata_for_order_line(
-    staff_api_client, order_line, permission_manage_orders
-):
+def test_update_public_metadata_for_order_line(api_client, order_line):
     # given
     order_line.store_value_in_metadata({PUBLIC_KEY: PUBLIC_VALUE})
     order_line.save(update_fields=["metadata"])
@@ -312,11 +290,7 @@ def test_update_public_metadata_for_order_line(
 
     # when
     response = execute_update_public_metadata_for_item(
-        staff_api_client,
-        permission_manage_orders,
-        order_line_id,
-        "OrderLine",
-        value="NewMetaValue",
+        api_client, None, order_line_id, "OrderLine", value="NewMetaValue"
     )
 
     # then
@@ -627,10 +601,10 @@ def test_change_in_public_metadata_triggers_webhooks(
     mocked_send_webhook_request_sync,
     wrapped_call_order_event,
     setup_order_webhooks,
-    staff_api_client,
+    api_client,
     order_with_lines,
+    django_capture_on_commit_callbacks,
     settings,
-    permission_manage_orders,
 ):
     # given
     mocked_send_webhook_request_sync.return_value = []
@@ -648,9 +622,10 @@ def test_change_in_public_metadata_triggers_webhooks(
     order_id = graphene.Node.to_global_id("Order", order.pk)
 
     # when
-    execute_update_public_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_id, "Order", key="new-key"
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        execute_update_public_metadata_for_item(
+            api_client, None, order_id, "Order", key="new-key"
+        )
 
     # then
     order_metadata_updated_delivery = EventDelivery.objects.get(
@@ -659,12 +634,11 @@ def test_change_in_public_metadata_triggers_webhooks(
     )
 
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": order_metadata_updated_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": order_metadata_updated_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery
@@ -707,6 +681,7 @@ def test_change_in_private_metadata_triggers_webhooks(
     staff_api_client,
     permission_manage_orders,
     order_with_lines,
+    django_capture_on_commit_callbacks,
     settings,
 ):
     # given
@@ -725,9 +700,10 @@ def test_change_in_private_metadata_triggers_webhooks(
     order_id = graphene.Node.to_global_id("Order", order.pk)
 
     # when
-    execute_update_private_metadata_for_item(
-        staff_api_client, permission_manage_orders, order_id, "Order", key="new-key"
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        execute_update_private_metadata_for_item(
+            staff_api_client, permission_manage_orders, order_id, "Order", key="new-key"
+        )
 
     # then
     order_metadata_updated_delivery = EventDelivery.objects.get(
@@ -735,12 +711,11 @@ def test_change_in_private_metadata_triggers_webhooks(
         event_type=WebhookEventAsyncType.ORDER_METADATA_UPDATED,
     )
     mocked_send_webhook_request_async.assert_called_once_with(
-        kwargs={
-            "event_delivery_id": order_metadata_updated_delivery.id,
-            "telemetry_context": ANY,
-        },
+        kwargs={"event_delivery_id": order_metadata_updated_delivery.id},
         queue=settings.ORDER_WEBHOOK_EVENTS_CELERY_QUEUE_NAME,
-        MessageGroupId="example.com:saleor.app.additional",
+        bind=True,
+        retry_backoff=10,
+        retry_kwargs={"max_retries": 5},
     )
 
     # confirm each sync webhook was called without saving event delivery

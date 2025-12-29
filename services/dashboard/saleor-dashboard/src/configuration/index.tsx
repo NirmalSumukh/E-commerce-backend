@@ -4,11 +4,15 @@ import { useUser } from "@dashboard/auth";
 import { channelsListUrl } from "@dashboard/channels/urls";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
 import { APP_VERSION as dashboardVersion } from "@dashboard/config";
+import { CustomAppUrls } from "@dashboard/custom-apps/urls";
 import { PermissionEnum } from "@dashboard/graphql";
 import useShop from "@dashboard/hooks/useShop";
 import Attributes from "@dashboard/icons/Attributes";
 import Channels from "@dashboard/icons/Channels";
+import Miscellaneous from "@dashboard/icons/Miscellaneous";
+import PageTypes from "@dashboard/icons/PageTypes";
 import PermissionGroups from "@dashboard/icons/PermissionGroups";
+import Plugins from "@dashboard/icons/Plugins";
 import ProductTypes from "@dashboard/icons/ProductTypes";
 import ShippingMethods from "@dashboard/icons/ShippingMethods";
 import SiteSettings from "@dashboard/icons/SiteSettings";
@@ -17,15 +21,16 @@ import Taxes from "@dashboard/icons/Taxes";
 import Warehouses from "@dashboard/icons/Warehouses";
 import { sectionNames } from "@dashboard/intl";
 import { maybe } from "@dashboard/misc";
+import { pageTypeListUrl } from "@dashboard/pageTypes/urls";
 import { permissionGroupListUrl } from "@dashboard/permissionGroups/urls";
+import { pluginListUrl } from "@dashboard/plugins/urls";
 import { productTypeListUrl } from "@dashboard/productTypes/urls";
-import { refundsSettingsPath } from "@dashboard/refundsSettings/urls";
 import { shippingZonesListUrl } from "@dashboard/shipping/urls";
 import { siteSettingsUrl } from "@dashboard/siteSettings/urls";
 import { staffListUrl } from "@dashboard/staff/urls";
 import { taxConfigurationListUrl } from "@dashboard/taxes/urls";
 import { warehouseSection } from "@dashboard/warehouses/urls";
-import { PaymentOutlined } from "@material-ui/icons";
+import React from "react";
 import { IntlShape, useIntl } from "react-intl";
 
 import { ConfigurationPage } from "./ConfigurationPage";
@@ -166,6 +171,28 @@ export function createConfigurationMenu(intl: IntlShape): MenuSection[] {
     },
     {
       label: intl.formatMessage({
+        id: "HjXnIf",
+        defaultMessage: "Content Management",
+      }),
+      menuItems: [
+        {
+          description: intl.formatMessage({
+            id: "JPH/uP",
+            defaultMessage: "Define types of content pages used in your store",
+          }),
+          icon: <PageTypes />,
+          permissions: [
+            PermissionEnum.MANAGE_PAGES,
+            PermissionEnum.MANAGE_PAGE_TYPES_AND_ATTRIBUTES,
+          ],
+          title: intl.formatMessage(sectionNames.pageTypes),
+          url: pageTypeListUrl(),
+          testId: "configuration-menu-page-types",
+        },
+      ],
+    },
+    {
+      label: intl.formatMessage({
         id: "YZl6cv",
         defaultMessage: "Miscellaneous",
       }),
@@ -183,14 +210,26 @@ export function createConfigurationMenu(intl: IntlShape): MenuSection[] {
         },
         {
           description: intl.formatMessage({
-            id: "rUnw7n",
-            defaultMessage: "Configure refunds behavior",
+            id: "m19JfL",
+            defaultMessage: "View and update your plugins and their settings.",
           }),
-          icon: <PaymentOutlined />,
-          permissions: [PermissionEnum.MANAGE_SETTINGS],
-          title: intl.formatMessage(sectionNames.refundsSettings),
-          url: refundsSettingsPath,
-          testId: "configuration-menu-refunds-settings",
+          icon: (
+            <Plugins fontSize="inherit" viewBox="-8 -5 44 44" preserveAspectRatio="xMinYMin meet" />
+          ),
+          permissions: [PermissionEnum.MANAGE_PLUGINS],
+          title: intl.formatMessage(sectionNames.plugins),
+          url: pluginListUrl(),
+          testId: "configuration-plugins-pages",
+        },
+        {
+          description: intl.formatMessage({
+            id: "Zz67wc",
+            defaultMessage: "View and update your webhooks and events.",
+          }),
+          icon: <Miscellaneous />,
+          title: intl.formatMessage(sectionNames.webhooksAndEvents),
+          url: CustomAppUrls.resolveAppListUrl(),
+          testId: "configuration-menu-webhooks-and-events",
         },
       ],
     },
@@ -199,7 +238,7 @@ export function createConfigurationMenu(intl: IntlShape): MenuSection[] {
 
 export const configurationMenuUrl = "/configuration/";
 
-const ConfigurationSection = () => {
+export const ConfigurationSection: React.FC = () => {
   const shop = useShop();
   const versions = {
     dashboardVersion,
@@ -219,5 +258,4 @@ const ConfigurationSection = () => {
     </>
   );
 };
-
 export default ConfigurationSection;

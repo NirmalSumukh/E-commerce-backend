@@ -3,6 +3,7 @@ import useLocale from "@dashboard/hooks/useLocale";
 import { IMoney } from "@dashboard/utils/intl";
 import { useId } from "@reach/auto-id";
 import { Box, Skeleton, Text, Toggle } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { useGrantRefundContext } from "../context";
@@ -10,7 +11,7 @@ import { grantRefundPageMessages } from "../messages";
 
 interface ShippingIncludedProps {
   currency: string;
-  amount?: IMoney;
+  amount: IMoney;
   canRefundShipping: boolean;
 }
 
@@ -32,7 +33,7 @@ export const ShippingIncluded = ({
         data-test-id="refundShippingCheckbox"
         disabled={!currency || !canRefundShipping}
       >
-        {!currency || !amount ? (
+        {!currency ? (
           <Skeleton />
         ) : (
           <FormattedMessage

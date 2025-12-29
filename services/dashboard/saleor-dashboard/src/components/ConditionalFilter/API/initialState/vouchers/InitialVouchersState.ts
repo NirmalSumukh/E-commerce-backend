@@ -8,7 +8,6 @@ export interface InitialVouchersState {
 }
 
 const isDateField = (name: string) => ["started"].includes(name);
-const isNumericField = (name: string) => ["timesUsed"].includes(name);
 
 export class InitialVouchersStateResponse implements InitialVouchersState {
   constructor(
@@ -22,11 +21,11 @@ export class InitialVouchersStateResponse implements InitialVouchersState {
   }
 
   public filterByUrlToken(token: UrlToken) {
-    if (isDateField(token.name) || isNumericField(token.name)) {
+    const entry = this.getEntryByName(token.name);
+
+    if (isDateField(token.name)) {
       return token.value;
     }
-
-    const entry = this.getEntryByName(token.name);
 
     if (!token.isLoadable()) {
       return [token.value] as string[];

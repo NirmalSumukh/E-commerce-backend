@@ -6,15 +6,15 @@ import graphene
 from ....core.models import EventDelivery
 from ....payment.interface import ListStoredPaymentMethodsRequestData
 from ....settings import WEBHOOK_SYNC_TIMEOUT
-from ....webhook import const
+from ....webhook.const import WEBHOOK_CACHE_DEFAULT_TIMEOUT
 from ....webhook.event_types import WebhookEventSyncType
-from ....webhook.tests.subscription_webhooks.subscription_queries import (
-    LIST_STORED_PAYMENT_METHODS as LIST_STORED_PAYMENT_METHODS_SUBSCRIPTION,
-)
 from ....webhook.transport.list_stored_payment_methods import (
     get_list_stored_payment_methods_from_response,
 )
 from ....webhook.transport.utils import generate_cache_key_for_webhook
+from .subscription_webhooks.subscription_queries import (
+    LIST_STORED_PAYMENT_METHODS as LIST_STORED_PAYMENT_METHODS_SUBSCRIPTION,
+)
 
 LIST_STORED_PAYMENT_METHODS = """
 subscription {
@@ -79,7 +79,7 @@ def test_list_stored_payment_methods_with_static_payload(
     mocked_cache_set.assert_called_once_with(
         expected_cache_key,
         webhook_list_stored_payment_methods_response,
-        timeout=const.WEBHOOK_CACHE_DEFAULT_TTL,
+        timeout=WEBHOOK_CACHE_DEFAULT_TIMEOUT,
     )
 
     assert response
@@ -238,7 +238,7 @@ def test_list_stored_payment_methods_with_subscription_payload(
     mocked_cache_set.assert_called_once_with(
         expected_cache_key,
         webhook_list_stored_payment_methods_response,
-        timeout=const.WEBHOOK_CACHE_DEFAULT_TTL,
+        timeout=WEBHOOK_CACHE_DEFAULT_TIMEOUT,
     )
 
     assert response
@@ -350,10 +350,6 @@ def test_list_stored_payment_methods_app_returns_incorrect_response(
     assert not EventDelivery.objects.exists()
 
     mocked_cache_get.assert_called_once_with(expected_cache_key)
-    mocked_cache_set.assert_called_once_with(
-        expected_cache_key,
-        const.SYNC_WEBHOOK_FAILURE_SENTINEL,
-        timeout=const.SYNC_WEBHOOK_FAILURE_CACHE_TTL,
-    )
+    assert not mocked_cache_set.called
 
     assert response == []

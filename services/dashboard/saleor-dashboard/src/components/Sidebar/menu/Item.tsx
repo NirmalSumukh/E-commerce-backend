@@ -1,3 +1,5 @@
+import React from "react";
+
 import { Divider } from "./Divider";
 import { ItemGroup } from "./ItemGroup";
 import { SingleItem } from "./SingleItem";
@@ -7,7 +9,7 @@ interface Props {
   menuItem: SidebarMenuItem;
 }
 
-export const MenuItem = (props: Props) => {
+export const MenuItem: React.FC<Props> = props => {
   const { menuItem } = props;
 
   switch (menuItem.type) {

@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { useLayoutEffect, useRef, useState } from "react";
+import React from "react";
 
 interface OverflowConfig {
   horizontal?: boolean;
@@ -14,11 +14,11 @@ const getIsVertical = (el: HTMLElement, config: OverflowConfig) =>
 export const useOverflow = <T extends HTMLElement>(
   config: OverflowConfig = { horizontal: true, vertical: true },
 ) => {
-  const ref = useRef<T>(null);
-  const [isHorizontal, setIsHorizontal] = useState(false);
-  const [isVertical, setIsVertical] = useState(false);
+  const ref = React.useRef<T>(null);
+  const [isHorizontal, setIsHorizontal] = React.useState(false);
+  const [isVertical, setIsVertical] = React.useState(false);
 
-  useLayoutEffect(() => {
+  React.useLayoutEffect(() => {
     const trigger = () => {
       setIsHorizontal(getIsHorizontal(ref.current, config));
       setIsVertical(getIsVertical(ref.current, config));

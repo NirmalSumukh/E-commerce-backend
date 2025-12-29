@@ -14,7 +14,7 @@ type Action =
   | { type: "fetched"; payload: AppstoreApi.SaleorApp[] }
   | { type: "error"; payload: Error };
 
-export function useAppstoreApps(appstoreUrl?: string): State {
+function useAppstoreApps(appstoreUrl?: string): State {
   const cache = useRef<Cache>({});
   // Used to prevent state update if the component is unmounted
   const cancelRequest = useRef<boolean>(false);
@@ -91,7 +91,10 @@ export function useAppstoreApps(appstoreUrl?: string): State {
     return () => {
       cancelRequest.current = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appstoreUrl]);
 
   return state;
 }
+
+export default useAppstoreApps;

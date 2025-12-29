@@ -1,3 +1,4 @@
+// @ts-strict-ignore
 import { DiscountListUrlSortField } from "@dashboard/discounts/discountsUrls";
 import { PromotionSortField } from "@dashboard/graphql";
 import { createGetSortQueryVariables } from "@dashboard/utils/sort";
@@ -19,7 +20,7 @@ export function canBeSorted(sort: DiscountListUrlSortField | undefined) {
   }
 }
 
-function getSortQueryField(sort: DiscountListUrlSortField): PromotionSortField | undefined {
+export function getSortQueryField(sort: DiscountListUrlSortField): PromotionSortField {
   switch (sort) {
     case DiscountListUrlSortField.name:
       return PromotionSortField.NAME;

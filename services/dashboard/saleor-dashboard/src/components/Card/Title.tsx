@@ -1,7 +1,7 @@
 import { Text, TextProps } from "@saleor/macaw-ui-next";
-import { PropsWithChildren } from "react";
+import React, { PropsWithChildren } from "react";
 
-export const Title = ({ children, ...rest }: PropsWithChildren<TextProps>) => (
+export const Title: React.FC<PropsWithChildren<TextProps>> = ({ children, ...rest }) => (
   <Text size={5} fontWeight="bold" __width="auto" {...rest}>
     {children}
   </Text>

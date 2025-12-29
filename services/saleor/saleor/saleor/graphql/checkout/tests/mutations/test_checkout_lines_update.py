@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest import mock
 from unittest.mock import patch
 
+import before_after
 import graphene
 import pytest
 from django.test import override_settings
@@ -26,7 +27,6 @@ from .....core.models import EventDelivery
 from .....discount import RewardValueType
 from .....plugins.manager import get_plugins_manager
 from .....product.models import ProductChannelListing, ProductVariantChannelListing
-from .....tests import race_condition
 from .....warehouse.models import Reservation, Stock
 from .....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from .....webhook.transport.asynchronous.transport import send_webhook_request_async
@@ -777,7 +777,7 @@ def test_checkout_lines_update_with_custom_price_and_fixed_catalogue_promotion(
     reward_value = line_discount.value
 
     variant_id = graphene.Node.to_global_id("ProductVariant", line.variant_id)
-    custom_price = Decimal(15)
+    custom_price = Decimal("15")
 
     variables = {
         "id": to_global_id_or_none(checkout),
@@ -828,13 +828,13 @@ def test_checkout_lines_update_with_custom_price_and_percentage_catalogue_promot
 
     promotion_rule = line_discount.promotion_rule
     reward_value_type = RewardValueType.PERCENTAGE
-    reward_value = Decimal(50)
+    reward_value = Decimal("50")
     promotion_rule.reward_value_type = reward_value_type
     promotion_rule.reward_value = reward_value
     promotion_rule.save(update_fields=["reward_value_type", "reward_value"])
 
     variant_id = graphene.Node.to_global_id("ProductVariant", line.variant_id)
-    custom_price = Decimal(40)
+    custom_price = Decimal("40")
 
     variables = {
         "id": to_global_id_or_none(checkout),
@@ -892,7 +892,7 @@ def test_checkout_lines_update_with_0_custom_price_and_catalogue_promotion(
     line_discount = line.discounts.first()
 
     variant_id = graphene.Node.to_global_id("ProductVariant", line.variant_id)
-    custom_price = Decimal(0)
+    custom_price = Decimal("0")
 
     variables = {
         "id": to_global_id_or_none(checkout),
@@ -1522,7 +1522,6 @@ def test_checkout_lines_update_triggers_webhooks(
     api_client,
     checkout_with_items,
     product_with_single_variant,
-    address,
 ):
     # given
     mocked_send_webhook_using_scheme_method.return_value = WebhookResponse(content="")
@@ -1540,12 +1539,6 @@ def test_checkout_lines_update_triggers_webhooks(
         checkout_with_items, [], get_plugins_manager(allow_replica=False)
     )
     add_variant_to_checkout(checkout_info, variant, 1)
-
-    # Ensure shipping is set so shipping webhooks are emitted
-    checkout_with_items.shipping_address = address
-    checkout_with_items.billing_address = address
-
-    checkout_with_items.save()
 
     variables = {
         "id": to_global_id_or_none(checkout_with_items),
@@ -1630,298 +1623,6 @@ def test_checkout_lines_update_when_line_deleted(user_api_client, checkout_with_
     assert data["errors"][0]["code"] == CheckoutErrorCode.GRAPHQL_ERROR.name
 
 
-def test_checkout_lines_update_with_metadata(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-    variant = line.variant
-
-    assert not line.metadata.get("test_key")
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                "metadata": [{"key": "test_key", "value": "test_value"}],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    assert not data["errors"]
-
-    checkout.refresh_from_db()
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    assert line.metadata["test_key"] == "test_value"
-
-    assert line.variant == variant
-
-
-def test_checkout_lines_update_with_metadata_overwrite_key(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-    variant = line.variant
-
-    line.metadata["test_key"] = "old_value"
-
-    line.save(update_fields=["metadata"])
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                "metadata": [{"key": "test_key", "value": "test_value"}],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    assert not data["errors"]
-
-    checkout.refresh_from_db()
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    assert line.metadata["test_key"] == "test_value"
-
-    assert line.variant == variant
-
-
-def test_checkout_lines_update_with_metadata_empty_list(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-    variant = line.variant
-
-    line.metadata["test_key"] = "old_value"
-
-    line.save(update_fields=["metadata"])
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                # Empty list should not prune metadata
-                "metadata": [],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    assert not data["errors"]
-
-    checkout.refresh_from_db()
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    assert line.metadata["test_key"] == "old_value"
-
-    assert line.variant == variant
-
-
-def test_checkout_lines_update_with_invalid_metadata(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-    variant = line.variant
-
-    assert not line.metadata.get("test_key")
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                # Key can't be empty
-                "metadata": [{"key": "", "value": "test_value"}],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    expected_error = data["errors"][0]
-
-    assert expected_error["field"] == "metadata"
-    assert expected_error["code"] == "REQUIRED"
-
-
-def test_checkout_lines_update_with_empty_metadata_preserve_old(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    line.metadata["test_key"] = "old_value"
-    line.save(update_fields=["metadata"])
-
-    variant = line.variant
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                # Leave input empty to ensure it will not affect existing entries
-                "metadata": [],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    assert not data["errors"]
-
-    checkout.refresh_from_db()
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    assert line.metadata["test_key"] == "old_value"
-
-    assert line.variant == variant
-
-
-def test_checkout_lines_update_with_new_metadata_merge_old(
-    user_api_client,
-    checkout_with_item,
-):
-    # given
-    checkout = checkout_with_item
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    line.metadata["test_key"] = "old_value"
-    line.save(update_fields=["metadata"])
-
-    variant = line.variant
-
-    variant_id = graphene.Node.to_global_id("ProductVariant", variant.pk)
-
-    # when
-    variables = {
-        "id": to_global_id_or_none(checkout_with_item),
-        "lines": [
-            {
-                "variantId": variant_id,
-                "quantity": 1,
-                "metadata": [
-                    {
-                        "key": "new_key",
-                        "value": "new_value",
-                    }
-                ],
-            }
-        ],
-    }
-    response = user_api_client.post_graphql(MUTATION_CHECKOUT_LINES_UPDATE, variables)
-
-    # then
-    content = get_graphql_content(response)
-
-    data = content["data"]["checkoutLinesUpdate"]
-
-    assert not data["errors"]
-
-    checkout.refresh_from_db()
-
-    assert checkout.lines.count() == 1
-
-    line = checkout.lines.first()
-
-    assert line.metadata["test_key"] == "old_value"
-    assert line.metadata["new_key"] == "new_value"
-
-    assert line.variant == variant
-
-
 @mock.patch(
     "saleor.checkout.calculations._calculate_and_add_tax",
     wraps=_calculate_and_add_tax,
@@ -1954,7 +1655,7 @@ def test_checkout_lines_update_checkout_updated_during_price_recalculation(
         checkout_to_modify.email = expected_email
         checkout_to_modify.save(update_fields=["email", "last_change"])
 
-    with race_condition.RunAfter(
+    with before_after.after(
         "saleor.checkout.calculations._calculate_and_add_tax", modify_checkout
     ):
         response = user_api_client.post_graphql(
@@ -1998,7 +1699,7 @@ def test_checkout_lines_update_checkout_removed_before_adding_variants_to_checko
         # it's would pass `checkout` without `pk` to `checkout_info`.
         Checkout.objects.filter(pk=checkout.pk).delete()
 
-    with race_condition.RunBefore(
+    with before_after.before(
         "saleor.graphql.checkout.mutations.checkout_lines_add.add_variants_to_checkout",
         delete_checkout,
     ):

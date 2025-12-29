@@ -1,7 +1,7 @@
-import datetime
+from datetime import datetime
 from enum import Enum
 from json.encoder import ESCAPE_ASCII, ESCAPE_DCT
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 
 class JsonTruncText:
@@ -77,7 +77,7 @@ class Webhook(TypedDict):
     id: str
     name: str
     target_url: str
-    subscription_query: JsonTruncText | None
+    subscription_query: Optional[JsonTruncText]
 
 
 class ObservabilityEventBase(TypedDict):
@@ -85,10 +85,10 @@ class ObservabilityEventBase(TypedDict):
 
 
 class GraphQLOperation(TypedDict):
-    name: JsonTruncText | None
-    operation_type: str | None
-    query: JsonTruncText | None
-    result: JsonTruncText | None
+    name: Optional[JsonTruncText]
+    operation_type: Optional[str]
+    query: Optional[JsonTruncText]
+    result: Optional[JsonTruncText]
     result_invalid: bool
 
 
@@ -103,14 +103,14 @@ class ApiCallRequest(TypedDict):
 
 class ApiCallResponse(TypedDict):
     headers: HttpHeaders
-    status_code: int | None
+    status_code: Optional[int]
     content_length: int
 
 
 class ApiCallPayload(ObservabilityEventBase):
     request: ApiCallRequest
     response: ApiCallResponse
-    app: App | None
+    app: Optional[App]
     gql_operations: list[GraphQLOperation]
 
 
@@ -133,17 +133,17 @@ class EventDeliveryAttemptRequest(TypedDict):
 
 class EventDeliveryAttemptResponse(TypedDict):
     headers: HttpHeaders
-    status_code: int | None
+    status_code: Optional[int]
     content_length: int
     body: JsonTruncText
 
 
 class EventDeliveryAttemptPayload(ObservabilityEventBase):
     id: str
-    time: datetime.datetime
-    duration: float | None
+    time: datetime
+    duration: Optional[float]
     status: str
-    next_retry: datetime.datetime | None
+    next_retry: Optional[datetime]
     request: EventDeliveryAttemptRequest
     response: EventDeliveryAttemptResponse
     event_delivery: EventDelivery

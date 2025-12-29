@@ -32,16 +32,16 @@ def get_default_channel(allow_replica: bool = False) -> Channel:
 
     try:
         channel = Channel.objects.using(database_connection_name).get()
-    except Channel.MultipleObjectsReturned as e:
+    except Channel.MultipleObjectsReturned:
         channels = list(
             Channel.objects.using(database_connection_name).filter(is_active=True)
         )
         if len(channels) == 1:
-            warnings.warn(DEPRECATION_WARNING_MESSAGE, stacklevel=1)
+            warnings.warn(DEPRECATION_WARNING_MESSAGE)
             return channels[0]
-        raise ChannelNotDefined() from e
-    except Channel.DoesNotExist as e:
-        raise NoDefaultChannel() from e
+        raise ChannelNotDefined()
+    except Channel.DoesNotExist:
+        raise NoDefaultChannel()
     else:
-        warnings.warn(DEPRECATION_WARNING_MESSAGE, stacklevel=1)
+        warnings.warn(DEPRECATION_WARNING_MESSAGE)
         return channel

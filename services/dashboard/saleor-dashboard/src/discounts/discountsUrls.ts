@@ -14,7 +14,7 @@ export const discountSalesListPath = discountSection;
 
 export type DiscountListUrlDialog = TabActionDialog;
 
-type DiscountListUrlSort = Sort<DiscountListUrlSortField>;
+export type DiscountListUrlSort = Sort<DiscountListUrlSortField>;
 
 export type DiscountListUrlQueryParams = Dialog<DiscountListUrlDialog> &
   Pagination &
@@ -22,7 +22,7 @@ export type DiscountListUrlQueryParams = Dialog<DiscountListUrlDialog> &
     query?: string;
   };
 
-type DiscountUrlDialog = "remove";
+export type DiscountUrlDialog = "remove";
 export type DiscountUrlQueryParams = Dialog<DiscountUrlDialog>;
 
 export const discountListUrl = (params?: DiscountListUrlQueryParams) =>

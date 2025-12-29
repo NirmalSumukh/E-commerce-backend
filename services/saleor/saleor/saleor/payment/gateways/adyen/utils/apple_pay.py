@@ -1,5 +1,6 @@
 import logging
 from tempfile import NamedTemporaryFile
+from typing import Optional
 from urllib.parse import urlsplit
 
 import requests
@@ -37,10 +38,10 @@ logger = logging.getLogger(__name__)
 
 
 def validate_payment_data_for_apple_pay(
-    validation_url: str | None,
-    merchant_identifier: str | None,
-    domain: str | None,
-    display_name: str | None,
+    validation_url: Optional[str],
+    merchant_identifier: Optional[str],
+    domain: Optional[str],
+    display_name: Optional[str],
     certificate,
 ):
     if not certificate:
@@ -80,12 +81,12 @@ def initialize_apple_pay_session(
         response = make_request_to_initialize_apple_pay(
             validation_url, request_data, certificate
         )
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         logger.warning("Failed to fetch the Apple Pay session", exc_info=True)
         raise PaymentError(
             "Unable to create Apple Pay payment session. Make sure that input data "
             " and certificate are correct."
-        ) from e
+        )
     if not response.ok:
         # FIXME: shouldn't we forward some details here?
         raise PaymentError(

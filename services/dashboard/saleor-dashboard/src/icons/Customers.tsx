@@ -1,3 +1,5 @@
+import React from "react";
+
 export const CustomersIcon = () => (
   <svg
     width="20"

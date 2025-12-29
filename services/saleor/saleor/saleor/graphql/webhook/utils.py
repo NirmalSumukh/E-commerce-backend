@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from typing import Optional
 
 from ...webhook.models import Webhook
 
@@ -12,8 +13,8 @@ def get_subscription_query_hash(subscription_query: str) -> str:
 
 def get_pregenerated_subscription_payload(
     webhook: Webhook,
-    pregenerated_subscription_payloads: dict | None = None,
-) -> dict | None:
+    pregenerated_subscription_payloads: Optional[dict] = None,
+) -> Optional[dict]:
     if pregenerated_subscription_payloads is None:
         pregenerated_subscription_payloads = {}
     if webhook.subscription_query is None or pregenerated_subscription_payloads is None:

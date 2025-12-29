@@ -1,9 +1,16 @@
 import { ChannelData } from "@dashboard/channels/utils";
 import { ColumnCategory } from "@dashboard/components/Datagrid/ColumnPicker/useColumns";
 import { AvailableColumn } from "@dashboard/components/Datagrid/types";
-import { AttributeInputTypeEnum, ProductFragment, WarehouseFragment } from "@dashboard/graphql";
+import {
+  AttributeInputTypeEnum,
+  ProductFragment,
+  useGridWarehousesLazyQuery,
+  useWarehouseListLazyQuery,
+  WarehouseFragment,
+} from "@dashboard/graphql";
 import { useClientPagination } from "@dashboard/hooks/useClientPagination";
-import { useState } from "react";
+import { mapEdgesToItems } from "@dashboard/utils/maps";
+import React from "react";
 import { IntlShape } from "react-intl";
 
 import messages from "./messages";
@@ -32,7 +39,7 @@ export const useChannelAdapter = ({
   selectedColumns: string[] | undefined;
   listings: ChannelData[] | undefined;
 }): ColumnCategory => {
-  const [channelQuery, setChannelQuery] = useState("");
+  const [channelQuery, setChannelQuery] = React.useState("");
   const { paginate, currentPage, changeCurrentPage } = useClientPagination();
   const paginatedChannels = paginate(
     (listings ?? [])?.filter(channel =>
@@ -67,7 +74,7 @@ export const useChannelAvailabilityAdapter = ({
   selectedColumns: string[] | undefined;
   listings: ChannelData[];
 }): ColumnCategory => {
-  const [channelQuery, setChannelQuery] = useState("");
+  const [channelQuery, setChannelQuery] = React.useState("");
   const { paginate, currentPage, changeCurrentPage } = useClientPagination();
   const paginatedChannels = paginate(
     (listings ?? []).filter(channel =>
@@ -131,7 +138,7 @@ export const useAttributesAdapter = ({
       attribute.inputType,
     );
   });
-  const [attributeQuery, setAttributeQuery] = useState("");
+  const [attributeQuery, setAttributeQuery] = React.useState("");
   const { paginate, currentPage, changeCurrentPage } = useClientPagination();
   const paginatedAttributes = paginate(
     (supportedAttributes ?? []).filter(attribute =>
@@ -156,7 +163,7 @@ export const useAttributesAdapter = ({
   };
 };
 
-const parseAttributeColumns = (
+export const parseAttributeColumns = (
   attributes: ProductFragment["productType"]["variantAttributes"] | undefined,
   intl: IntlShape,
 ): AvailableColumn[] | undefined =>
@@ -177,7 +184,7 @@ export const useWarehouseAdapter = ({
   selectedColumns: string[] | undefined;
   warehouses: WarehouseFragment[] | undefined;
 }) => {
-  const [warehouseQuery, setWarehouseQuery] = useState("");
+  const [warehouseQuery, setWarehouseQuery] = React.useState("");
   const { paginate, currentPage, changeCurrentPage } = useClientPagination();
   const paginatedWarehouses = paginate(
     (warehouses ?? []).filter(warehouse =>
@@ -202,6 +209,18 @@ export const useWarehouseAdapter = ({
   };
 };
 
+export const getAvailableWarehousesData = ({
+  availableWarehouses,
+  initialWarehouses,
+}: {
+  availableWarehouses: ReturnType<typeof useWarehouseListLazyQuery>[1];
+  initialWarehouses: ReturnType<typeof useGridWarehousesLazyQuery>[1];
+}) =>
+  mapEdgesToItems(availableWarehouses.data?.warehouses) ??
+  (availableWarehouses.loading
+    ? undefined
+    : mapEdgesToItems(initialWarehouses.data?.availableWarehouses) ?? []);
+
 const parseWarehousesColumns = (data: WarehouseFragment[] | undefined, intl: IntlShape) => {
   return data?.map(warehouse => ({
     id: `warehouse:${warehouse.id}`,
@@ -211,3 +230,68 @@ const parseWarehousesColumns = (data: WarehouseFragment[] | undefined, intl: Int
     width: 150,
   }));
 };
+
+// Reuse when fixing #4165
+export const getWarehousesFetchMoreProps = ({
+  queryAvailableWarehouses,
+  availableWarehousesData,
+  gridWarehousesData,
+}: {
+  queryAvailableWarehouses: ReturnType<typeof useWarehouseListLazyQuery>[0];
+  availableWarehousesData: ReturnType<typeof useWarehouseListLazyQuery>[1];
+  gridWarehousesData: ReturnType<typeof useGridWarehousesLazyQuery>[1];
+}) => {
+  const onNextPage = (query: string) =>
+    queryAvailableWarehouses({
+      variables: {
+        filter: {
+          search: query,
+        },
+        after:
+          availableWarehousesData.data?.warehouses?.pageInfo.endCursor ??
+          gridWarehousesData.data?.availableWarehouses?.pageInfo.endCursor,
+        first: 10,
+        last: null,
+        before: null,
+      },
+    });
+  const onPreviousPage = (query: string) =>
+    queryAvailableWarehouses({
+      variables: {
+        filter: {
+          search: query,
+        },
+        before: availableWarehousesData.data?.warehouses?.pageInfo.startCursor,
+        last: 10,
+        first: null,
+        after: null,
+      },
+    });
+  const hasNextPage =
+    availableWarehousesData.data?.warehouses?.pageInfo?.hasNextPage ??
+    gridWarehousesData.data?.availableWarehouses?.pageInfo?.hasNextPage ??
+    false;
+  const hasPreviousPage =
+    availableWarehousesData.data?.warehouses?.pageInfo?.hasPreviousPage ?? false;
+
+  return {
+    hasNextPage,
+    hasPreviousPage,
+    onNextPage,
+    onPreviousPage,
+  };
+};
+
+const prefix = "warehouse";
+
+export function getWarehouseColumnValue(id: string) {
+  return `${prefix}:${id}`;
+}
+
+export function isWarehouseColumnValue(value: string) {
+  return value?.includes(`${prefix}:`);
+}
+
+export function getWarehouseIdFromColumnValue(value: string) {
+  return value.substr(prefix.length + 1);
+}

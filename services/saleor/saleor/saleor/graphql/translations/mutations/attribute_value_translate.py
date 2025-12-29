@@ -1,12 +1,11 @@
 import graphene
+from django.template.defaultfilters import truncatechars
 
 from ....attribute import AttributeInputType
 from ....attribute import models as attribute_models
 from ....core.utils.editorjs import clean_editor_js
-from ....core.utils.text import safe_truncate
 from ....permission.enums import SitePermissions
 from ...attribute.types import AttributeValue
-from ...core.context import ChannelContext
 from ...core.descriptions import RICH_CONTENT
 from ...core.enums import LanguageCodeEnum
 from ...core.fields import JSONString
@@ -42,18 +41,12 @@ class AttributeValueTranslate(BaseTranslateMutation):
         permissions = (SitePermissions.MANAGE_TRANSLATIONS,)
 
     @classmethod
-    def pre_update_or_create(cls, instance, input_data, language_code):
+    def pre_update_or_create(cls, instance, input_data):
         if "name" not in input_data.keys() or input_data["name"] is None:
             if instance.attribute.input_type == AttributeInputType.RICH_TEXT:
-                input_data["name"] = safe_truncate(
+                input_data["name"] = truncatechars(
                     clean_editor_js(input_data["rich_text"], to_string=True), 250
                 )
             elif instance.attribute.input_type == AttributeInputType.PLAIN_TEXT:
-                input_data["name"] = safe_truncate(input_data["plain_text"], 250)
+                input_data["name"] = truncatechars(input_data["plain_text"], 250)
         return input_data
-
-    @classmethod
-    def perform_mutation(cls, *args, **kwargs):
-        response = super().perform_mutation(*args, **kwargs)
-        response.attributeValue = ChannelContext(response.attributeValue, None)
-        return response

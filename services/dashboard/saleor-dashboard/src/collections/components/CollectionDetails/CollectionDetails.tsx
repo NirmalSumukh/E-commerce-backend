@@ -8,10 +8,10 @@ import { getFormErrors, getProductErrorMessage } from "@dashboard/utils/errors";
 import { useRichTextContext } from "@dashboard/utils/richText/context";
 import { OutputData } from "@editorjs/editorjs";
 import { Input } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 import { useIntl } from "react-intl";
 
-interface CollectionDetailsProps {
+export interface CollectionDetailsProps {
   data: {
     description: OutputData;
     name: string;
@@ -21,7 +21,12 @@ interface CollectionDetailsProps {
   onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const CollectionDetails = ({ disabled, data, onChange, errors }: CollectionDetailsProps) => {
+const CollectionDetails: React.FC<CollectionDetailsProps> = ({
+  disabled,
+  data,
+  onChange,
+  errors,
+}) => {
   const intl = useIntl();
   const { defaultValue, editorRef, isReadyForMount, handleChange } = useRichTextContext();
   const formErrors = getFormErrors(["name", "description"], errors);

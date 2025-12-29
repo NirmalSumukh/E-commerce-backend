@@ -1,7 +1,8 @@
 import { DashboardCard } from "@dashboard/components/Card";
-import { ChangeEvent } from "@dashboard/hooks/useForm";
-import { Checkbox, Input, Text } from "@saleor/macaw-ui-next";
-import { FormattedMessage, useIntl } from "react-intl";
+import { ControlledCheckbox } from "@dashboard/components/ControlledCheckbox";
+import { TextField } from "@material-ui/core";
+import React from "react";
+import { useIntl } from "react-intl";
 
 interface ProductTypeShippingProps {
   data: {
@@ -10,15 +11,15 @@ interface ProductTypeShippingProps {
   };
   weightUnit: string;
   disabled: boolean;
-  onChange: (event: ChangeEvent) => void;
+  onChange: (event: React.ChangeEvent<any>) => void;
 }
 
-const ProductTypeShipping = ({
+const ProductTypeShipping: React.FC<ProductTypeShippingProps> = ({
   data,
   weightUnit,
   disabled,
   onChange,
-}: ProductTypeShippingProps) => {
+}) => {
   const intl = useIntl();
 
   return (
@@ -33,30 +34,21 @@ const ProductTypeShipping = ({
         </DashboardCard.Title>
       </DashboardCard.Header>
       <DashboardCard.Content>
-        <Checkbox
+        <ControlledCheckbox
           checked={data.isShippingRequired}
           disabled={disabled}
+          label={intl.formatMessage({
+            id: "IBw72y",
+            defaultMessage: "Is this product shippable?",
+            description: "switch button",
+          })}
           name="isShippingRequired"
-          data-test-id="isShippingRequired"
-          onCheckedChange={checked =>
-            onChange({
-              target: { name: "isShippingRequired", value: checked },
-            })
-          }
-          marginBottom={2}
-        >
-          <Text>
-            <FormattedMessage
-              id="IBw72y"
-              defaultMessage="Is this product shippable?"
-              description="switch button"
-            />
-          </Text>
-        </Checkbox>
+          onChange={onChange}
+        />
         {data.isShippingRequired && (
-          <Input
+          <TextField
             disabled={disabled}
-            endAdornment={<Text color="default2">{weightUnit}</Text>}
+            InputProps={{ endAdornment: weightUnit }}
             label={intl.formatMessage({
               id: "zCb8fX",
               defaultMessage: "Weight",
@@ -68,7 +60,7 @@ const ProductTypeShipping = ({
                 "Used to calculate rates for shipping for products of this product type, when specific weight is not given",
             })}
             type="number"
-            value={data.weight || 0}
+            value={data.weight}
             onChange={onChange}
           />
         )}

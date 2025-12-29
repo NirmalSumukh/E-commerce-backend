@@ -6,7 +6,7 @@ on:
 
 jobs:
   create-release-tag:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
     env:
       GH_REF: ${{ github.event.pull_request.head.ref }}
@@ -30,7 +30,7 @@ jobs:
             echo "IS_LATEST=false" >> $GITHUB_OUTPUT
           fi
       - name: Create tag
-        uses: actions/github-script@v8
+        uses: actions/github-script@v5
         env:
           VERSION: ${{ steps.set-version.outputs.VERSION }}
         with:

@@ -6,7 +6,7 @@ from ...checkout.fetch import (
     fetch_checkout_info,
     fetch_checkout_lines,
     get_all_shipping_methods_list,
-    get_available_built_in_shipping_methods_for_checkout_info,
+    get_valid_internal_shipping_method_list_for_checkout_info,
 )
 from ...core.exceptions import PermissionDenied
 from ...permission.enums import AppPermission
@@ -55,11 +55,12 @@ def resolve_sample_payload(info: ResolveInfo, event_name, app):
     )
     if not required_permission:
         return payloads.generate_sample_payload(event_name)
-    if app and app.has_perm(required_permission):
-        return payloads.generate_sample_payload(event_name)
-    if user and user.has_perm(required_permission):
-        return payloads.generate_sample_payload(event_name)
-    raise PermissionDenied(permissions=[required_permission])
+    else:
+        if app and app.has_perm(required_permission):
+            return payloads.generate_sample_payload(event_name)
+        if user and user.has_perm(required_permission):
+            return payloads.generate_sample_payload(event_name)
+        raise PermissionDenied(permissions=[required_permission])
 
 
 def resolve_shipping_methods_for_checkout(
@@ -81,6 +82,11 @@ def resolve_shipping_methods_for_checkout(
     )
     all_shipping_methods = get_all_shipping_methods_list(
         checkout_info,
+        checkout.shipping_address,
+        lines,
+        shipping_channel_listings,
+        manager,
+        database_connection_name=database_connection_name,
     )
     return all_shipping_methods
 
@@ -102,6 +108,11 @@ def resolve_only_internal_shipping_methods_for_checkout(
         shipping_channel_listings,
         database_connection_name=database_connection_name,
     )
-    return get_available_built_in_shipping_methods_for_checkout_info(
+    address = checkout.shipping_address or checkout.billing_address
+    return get_valid_internal_shipping_method_list_for_checkout_info(
         checkout_info,
+        address,
+        lines,
+        shipping_channel_listings,
+        database_connection_name,
     )

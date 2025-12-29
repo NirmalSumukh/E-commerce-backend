@@ -1,13 +1,4 @@
-import {
-  AppExtensionMountEnum,
-  AppExtensionTargetEnum,
-  ExtensionListQuery,
-  PermissionEnum,
-} from "@dashboard/graphql";
-import { RelayToFlat } from "@dashboard/types";
 import { ReactNode } from "react";
-
-import { AppDetailsUrlMountQueryParams } from "./urls";
 
 interface CommonExtensionData {
   id: string;
@@ -44,7 +35,7 @@ interface PluginExtensionData extends CommonExtensionData {
 
 export type ExtensionData = AppExtensionData | PluginExtensionData;
 
-type ExtensionGroup = "payments" | "taxes" | "cms" | "automation";
+export type ExtensionGroup = "payments" | "taxes" | "cms" | "automation";
 
 export type ExtensionsGroups = Record<ExtensionGroup, { title: string; items: ExtensionData[] }>;
 
@@ -54,33 +45,10 @@ export type APIExtensionsResponse = Array<{
   extensions: ExtensionData[];
 }>;
 
-/*
-  Candidate for refactoring. InstalledExtension is only one case.
-  We have also pending installation, failed installation, etc. and they have different actions.
-  We should create dedicated types for each case (PendingInstallation, FailedInstallation and so on)
-*/
 export type InstalledExtension = {
   id: string;
   name: string;
   logo: ReactNode;
   info: ReactNode;
-  href?: string;
-  actions?: ReactNode;
+  actions: ReactNode;
 };
-
-export interface Extension {
-  id: string;
-  app: RelayToFlat<NonNullable<ExtensionListQuery["appExtensions"]>>[0]["app"];
-  accessToken: string;
-  permissions: PermissionEnum[];
-  label: string;
-  mount: AppExtensionMountEnum;
-  url: string;
-  open: () => void;
-  target: AppExtensionTargetEnum;
-  options: RelayToFlat<NonNullable<ExtensionListQuery["appExtensions"]>>[0]["options"];
-}
-
-export interface ExtensionWithParams extends Omit<Extension, "open"> {
-  open: (params: AppDetailsUrlMountQueryParams) => void;
-}

@@ -1,6 +1,36 @@
-import { FieldType, FilterElementGeneric } from "@dashboard/components/Filter/types";
-import { MinMax } from "@dashboard/types";
+import { FieldType, FilterElementGeneric } from "@dashboard/components/Filter";
+import { FetchMoreProps, KeyValue, MinMax, SearchPageProps } from "@dashboard/types";
 import { Option } from "@saleor/macaw-ui-next";
+
+export function createPriceField<K extends string = string>(
+  name: K,
+  label: string,
+  defaultValue: MinMax,
+): FilterElementGeneric<K, FieldType.price> {
+  return {
+    active: false,
+    label,
+    multiple: defaultValue.min !== defaultValue.max,
+    name,
+    type: FieldType.price,
+    value: [defaultValue.min, defaultValue.max],
+  };
+}
+
+export function createKeyValueField<K extends string = string>(
+  name: K,
+  label: string,
+  defaultValue: KeyValue[],
+): FilterElementGeneric<K, FieldType.keyValue> {
+  return {
+    active: false,
+    label,
+    multiple: false,
+    name,
+    type: FieldType.keyValue,
+    value: defaultValue,
+  };
+}
 
 export function createDateField<K extends string>(
   name: K,
@@ -13,6 +43,21 @@ export function createDateField<K extends string>(
     multiple: defaultValue.min !== defaultValue.max,
     name,
     type: FieldType.date,
+    value: [defaultValue.min, defaultValue.max],
+  };
+}
+
+export function createDateTimeField<K extends string>(
+  name: K,
+  label: string,
+  defaultValue: MinMax,
+): FilterElementGeneric<K, FieldType.dateTime> {
+  return {
+    active: false,
+    label,
+    multiple: defaultValue.min !== defaultValue.max,
+    name,
+    type: FieldType.dateTime,
     value: [defaultValue.min, defaultValue.max],
   };
 }
@@ -49,6 +94,31 @@ export function createOptionsField<K extends string>(
     value: defaultValue,
   };
 }
+
+export function createAutocompleteField<K extends string>(
+  name: K,
+  label: string,
+  defaultValue: string[] = [],
+  displayValues: Option[],
+  multiple: boolean,
+  options: Option[],
+  opts: FetchMoreProps & SearchPageProps,
+  id?: string,
+): FilterElementGeneric<K, FieldType.autocomplete> {
+  return {
+    ...opts,
+    active: false,
+    displayValues,
+    label,
+    multiple,
+    name,
+    options,
+    type: FieldType.autocomplete,
+    value: defaultValue,
+    id,
+  };
+}
+
 export function createTextField<K extends string>(
   name: K,
   label: string,

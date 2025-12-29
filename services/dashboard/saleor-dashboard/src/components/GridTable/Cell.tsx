@@ -1,6 +1,5 @@
 import { Box } from "@saleor/macaw-ui-next";
-import { TdHTMLAttributes } from "react";
-import * as React from "react";
+import React, { TdHTMLAttributes } from "react";
 
 import { GridTableProps } from "./types";
 
@@ -10,7 +9,6 @@ type GridTableCellProps = GridTableProps<TdHTMLAttributes<HTMLTableCellElement>>
 export const GridTableCell = React.forwardRef<GridTableCellElement, GridTableCellProps>(
   ({ children, ...props }, forwardedRef) => {
     return (
-      // @ts-expect-error - incorrect types
       <Box
         as="td"
         ref={forwardedRef}

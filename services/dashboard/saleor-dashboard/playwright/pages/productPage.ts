@@ -194,9 +194,6 @@ export class ProductPage extends BasePage {
     await this.editVariantButton.first().click();
   }
 
-  async clickFirstAddVariantButton() {
-    await this.addVariantButton.first().click();
-  }
   async clickAddVariantButton() {
     await this.addVariantButton.nth(1).click();
   }

@@ -2,17 +2,13 @@ from typing import TYPE_CHECKING, Optional
 
 import graphene
 from django.conf import settings
-from django.core.exceptions import ValidationError
 
 from ....checkout import AddressType, models
 from ....checkout.actions import call_checkout_event
 from ....checkout.error_codes import CheckoutErrorCode
-from ....checkout.utils import add_variants_to_checkout, create_checkout_metadata
-from ....core.exceptions import PermissionDenied
+from ....checkout.utils import add_variants_to_checkout
 from ....core.tracing import traced_atomic_transaction
-from ....core.utils import metadata_manager
 from ....core.utils.country import get_active_country
-from ....permission.enums import CheckoutPermissions
 from ....product import models as product_models
 from ....warehouse.reservations import get_reservation_length, is_reservation_enabled
 from ....webhook.event_types import WebhookEventAsyncType
@@ -21,11 +17,16 @@ from ...account.types import AddressInput
 from ...app.dataloaders import get_app_promise
 from ...channel.utils import clean_channel
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import ADDED_IN_321
+from ...core.descriptions import (
+    ADDED_IN_31,
+    ADDED_IN_35,
+    ADDED_IN_36,
+    ADDED_IN_38,
+    DEPRECATED_IN_3X_FIELD,
+)
 from ...core.doc_category import DOC_CATEGORY_CHECKOUT
 from ...core.enums import LanguageCodeEnum
-from ...core.mutations import DeprecatedModelMutation
+from ...core.mutations import ModelMutation
 from ...core.scalars import PositiveDecimal
 from ...core.types import BaseInputObjectType, CheckoutError, NonNullList
 from ...core.utils import WebhookEventInfo
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     from ....account.models import Address
     from .utils import CheckoutLineData
 
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 
 
 class CheckoutAddressValidationRules(BaseInputObjectType):
@@ -91,7 +92,8 @@ class CheckoutValidationRules(BaseInputObjectType):
     )
     billing_address = CheckoutAddressValidationRules(
         description=(
-            "The validation rules that can be applied to provided billing address data."
+            "The validation rules that can be applied to provided billing address"
+            " data."
         )
     )
 
@@ -108,6 +110,7 @@ class CheckoutLineInput(BaseInputObjectType):
             "Custom price of the item. Can be set only by apps "
             "with `HANDLE_CHECKOUTS` permission. When the line with the same variant "
             "will be provided multiple times, the last price will be used."
+            + ADDED_IN_31
         ),
     )
     force_new_line = graphene.Boolean(
@@ -115,13 +118,12 @@ class CheckoutLineInput(BaseInputObjectType):
         default_value=False,
         description=(
             "Flag that allow force splitting the same variant into multiple lines "
-            "by skipping the matching logic. "
+            "by skipping the matching logic. " + ADDED_IN_36
         ),
     )
     metadata = NonNullList(
         MetadataInput,
-        description="Fields required to update the object's metadata. "
-        f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+        description=("Fields required to update the object's metadata." + ADDED_IN_38),
         required=False,
     )
 
@@ -142,15 +144,6 @@ class CheckoutCreateInput(BaseInputObjectType):
         required=True,
     )
     email = graphene.String(description="The customer's email address.")
-    save_shipping_address = graphene.Boolean(
-        description=(
-            "Indicates whether the shipping address should be saved "
-            "to the user’s address book upon checkout completion."
-            "Can only be set when a shipping address is provided. If not specified "
-            "along with the address, the default behavior is to save the address."
-        )
-        + ADDED_IN_321
-    )
     shipping_address = AddressInput(
         description=(
             "The mailing address to where the checkout will be shipped. "
@@ -158,15 +151,6 @@ class CheckoutCreateInput(BaseInputObjectType):
             "doesn't contain shippable items. `skipValidation` requires "
             "HANDLE_CHECKOUTS and AUTHENTICATED_APP permissions."
         )
-    )
-    save_billing_address = graphene.Boolean(
-        description=(
-            "Indicates whether the billing address should be saved "
-            "to the user’s address book upon checkout completion. "
-            "Can only be set when a billing address is provided. If not specified "
-            "along with the address, the default behavior is to save the address."
-        )
-        + ADDED_IN_321
     )
     billing_address = AddressInput(
         description=(
@@ -179,36 +163,16 @@ class CheckoutCreateInput(BaseInputObjectType):
     )
     validation_rules = CheckoutValidationRules(
         required=False,
-        description="The checkout validation rules that can be changed.",
-    )
-
-    metadata = NonNullList(
-        MetadataInput,
         description=(
-            f"Checkout public metadata. "
-            f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}"
-            f"{ADDED_IN_321}"
+            "The checkout validation rules that can be changed." + ADDED_IN_35
         ),
-        required=False,
-    )
-
-    private_metadata = NonNullList(
-        MetadataInput,
-        description=(
-            "Checkout private metadata. Requires one of the following permissions: "
-            f"{CheckoutPermissions.MANAGE_CHECKOUTS.name}, "
-            f"{CheckoutPermissions.HANDLE_CHECKOUTS.name} \n\n"
-            f"{MetadataInputDescription.PRIVATE_METADATA_INPUT}"
-            f"{ADDED_IN_321}"
-        ),
-        required=False,
     )
 
     class Meta:
         doc_category = DOC_CATEGORY_CHECKOUT
 
 
-class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
+class CheckoutCreate(ModelMutation, I18nMixin):
     created = graphene.Field(
         graphene.Boolean,
         description=(
@@ -216,7 +180,7 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
             "Refer to checkoutLinesAdd and checkoutLinesUpdate to merge a cart "
             "with an active checkout."
         ),
-        deprecation_reason="Always returns `true`.",
+        deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Always returns `true`.",
     )
 
     class Arguments:
@@ -241,12 +205,6 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
                 description="A checkout was created.",
             )
         ]
-
-        # This mutation *does* save metadata but not via "support_meta_field"
-        # flags. Checkout metadata is held in separate objects
-        # Flags are set to False, so it's explicit and should not be enabled
-        support_meta_field = False
-        support_private_meta_field = False
 
     @classmethod
     def clean_checkout_lines(
@@ -338,98 +296,26 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
     def clean_input(cls, info: ResolveInfo, instance: models.Checkout, data, **kwargs):
         user = info.context.user
         channel = data.pop("channel")
-
-        metadata_list: list[MetadataInput] | None = data.pop("metadata", None)
-        private_metadata_list: list[MetadataInput] | None = data.pop(
-            "private_metadata", None
-        )
-
         cleaned_input = super().clean_input(info, instance, data, **kwargs)
-
-        trying_to_set_private_metadata = private_metadata_list is not None
-
-        if trying_to_set_private_metadata:
-            private_metadata_permissions = [
-                CheckoutPermissions.HANDLE_CHECKOUTS,
-                CheckoutPermissions.MANAGE_CHECKOUTS,
-            ]
-
-            can_set_private_metadata = cls.check_permissions(
-                info.context,
-                permissions=private_metadata_permissions,
-            )
-
-            if not can_set_private_metadata:
-                raise PermissionDenied(permissions=private_metadata_permissions)
-
-        cleaned_input["metadata_collection"] = cls.create_metadata_from_graphql_input(
-            metadata_list, error_field_name="metadata"
-        )
-        cleaned_input["private_metadata_collection"] = (
-            cls.create_metadata_from_graphql_input(
-                private_metadata_list, error_field_name="private_metadata"
-            )
-        )
 
         cleaned_input["channel"] = channel
         cleaned_input["currency"] = channel.currency_code
-        save_shipping_address = data.get("save_shipping_address")
-        shipping_address_metadata: list[MetadataInput] | None = (
-            data.get("shipping_address", {}).pop("metadata", [])
+        shipping_address_metadata = (
+            data.get("shipping_address", {}).pop("metadata", list())
             if data.get("shipping_address")
             else None
         )
-        save_billing_address = data.get("save_billing_address")
-        billing_address_metadata: list[MetadataInput] | None = (
-            data.get("billing_address", {}).pop("metadata", [])
+        billing_address_metadata = (
+            data.get("billing_address", {}).pop("metadata", list())
             if data.get("billing_address")
             else None
         )
-
-        shipping_address_metadata_collection = cls.create_metadata_from_graphql_input(
-            shipping_address_metadata, error_field_name="metadata"
-        )
-        billing_address_metadata_collection = cls.create_metadata_from_graphql_input(
-            billing_address_metadata, error_field_name="metadata"
-        )
-
         shipping_address = cls.retrieve_shipping_address(user, data, info)
         billing_address = cls.retrieve_billing_address(user, data, info)
         if shipping_address:
-            metadata_manager.store_on_instance(
-                shipping_address_metadata_collection,
-                shipping_address,
-                metadata_manager.MetadataType.PUBLIC,
-            )
-
+            cls.update_metadata(shipping_address, shipping_address_metadata)
         if billing_address:
-            metadata_manager.store_on_instance(
-                billing_address_metadata_collection,
-                billing_address,
-                metadata_manager.MetadataType.PUBLIC,
-            )
-
-        if save_shipping_address is not None and not shipping_address:
-            raise ValidationError(
-                {
-                    "save_shipping_address": ValidationError(
-                        "This option can only be selected if a shipping address "
-                        "is provided.",
-                        code=CheckoutErrorCode.MISSING_ADDRESS_DATA.value,
-                    )
-                }
-            )
-
-        if save_billing_address is not None and not billing_address:
-            raise ValidationError(
-                {
-                    "save_billing_address": ValidationError(
-                        "This option can only be selected if a billing address "
-                        "is provided.",
-                        code=CheckoutErrorCode.MISSING_ADDRESS_DATA.value,
-                    )
-                }
-            )
+            cls.update_metadata(billing_address, billing_address_metadata)
 
         country = get_active_country(
             channel,
@@ -462,13 +348,7 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
         return cleaned_input
 
     @classmethod
-    def save(
-        cls,
-        info: ResolveInfo,
-        instance: models.Checkout,
-        cleaned_input,
-        instance_tracker=None,
-    ):
+    def save(cls, info: ResolveInfo, instance: models.Checkout, cleaned_input):
         with traced_atomic_transaction():
             # Create the checkout object
             instance.save()
@@ -508,11 +388,6 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
                 instance.billing_address = billing_address.get_copy()
 
             instance.save()
-            create_checkout_metadata(
-                instance,
-                metadata=cleaned_input.get("metadata_collection"),
-                private_metadata=cleaned_input.get("private_metadata_collection"),
-            )
 
     @classmethod
     def get_instance(cls, info: ResolveInfo, **data):
@@ -532,25 +407,14 @@ class CheckoutCreate(DeprecatedModelMutation, I18nMixin):
         )
         if channel:
             input["channel"] = channel
-
-        instance = cls.get_instance(info, **input)
-        cleaned_input = cls.clean_input(info, instance, input)
-
-        instance = cls.construct_instance(instance, cleaned_input)
-
-        cls.clean_instance(info, instance)
-        cls.save(info, instance, cleaned_input)
-        cls._save_m2m(info, instance, cleaned_input)
-
-        checkout = instance
-        apply_gift_reward_if_applicable_on_checkout_creation(checkout)
+        response = super().perform_mutation(_root, info, input=input)
+        checkout = response.checkout
+        apply_gift_reward_if_applicable_on_checkout_creation(response.checkout)
         manager = get_plugin_manager_promise(info.context).get()
         call_checkout_event(
             manager,
             event_name=WebhookEventAsyncType.CHECKOUT_CREATED,
             checkout=checkout,
         )
-
-        return CheckoutCreate(
-            checkout=SyncWebhookControlContext(node=checkout), created=True
-        )
+        response.created = True
+        return response

@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 import graphene
 from django.core.exceptions import ValidationError
 
@@ -21,8 +23,7 @@ from ....webhook.event_types import WebhookEventAsyncType, WebhookEventSyncType
 from ...account.i18n import I18nMixin
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
-from ...core.descriptions import DEPRECATED_IN_3X_INPUT
+from ...core.descriptions import ADDED_IN_34, ADDED_IN_38, DEPRECATED_IN_3X_INPUT
 from ...core.doc_category import DOC_CATEGORY_CHECKOUT
 from ...core.fields import JSONString
 from ...core.mutations import BaseMutation
@@ -30,7 +31,7 @@ from ...core.scalars import UUID
 from ...core.types import CheckoutError, NonNullList
 from ...core.utils import CHECKOUT_CALCULATE_TAXES_MESSAGE, WebhookEventInfo
 from ...core.validators import validate_one_of_args_is_in_mutation
-from ...meta.inputs import MetadataInput, MetadataInputDescription
+from ...meta.inputs import MetadataInput
 from ...order.types import Order
 from ...plugins.dataloaders import get_plugin_manager_promise
 from ...site.dataloaders import get_site_promise
@@ -45,7 +46,8 @@ class CheckoutComplete(BaseMutation, I18nMixin):
         required=True,
         default_value=False,
         description=(
-            "Set to true if payment needs to be confirmed before checkout is complete."
+            "Set to true if payment needs to be confirmed"
+            " before checkout is complete."
         ),
     )
     confirmation_data = JSONString(
@@ -57,7 +59,7 @@ class CheckoutComplete(BaseMutation, I18nMixin):
 
     class Arguments:
         id = graphene.ID(
-            description="The checkout's ID.",
+            description="The checkout's ID." + ADDED_IN_34,
             required=False,
         )
         token = UUID(
@@ -92,8 +94,9 @@ class CheckoutComplete(BaseMutation, I18nMixin):
         )
         metadata = NonNullList(
             MetadataInput,
-            description="Fields required to update the checkout metadata. "
-            f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}",
+            description=(
+                "Fields required to update the checkout metadata." + ADDED_IN_38
+            ),
             required=False,
         )
 
@@ -171,7 +174,7 @@ class CheckoutComplete(BaseMutation, I18nMixin):
     def validate_checkout_addresses(
         cls,
         checkout_info: CheckoutInfo,
-        lines: list[CheckoutLineInfo],
+        lines: Iterable[CheckoutLineInfo],
     ):
         """Validate checkout addresses.
 
@@ -264,14 +267,12 @@ class CheckoutComplete(BaseMutation, I18nMixin):
                                 code=CheckoutErrorCode.CHANNEL_INACTIVE.value,
                             )
                         }
-                    ) from e
+                    )
                 # The order is already created. We return it as a success
                 # checkoutComplete response. Order is anonymized for not logged in
                 # user
                 return CheckoutComplete(
-                    order=SyncWebhookControlContext(order),
-                    confirmation_needed=False,
-                    confirmation_data={},
+                    order=order, confirmation_needed=False, confirmation_data={}
                 )
             raise e
         if metadata is not None:
@@ -279,9 +280,7 @@ class CheckoutComplete(BaseMutation, I18nMixin):
                 info,
                 id or checkout_id or graphene.Node.to_global_id("Checkout", token),
             )
-            cls.create_metadata_from_graphql_input(
-                metadata, error_field_name="metadata"
-            )
+            cls.validate_metadata_keys(metadata)
 
         validate_checkout_email(checkout)
 
@@ -340,7 +339,7 @@ class CheckoutComplete(BaseMutation, I18nMixin):
         # If gateway returns information that additional steps are required we need
         # to inform the frontend and pass all required data
         return CheckoutComplete(
-            order=SyncWebhookControlContext(order) if order else None,
+            order=order,
             confirmation_needed=action_required,
             confirmation_data=action_data,
         )

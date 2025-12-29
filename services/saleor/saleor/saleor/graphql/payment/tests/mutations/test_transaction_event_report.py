@@ -1,10 +1,12 @@
-import datetime
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
 
+import before_after
 import graphene
 import pytest
+import pytz
 from django.utils import timezone
 from freezegun import freeze_time
 
@@ -21,14 +23,13 @@ from .....order import (
     OrderStatus,
 )
 from .....order.models import Order
-from .....payment import OPTIONAL_AMOUNT_EVENTS, PaymentMethodType, TransactionEventType
+from .....payment import OPTIONAL_AMOUNT_EVENTS, TransactionEventType
 from .....payment.lock_objects import (
     get_checkout_and_transaction_item_locked_for_update,
     get_order_and_transaction_item_locked_for_update,
 )
 from .....payment.models import TransactionEvent
 from .....payment.transaction_item_calculations import recalculate_transaction_amounts
-from .....tests import race_condition
 from ....core.enums import TransactionEventReportErrorCode
 from ....core.utils import to_global_id_or_none
 from ....tests.utils import assert_no_permission, get_graphql_content
@@ -62,21 +63,6 @@ fragment TransactionEventData on TransactionEventReport {
             key
             value
         }
-        paymentMethodDetails{
-            ...on CardPaymentMethodDetails{
-                __typename
-                name
-                brand
-                firstDigits
-                lastDigits
-                expMonth
-                expYear
-            }
-            ...on OtherPaymentMethodDetails{
-                __typename
-                name
-            }
-        }
     }
     transactionEvent {
         id
@@ -90,17 +76,16 @@ fragment TransactionEventData on TransactionEventReport {
         }
         type
         createdBy {
-            ... on User {
-                id
-            }
-            ... on App {
-                id
-            }
+        ... on User {
+            id
+        }
+        ... on App {
+            id
+        }
         }
     }
     errors {
         field
-        message
         code
     }
 }
@@ -114,7 +99,7 @@ def test_transaction_event_report_by_app(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -193,7 +178,7 @@ def test_transaction_event_report_by_app_via_token(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -420,7 +405,7 @@ def test_transaction_event_report_amount_with_lot_of_decimal_places(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -774,14 +759,15 @@ def test_transaction_event_report_event_already_exists_updates_available_actions
     response = get_graphql_content(response)
     transaction_report_data = response["data"]["transactionEventReport"]
     assert transaction_report_data["alreadyProcessed"] is True
-    assert set(transaction_report_data["transaction"]["actions"]) == {
-        TransactionActionEnum.REFUND.name,
-        TransactionActionEnum.CHARGE.name,
-    }
-    assert set(transaction.available_actions) == {
-        TransactionActionEnum.REFUND.value,
-        TransactionActionEnum.CHARGE.value,
-    }
+    assert set(transaction_report_data["transaction"]["actions"]) == set(
+        [
+            TransactionActionEnum.REFUND.name,
+            TransactionActionEnum.CHARGE.name,
+        ]
+    )
+    assert set(transaction.available_actions) == set(
+        [TransactionActionEnum.REFUND.value, TransactionActionEnum.CHARGE.value]
+    )
 
 
 def test_event_already_exists_do_not_overwrite_actions_when_not_provided_in_input(
@@ -852,14 +838,15 @@ def test_event_already_exists_do_not_overwrite_actions_when_not_provided_in_inpu
     response = get_graphql_content(response)
     transaction_report_data = response["data"]["transactionEventReport"]
     assert transaction_report_data["alreadyProcessed"] is True
-    assert set(transaction_report_data["transaction"]["actions"]) == {
-        TransactionActionEnum.REFUND.name,
-        TransactionActionEnum.CHARGE.name,
-    }
-    assert set(transaction.available_actions) == {
-        TransactionActionEnum.REFUND.value,
-        TransactionActionEnum.CHARGE.value,
-    }
+    assert set(transaction_report_data["transaction"]["actions"]) == set(
+        [
+            TransactionActionEnum.REFUND.name,
+            TransactionActionEnum.CHARGE.name,
+        ]
+    )
+    assert set(transaction.available_actions) == set(
+        [TransactionActionEnum.REFUND.value, TransactionActionEnum.CHARGE.value]
+    )
 
 
 def test_transaction_event_report_incorrect_amount_for_already_existing(
@@ -1019,7 +1006,7 @@ def test_transaction_event_updates_order_total_charged(
 ):
     # given
     order = order_with_lines
-    current_charged_value = Decimal(20)
+    current_charged_value = Decimal("20")
     psp_reference = "111-abc"
     amount = Decimal("11.00")
     transaction = transaction_item_generator(app=app_api_client.app, order_id=order.pk)
@@ -1274,7 +1261,7 @@ def test_transaction_event_updates_checkout_payment_statuses(
     checkout_info = fetch_checkout_info(checkout, lines, plugins_manager)
     fetch_checkout_data(checkout_info, plugins_manager, lines)
 
-    current_charged_value = Decimal(20)
+    current_charged_value = Decimal("20")
     psp_reference = "111-abc"
     amount = Decimal("11.00")
     transaction = transaction_item_generator(
@@ -1327,7 +1314,7 @@ def test_transaction_event_updates_checkout_payment_statuses(
 
 @pytest.mark.parametrize(
     "current_last_transaction_modified_at",
-    [None, datetime.datetime(2000, 5, 31, 12, 0, 0, tzinfo=datetime.UTC)],
+    [None, datetime(2000, 5, 31, 12, 0, 0, tzinfo=pytz.UTC)],
 )
 @freeze_time("2018-05-31 12:00:01")
 def test_transaction_event_updates_checkout_last_transaction_modified_at(
@@ -1390,9 +1377,7 @@ def test_transaction_event_updates_checkout_last_transaction_modified_at(
 
 @patch("saleor.checkout.tasks.automatic_checkout_completion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 def test_transaction_event_updates_checkout_full_paid_with_charged_amount(
-    mocked_fully_authorized,
     mocked_fully_paid,
     mocked_automatic_checkout_completion_task,
     transaction_item_generator,
@@ -1457,16 +1442,13 @@ def test_transaction_event_updates_checkout_full_paid_with_charged_amount(
     assert checkout.charge_status == CheckoutChargeStatus.FULL
     assert checkout.authorize_status == CheckoutAuthorizeStatus.FULL
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_automatic_checkout_completion_task.assert_not_called()
 
 
 @patch("saleor.checkout.tasks.automatic_checkout_completion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 def test_transaction_event_updates_checkout_full_paid_with_pending_charge_amount(
     mocked_fully_paid,
-    mocked_fully_authorized,
     mocked_automatic_checkout_completion_task,
     transaction_item_generator,
     app_api_client,
@@ -1527,15 +1509,12 @@ def test_transaction_event_updates_checkout_full_paid_with_pending_charge_amount
     assert checkout.charge_status == CheckoutChargeStatus.FULL
     assert checkout.authorize_status == CheckoutAuthorizeStatus.FULL
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_automatic_checkout_completion_task.assert_not_called()
 
 
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 def test_transaction_event_updates_checkout_full_paid_automatic_completion(
     mocked_fully_paid,
-    checkout_fully_authorized,
     transaction_item_generator,
     app_api_client,
     permission_manage_payments,
@@ -1607,15 +1586,12 @@ def test_transaction_event_updates_checkout_full_paid_automatic_completion(
         type=OrderEvents.PLACED_AUTOMATICALLY_FROM_PAID_CHECKOUT
     ).exists()
 
-    checkout_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
 
 
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 def test_transaction_event_updates_checkout_full_paid_pending_charge_automatic_complete(
     mocked_fully_paid,
-    checkout_fully_authorized,
     transaction_item_generator,
     app_api_client,
     permission_manage_payments,
@@ -1684,14 +1660,11 @@ def test_transaction_event_updates_checkout_full_paid_pending_charge_automatic_c
     assert order.authorize_status == CheckoutAuthorizeStatus.NONE
 
     mocked_fully_paid.assert_called_once_with(checkout, webhooks=set())
-    checkout_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
 @patch("saleor.checkout.tasks.automatic_checkout_completion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 def test_transaction_event_updates_checkout_fully_authorized(
-    mocked_fully_authorized,
     mocked_fully_paid,
     mocked_automatic_checkout_completion_task,
     transaction_item_generator,
@@ -1755,17 +1728,13 @@ def test_transaction_event_updates_checkout_fully_authorized(
 
     assert checkout.charge_status == CheckoutChargeStatus.NONE
     assert checkout.authorize_status == CheckoutAuthorizeStatus.FULL
-
     mocked_fully_paid.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
     mocked_automatic_checkout_completion_task.assert_not_called()
 
 
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 def test_transaction_event_updates_checkout_fully_authorized_automatic_complete(
     mocked_fully_paid,
-    mocked_fully_authorized,
     transaction_item_generator,
     app_api_client,
     permission_manage_payments,
@@ -1837,14 +1806,11 @@ def test_transaction_event_updates_checkout_fully_authorized_automatic_complete(
         type=OrderEvents.PLACED_AUTOMATICALLY_FROM_PAID_CHECKOUT
     ).exists()
     mocked_fully_paid.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
-@patch("saleor.plugins.manager.PluginsManager.checkout_fully_authorized")
 @patch("saleor.plugins.manager.PluginsManager.checkout_fully_paid")
 def test_transaction_event_updates_checkout_fully_authorized_pending_automatic_complete(
     mocked_fully_paid,
-    mocked_fully_authorized,
     transaction_item_generator,
     app_api_client,
     permission_manage_payments,
@@ -1913,7 +1879,6 @@ def test_transaction_event_updates_checkout_fully_authorized_pending_automatic_c
     assert order.charge_status == CheckoutChargeStatus.NONE
     assert order.authorize_status == CheckoutAuthorizeStatus.NONE
     mocked_fully_paid.assert_not_called()
-    mocked_fully_authorized.assert_called_once_with(checkout, webhooks=set())
 
 
 def test_transaction_event_report_with_info_event(
@@ -1923,7 +1888,7 @@ def test_transaction_event_report_with_info_event(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -1996,7 +1961,7 @@ def test_transaction_event_report_accepts_old_id_for_old_transaction(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10), use_old_id=True
+        app=app_api_client.app, authorized_value=Decimal("10"), use_old_id=True
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -2210,7 +2175,7 @@ def test_transaction_event_report_for_order_triggers_webhooks_when_fully_paid(
 
 
 @pytest.mark.parametrize(
-    "auto_order_confirmation",
+    ("auto_order_confirmation"),
     [True, False],
 )
 @patch("saleor.plugins.manager.PluginsManager.order_paid")
@@ -2560,7 +2525,7 @@ def test_transaction_event_report_by_app_assign_app_owner(
     permission_manage_payments,
 ):
     # given
-    transaction = transaction_item_generator(authorized_value=Decimal(10))
+    transaction = transaction_item_generator(authorized_value=Decimal("10"))
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
     message = "Sucesfull charge"
@@ -2640,7 +2605,7 @@ def test_transaction_event_report_assign_transaction_psp_reference_if_missing(
 ):
     # given
     transaction = transaction_item_generator(
-        authorized_value=Decimal(10), psp_reference=transaction_psp_reference
+        authorized_value=Decimal("10"), psp_reference=transaction_psp_reference
     )
     amount = Decimal("11.00")
     transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
@@ -2706,7 +2671,7 @@ def test_transaction_event_report_updates_granted_refund_status_when_needed(
     # given
     amount = Decimal("11.00")
     transaction = transaction_item_generator(
-        app=app_api_client.app, charged_value=Decimal(10), order_id=order.pk
+        app=app_api_client.app, charged_value=Decimal("10"), order_id=order.pk
     )
     granted_refund = order.granted_refunds.create(
         amount_value=amount, currency=order.currency, transaction_item=transaction
@@ -2763,7 +2728,9 @@ def test_transaction_event_report_updates_granted_refund_status_when_needed(
     assert granted_refund.status == expected_status
 
 
-@pytest.mark.parametrize("event_type", list(OPTIONAL_AMOUNT_EVENTS))
+@pytest.mark.parametrize(
+    "event_type", [event_type for event_type in OPTIONAL_AMOUNT_EVENTS]
+)
 def test_transaction_event_report_missing_amount(
     event_type,
     transaction_item_generator,
@@ -2773,7 +2740,7 @@ def test_transaction_event_report_missing_amount(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     expected_amount = 10
@@ -2836,7 +2803,7 @@ def test_transaction_event_report_missing_amount(
     assert event.psp_reference == psp_reference
     assert event.type == event_type
     expected_amount = (
-        expected_amount if event_type != TransactionEventType.INFO else Decimal(0)
+        expected_amount if event_type != TransactionEventType.INFO else Decimal("0")
     )
     assert event.amount_value == expected_amount
     assert event.currency == transaction.currency
@@ -2862,7 +2829,7 @@ def test_transaction_event_report_missing_amount_not_deduced_error_raised(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
@@ -2921,7 +2888,7 @@ def test_transaction_event_report_missing_amount_error_raised(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     amount = 10
@@ -2991,7 +2958,7 @@ def test_transaction_event_report_update_transaction_metadata(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     amount = Decimal("11.00")
@@ -3064,7 +3031,7 @@ def test_transaction_event_report_metadata_not_provided(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     amount = Decimal("11.00")
@@ -3138,7 +3105,7 @@ def test_transaction_event_report_update_transaction_private_metadata(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     psp_reference = "111-abc"
     amount = Decimal("11.00")
@@ -3209,7 +3176,7 @@ def test_transaction_event_report_message_limit_exceeded(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -3279,7 +3246,7 @@ def test_transaction_event_report_message_limit_exceeded(
     assert event.app_identifier == app_api_client.app.identifier
     assert event.app == app_api_client.app
     assert event.user is None
-    assert event.message == message[:511] + "…"
+    assert event.message == message[:509] + "..."
 
 
 def test_transaction_event_report_empty_message(
@@ -3289,7 +3256,7 @@ def test_transaction_event_report_empty_message(
 ):
     # given
     transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
+        app=app_api_client.app, authorized_value=Decimal("10")
     )
     event_time = timezone.now()
     external_url = f"http://{TEST_SERVER_DOMAIN}/external-url"
@@ -3545,7 +3512,7 @@ def test_transaction_event_report_checkout_completed_race_condition(
             checkout_info, plugins_manager, user=None, app=app_api_client.app
         )
 
-    with race_condition.RunBefore(
+    with before_after.before(
         "saleor.graphql.payment.mutations.transaction.transaction_event_report.recalculate_transaction_amounts",
         complete_checkout,
     ):
@@ -3560,464 +3527,3 @@ def test_transaction_event_report_checkout_completed_race_condition(
     assert order.status == OrderStatus.UNFULFILLED
     assert order.charge_status == OrderChargeStatus.FULL
     assert order.total_charged.amount == checkout.total.gross.amount
-
-
-TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY = (
-    MUTATION_DATA_FRAGMENT
-    + """
-    mutation TransactionEventReport(
-        $id: ID
-        $type: TransactionEventTypeEnum!
-        $amount: PositiveDecimal!
-        $pspReference: String!
-        $paymentMethodDetails: PaymentMethodDetailsInput
-    ) {
-        transactionEventReport(
-            id: $id
-            type: $type
-            amount: $amount
-            pspReference: $pspReference
-            paymentMethodDetails: $paymentMethodDetails
-        ) {
-            ...TransactionEventData
-        }
-    }
-    """
-)
-
-
-@pytest.mark.parametrize(
-    (
-        "card_brand",
-        "card_first_digits",
-        "card_last_digits",
-        "card_exp_month",
-        "card_exp_year",
-    ),
-    [
-        ("Brand", "1234", "5678", 12, 2025),
-        (None, "1111", "0000", 1, 2001),
-        (None, None, None, None, None),
-        ("", "", "", None, None),
-        (None, None, "1234", None, None),
-    ],
-)
-def test_transaction_event_report_with_card_payment_method_details(
-    card_brand,
-    card_first_digits,
-    card_last_digits,
-    card_exp_month,
-    card_exp_year,
-    transaction_item_generator,
-    app_api_client,
-    permission_manage_payments,
-):
-    # given
-    transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
-    )
-    transaction.payment_method_type = PaymentMethodType.CARD
-    transaction.payment_method_name = "Payment Method Name"
-    transaction.cc_brand = None
-    transaction.cc_first_digits = "1111"
-    transaction.cc_last_digits = "0000"
-    transaction.cc_exp_month = 6
-    transaction.cc_exp_year = 2010
-    transaction.save()
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-
-    card_name = "Payment Method Name"
-
-    variables = {
-        "id": transaction_id,
-        "type": TransactionEventTypeEnum.CHARGE_SUCCESS.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "card": {
-                "name": card_name,
-                "brand": card_brand,
-                "firstDigits": card_first_digits,
-                "lastDigits": card_last_digits,
-                "expMonth": card_exp_month,
-                "expYear": card_exp_year,
-            }
-        },
-    }
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    response = get_graphql_content(response)
-    transaction_report_data = response["data"]["transactionEventReport"]
-    assert not transaction_report_data["errors"]
-
-    transaction_data = transaction_report_data["transaction"]
-    assert transaction_data
-    payment_method_details_data = transaction_data["paymentMethodDetails"]
-    assert payment_method_details_data["__typename"] == "CardPaymentMethodDetails"
-    assert payment_method_details_data["name"] == card_name
-    assert payment_method_details_data["brand"] == card_brand
-    assert payment_method_details_data["firstDigits"] == card_first_digits
-    assert payment_method_details_data["lastDigits"] == card_last_digits
-    assert payment_method_details_data["expMonth"] == card_exp_month
-    assert payment_method_details_data["expYear"] == card_exp_year
-
-    transaction.refresh_from_db()
-    assert transaction.payment_method_type == PaymentMethodType.CARD
-    assert transaction.payment_method_name == card_name
-    assert transaction.cc_brand == card_brand
-    assert transaction.cc_first_digits == card_first_digits
-    assert transaction.cc_last_digits == card_last_digits
-    assert transaction.cc_exp_month == card_exp_month
-    assert transaction.cc_exp_year == card_exp_year
-
-
-def test_transaction_event_report_with_other_payment_method_details(
-    transaction_item_generator,
-    app_api_client,
-    permission_manage_payments,
-):
-    # given
-    transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
-    )
-    transaction.payment_method_type = PaymentMethodType.CARD
-    transaction.payment_method_name = "Payment Method Name"
-    transaction.cc_brand = None
-    transaction.cc_first_digits = "1111"
-    transaction.cc_last_digits = "0000"
-    transaction.cc_exp_month = 6
-    transaction.cc_exp_year = 2010
-    transaction.save()
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-
-    other_name = "Payment Method Name"
-
-    variables = {
-        "id": transaction_id,
-        "type": TransactionEventTypeEnum.CHARGE_SUCCESS.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "other": {
-                "name": other_name,
-            }
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    response = get_graphql_content(response)
-    transaction_report_data = response["data"]["transactionEventReport"]
-    assert not transaction_report_data["errors"]
-
-    transaction_data = transaction_report_data["transaction"]
-    assert transaction_data
-
-    payment_method_details_data = transaction_data["paymentMethodDetails"]
-    assert payment_method_details_data["__typename"] == "OtherPaymentMethodDetails"
-    assert payment_method_details_data["name"] == other_name
-
-    transaction.refresh_from_db()
-    assert transaction.payment_method_type == PaymentMethodType.OTHER
-    assert transaction.payment_method_name == other_name
-    assert transaction.cc_brand is None
-    assert transaction.cc_first_digits is None
-    assert transaction.cc_last_digits is None
-    assert transaction.cc_exp_month is None
-    assert transaction.cc_exp_year is None
-
-
-def test_transaction_event_report_with_both_payment_method_details_inputs(
-    transaction_item_generator,
-    app_api_client,
-    permission_manage_payments,
-):
-    # given
-    transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
-    )
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-
-    variables = {
-        "id": transaction_id,
-        "type": TransactionEventTypeEnum.CHARGE_SUCCESS.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "other": {
-                "name": "Other",
-            },
-            "card": {
-                "name": "Name",
-            },
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    response = get_graphql_content(response)
-    transaction_report_data = response["data"]["transactionEventReport"]
-    assert transaction_report_data["errors"]
-    assert len(transaction_report_data["errors"]) == 1
-    assert transaction_report_data["errors"][0]["code"] == "INVALID"
-
-
-@pytest.mark.parametrize(
-    (
-        "card_brand_length",
-        "card_first_digits",
-        "card_last_digits",
-        "card_exp_month",
-        "card_exp_year",
-        "card_name_length",
-    ),
-    [
-        (41, "12345", "56780", 33, 12025, 257),
-        (41, None, None, None, None, None),
-        (None, "12345", None, None, None, None),
-        (None, None, "56780", None, None, None),
-        (None, None, None, 33, None, None),
-        (None, None, None, None, 12025, None),
-        (None, None, None, None, None, 257),
-    ],
-)
-def test_transaction_event_report_with_invalid_card_payment_method_details(
-    card_brand_length,
-    card_first_digits,
-    card_last_digits,
-    card_exp_month,
-    card_exp_year,
-    card_name_length,
-    transaction_item_generator,
-    app_api_client,
-    permission_manage_payments,
-):
-    # given
-    transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
-    )
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-
-    variables = {
-        "id": transaction_id,
-        "type": TransactionEventTypeEnum.CHARGE_SUCCESS.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "card": {
-                "name": "N" * (card_name_length or 0),
-                "brand": "B" * (card_brand_length or 0),
-                "firstDigits": card_first_digits,
-                "lastDigits": card_last_digits,
-                "expMonth": card_exp_month,
-                "expYear": card_exp_year,
-            }
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    response = get_graphql_content(response)
-    transaction_report_data = response["data"]["transactionEventReport"]
-    assert transaction_report_data["errors"]
-
-    for error in transaction_report_data["errors"]:
-        assert error["code"] == "INVALID"
-        assert error["field"] == "paymentMethodDetails"
-
-
-def test_transaction_event_report_with_invalid_other_payment_method_details(
-    transaction_item_generator,
-    app_api_client,
-    permission_manage_payments,
-):
-    # given
-    transaction = transaction_item_generator(
-        app=app_api_client.app, authorized_value=Decimal(10)
-    )
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-
-    variables = {
-        "id": transaction_id,
-        "type": TransactionEventTypeEnum.CHARGE_SUCCESS.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "other": {
-                "name": "N" * 257,
-            }
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    response = get_graphql_content(response)
-    transaction_report_data = response["data"]["transactionEventReport"]
-    assert transaction_report_data["errors"]
-    assert len(transaction_report_data["errors"]) == 1
-    error = transaction_report_data["errors"][0]
-    assert error["code"] == "INVALID"
-    assert error["field"] == "paymentMethodDetails"
-
-
-def test_transaction_event_report_event_already_exists_updates_card_payment_method_details(
-    transaction_item_generator, app_api_client, permission_manage_payments, app
-):
-    # given
-    card_name = "Name"
-    card_brand = "Brand"
-    card_first_digits = "1234"
-    card_last_digits = "5678"
-    card_exp_month = 12
-    card_exp_year = 2025
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    event_type = TransactionEventTypeEnum.CHARGE_SUCCESS
-    transaction = transaction_item_generator(app=app, charged_value=amount)
-    transaction.events.update(
-        psp_reference=psp_reference,
-    )
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-    variables = {
-        "id": transaction_id,
-        "type": event_type.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "card": {
-                "name": card_name,
-                "brand": card_brand,
-                "firstDigits": card_first_digits,
-                "lastDigits": card_last_digits,
-                "expMonth": card_exp_month,
-                "expYear": card_exp_year,
-            },
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    transaction.refresh_from_db()
-    response = get_graphql_content(response)
-    assert not response["data"]["transactionEventReport"]["errors"]
-    transaction_report_data = response["data"]["transactionEventReport"]
-    transaction_data = transaction_report_data["transaction"]
-    assert transaction_data
-    payment_method_details_data = transaction_data["paymentMethodDetails"]
-    assert payment_method_details_data["__typename"] == "CardPaymentMethodDetails"
-    assert payment_method_details_data["name"] == card_name
-    assert payment_method_details_data["brand"] == card_brand
-    assert payment_method_details_data["firstDigits"] == card_first_digits
-    assert payment_method_details_data["lastDigits"] == card_last_digits
-    assert payment_method_details_data["expMonth"] == card_exp_month
-    assert payment_method_details_data["expYear"] == card_exp_year
-
-    transaction.refresh_from_db()
-    assert transaction.payment_method_type == PaymentMethodType.CARD
-    assert transaction.payment_method_name == card_name
-    assert transaction.cc_brand == card_brand
-    assert transaction.cc_first_digits == card_first_digits
-    assert transaction.cc_last_digits == card_last_digits
-    assert transaction.cc_exp_month == card_exp_month
-    assert transaction.cc_exp_year == card_exp_year
-
-
-def test_transaction_event_report_event_already_exists_updates_other_payment_method_details(
-    transaction_item_generator, app_api_client, permission_manage_payments, app
-):
-    # given
-    payment_method_name = "Payment Method Name"
-
-    psp_reference = "111-abc"
-    amount = Decimal("11.00")
-    event_type = TransactionEventTypeEnum.CHARGE_SUCCESS
-    transaction = transaction_item_generator(app=app, charged_value=amount)
-    transaction.events.update(
-        psp_reference=psp_reference,
-    )
-    transaction_id = graphene.Node.to_global_id("TransactionItem", transaction.token)
-    variables = {
-        "id": transaction_id,
-        "type": event_type.name,
-        "amount": amount,
-        "pspReference": psp_reference,
-        "paymentMethodDetails": {
-            "other": {
-                "name": payment_method_name,
-            },
-        },
-    }
-
-    # when
-    response = app_api_client.post_graphql(
-        TRANSACTION_EVENT_REPORT_WITH_CARD_PAYMENT_METHOD_DETAILS_QUERY,
-        variables,
-        permissions=[permission_manage_payments],
-    )
-
-    # then
-    transaction.refresh_from_db()
-    response = get_graphql_content(response)
-    assert not response["data"]["transactionEventReport"]["errors"]
-    transaction_report_data = response["data"]["transactionEventReport"]
-    transaction_data = transaction_report_data["transaction"]
-    assert transaction_data
-    payment_method_details_data = transaction_data["paymentMethodDetails"]
-    assert payment_method_details_data["__typename"] == "OtherPaymentMethodDetails"
-    assert payment_method_details_data["name"] == payment_method_name
-
-    transaction.refresh_from_db()
-    assert transaction.payment_method_type == PaymentMethodType.OTHER
-    assert transaction.payment_method_name == payment_method_name

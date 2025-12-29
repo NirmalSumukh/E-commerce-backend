@@ -3,18 +3,15 @@ from typing import cast
 import graphene
 
 from .....account import models
-from .....account.search import prepare_user_search_document_value
-from .....core.tracing import traced_atomic_transaction
 from .....permission.auth_filters import AuthorizationFilters
 from .....webhook.event_types import WebhookEventAsyncType
 from ....account.mixins import AddressMetadataMixin
 from ....core import ResolveInfo
-from ....core.descriptions import ADDED_IN_319
+from ....core.descriptions import ADDED_IN_314, ADDED_IN_319
 from ....core.doc_category import DOC_CATEGORY_USERS
 from ....core.types import AccountError, NonNullList
 from ....core.utils import WebhookEventInfo
-from ....meta.inputs import MetadataInput, MetadataInputDescription
-from ....plugins.dataloaders import get_plugin_manager_promise
+from ....meta.inputs import MetadataInput
 from ...mixins import AppImpersonateMixin
 from ...types import AddressInput, User
 from ..base import BaseCustomerCreate
@@ -30,10 +27,7 @@ class AccountInput(AccountBaseInput):
     )
     metadata = NonNullList(
         MetadataInput,
-        description=(
-            "Fields required to update the user metadata. "
-            f"{MetadataInputDescription.PUBLIC_METADATA_INPUT}"
-        ),
+        description="Fields required to update the user metadata." + ADDED_IN_314,
         required=False,
     )
 
@@ -94,21 +88,3 @@ class AccountUpdate(AddressMetadataMixin, BaseCustomerCreate, AppImpersonateMixi
         user = cast(models.User, user)
         data["id"] = graphene.Node.to_global_id("User", user.id)
         return super().perform_mutation(root, info, **data)
-
-    @classmethod
-    @traced_atomic_transaction()
-    def save(
-        cls,
-        info: ResolveInfo,
-        instance: models.User,
-        cleaned_input,
-        instance_tracker=None,
-    ):
-        manager = get_plugin_manager_promise(info.context).get()
-
-        cls.save_default_addresses(cleaned_input=cleaned_input, user_instance=instance)
-
-        instance.search_document = prepare_user_search_document_value(instance)
-        instance.save()
-
-        cls.call_event(manager.customer_updated, instance)

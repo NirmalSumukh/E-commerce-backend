@@ -6,8 +6,7 @@ export const orderListQuery = gql`
     $after: String
     $last: Int
     $before: String
-    $where: OrderWhereInput
-    $search: String
+    $filter: OrderFilterInput
     $sort: OrderSortingInput
   ) {
     orders(
@@ -15,8 +14,7 @@ export const orderListQuery = gql`
       after: $after
       first: $first
       last: $last
-      where: $where
-      search: $search
+      filter: $filter
       sortBy: $sort
     ) {
       edges {
@@ -24,10 +22,6 @@ export const orderListQuery = gql`
           __typename
           billingAddress {
             ...Address
-          }
-          channel {
-            name
-            id
           }
           created
           id
@@ -79,10 +73,6 @@ export const orderDraftListQuery = gql`
             ...Address
           }
           created
-          channel {
-            name
-            id
-          }
           id
           number
           paymentStatus
@@ -310,17 +300,6 @@ export const DevModeQuery = /* GraphQL */ `
           userEmail
           isPaid
         }
-      }
-    }
-  }
-`;
-
-export const refundSettings = gql`
-  query RefundSettings {
-    refundSettings {
-      reasonReferenceType {
-        id
-        name
       }
     }
   }

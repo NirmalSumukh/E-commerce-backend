@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -60,22 +60,23 @@ def clean_promotion_rule(
     return cleaned_input
 
 
-def _get_gift_ids(cleaned_input, instance) -> set[int]:
+def _get_gift_ids(cleaned_input, instance):
     """Return the set of gift ids for promotion rule valid after performing mutation."""
     if not instance and not any(
-        field in cleaned_input for field in ["gifts", "add_gifts", "remove_gifts"]
+        [field in cleaned_input for field in ["gifts", "add_gifts", "remove_gifts"]]
     ):
-        return set()
+        return
 
     if "gifts" in cleaned_input:
         gifts = cleaned_input["gifts"] or []
         return {gift.id for gift in gifts}
-    # this part is only for PromotionRuleUpdate mutation
-    # so the gifts will be fetched once
-    current_gift_ids = {gift.id for gift in instance.gifts.all()}
-    add_gift_ids = {gift.id for gift in cleaned_input.get("add_gifts", [])}
-    remove_gift_ids = {gift.id for gift in cleaned_input.get("remove_gifts", [])}
-    return (current_gift_ids | add_gift_ids) - remove_gift_ids
+    else:
+        # this part is only for PromotionRuleUpdate mutation
+        # so the gifts will be fetched once
+        current_gift_ids = {gift.id for gift in instance.gifts.all()}
+        add_gift_ids = {gift.id for gift in cleaned_input.get("add_gifts", [])}
+        remove_gift_ids = {gift.id for gift in cleaned_input.get("remove_gifts", [])}
+        return (current_gift_ids | add_gift_ids) - remove_gift_ids
 
 
 def _clean_gifts(gift_ids, errors, error_class, index):
@@ -143,7 +144,8 @@ def _clean_predicates(
             errors["order_predicate"].append(
                 ValidationError(
                     message=(
-                        "For `order` predicate type, `orderPredicate` must be provided."
+                        "For `order` predicate type, `orderPredicate` "
+                        "must be provided."
                     ),
                     code=error_class.REQUIRED.value,
                     params={"index": index} if index is not None else {},
@@ -511,7 +513,7 @@ def clean_predicate(predicate, error_class, index=None):
     if isinstance(predicate, list):
         return [
             clean_predicate(item, error_class, index)
-            if isinstance(item, dict | list)
+            if isinstance(item, (dict, list))
             else item
             for item in predicate
         ]
@@ -524,14 +526,14 @@ def clean_predicate(predicate, error_class, index=None):
         )
     return {
         to_camel_case(key): clean_predicate(value, error_class, index)
-        if isinstance(value, dict | list)
+        if isinstance(value, (dict, list))
         else value
         for key, value in predicate.items()
     }
 
 
-def _contains_operator(input: dict[str, dict | str]):
-    return any(operator in input for operator in ["AND", "OR"])
+def _contains_operator(input: dict[str, Union[dict, str]]):
+    return any([operator in input for operator in ["AND", "OR"]])
 
 
 def clean_fixed_discount_value(
@@ -539,12 +541,12 @@ def clean_fixed_discount_value(
 ):
     try:
         validate_price_precision(reward_value, currency_code)
-    except ValidationError as e:
+    except ValidationError:
         raise ValidationError(
             "Invalid amount precision.",
             code=error_code,
             params={"index": index} if index is not None else {},
-        ) from e
+        )
 
 
 def clean_percentage_discount_value(
@@ -563,4 +565,3 @@ def get_from_input_or_instance(field: str, input: dict, instance: PromotionRule)
         return input[field]
     if instance:
         return getattr(instance, field)
-    return None

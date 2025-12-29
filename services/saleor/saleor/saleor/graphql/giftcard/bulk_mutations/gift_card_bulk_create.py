@@ -14,6 +14,7 @@ from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
 from ...app.dataloaders import get_app_promise
 from ...core import ResolveInfo
+from ...core.descriptions import ADDED_IN_31
 from ...core.doc_category import DOC_CATEGORY_GIFT_CARDS
 from ...core.mutations import BaseMutation
 from ...core.scalars import Date
@@ -62,7 +63,7 @@ class GiftCardBulkCreate(BaseMutation):
         )
 
     class Meta:
-        description = "Creates gift cards."
+        description = "Create gift cards." + ADDED_IN_31
         doc_category = DOC_CATEGORY_GIFT_CARDS
         model = models.GiftCard
         permissions = (GiftcardPermissions.MANAGE_GIFT_CARD,)
@@ -129,9 +130,9 @@ class GiftCardBulkCreate(BaseMutation):
         currency = balance["currency"]
         try:
             validate_price_precision(amount, currency)
-        except ValidationError as e:
-            e.code = GiftCardErrorCode.INVALID.value
-            raise ValidationError({"balance": e}) from e
+        except ValidationError as error:
+            error.code = GiftCardErrorCode.INVALID.value
+            raise ValidationError({"balance": error})
         if not amount > 0:
             raise ValidationError(
                 {
@@ -169,7 +170,7 @@ class GiftCardBulkCreate(BaseMutation):
         models.GiftCardTag.objects.bulk_create(
             [models.GiftCardTag(name=tag) for tag in tags_to_create]
         )
-        for tag_instance in tags_instances.iterator(chunk_size=1000):
+        for tag_instance in tags_instances.iterator():
             tag_instance.gift_cards.set(instances)
 
     @classmethod

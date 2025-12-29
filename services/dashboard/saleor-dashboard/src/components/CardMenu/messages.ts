@@ -2,8 +2,8 @@ import { defineMessages } from "react-intl";
 
 export const cardMenuMessages = defineMessages({
   cardMenuItemLoading: {
-    id: "9HSbdS",
+    id: "B2LE7A",
     defaultMessage: "working...",
-    description: "structure loading",
+    description: "menu item loading",
   },
 });

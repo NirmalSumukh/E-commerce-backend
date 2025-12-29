@@ -1,11 +1,11 @@
-import * as React from "react";
+import React from "react";
 
 export type OnboardingStepsIDs =
   | "get-started"
   | "create-product"
   | "explore-orders"
   | "graphql-playground"
-  | "view-extensions"
+  | "view-webhooks"
   | "invite-staff";
 
 export type OnboardingStep = {
@@ -34,8 +34,6 @@ export interface OnboardingContextType {
   markAllAsCompleted: () => void;
   toggleExpandedOnboardingStep: (id: string, currentExpandedId: OnboardingStepsIDs | "") => void;
   toggleOnboarding: (value: boolean) => void;
-  validCompletedStepsCount: number;
-  visibleSteps: OnboardingStep[];
 }
 
 export interface OnboardingProviderProps {

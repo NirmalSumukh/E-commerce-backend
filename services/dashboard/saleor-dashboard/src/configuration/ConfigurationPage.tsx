@@ -5,13 +5,13 @@ import { UserFragment } from "@dashboard/graphql";
 import { sectionNames } from "@dashboard/intl";
 import { useTheme } from "@material-ui/core/styles";
 import useMediaQuery from "@material-ui/core/useMediaQuery";
-import { NavigationCard } from "@saleor/macaw-ui";
-import { Box, Text } from "@saleor/macaw-ui-next";
+import { makeStyles, NavigationCard } from "@saleor/macaw-ui";
+import { Box, Text, vars } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
 import VersionInfo from "../components/VersionInfo";
-import { useStyles } from "./styles";
 import { MenuSection } from "./types";
 import { hasUserMenuItemPermissions } from "./utils";
 
@@ -20,13 +20,61 @@ interface VersionInfo {
   coreVersion: string;
 }
 
-interface ConfigurationPageProps {
+const useStyles = makeStyles(
+  theme => ({
+    configurationCategory: {
+      [theme.breakpoints.down("md")]: {
+        gridTemplateColumns: "1fr",
+      },
+      display: "grid",
+      gap: theme.spacing(4),
+      gridTemplateColumns: "1fr 3fr",
+      padding: theme.spacing(4, 0),
+    },
+
+    configurationItem: {
+      display: "grid",
+      gap: theme.spacing(4),
+      gridTemplateColumns: "1fr 1fr",
+    },
+    configurationLabel: {
+      paddingBottom: 20,
+    },
+
+    link: {
+      display: "contents",
+      marginBottom: theme.spacing(4),
+    },
+    icon: {
+      "& path": {
+        fill: theme.palette.primary.main,
+      },
+      fontSize: 48,
+    },
+    sectionDescription: {},
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 600 as const,
+    },
+    navigationCard: {
+      border: `1px solid ${vars.colors.border.default1}`,
+      height: 130,
+      boxShadow: "none !important",
+      "& .MuiCardContent-root": {
+        borderRadius: vars.borderRadius[3],
+      },
+    },
+  }),
+  { name: "ConfigurationPage" },
+);
+
+export interface ConfigurationPageProps {
   menu: MenuSection[];
   user: UserFragment;
   versionInfo: VersionInfo;
 }
 
-export const ConfigurationPage = (props: ConfigurationPageProps) => {
+export const ConfigurationPage: React.FC<ConfigurationPageProps> = props => {
   const {
     menu: menus,
     user,
@@ -58,9 +106,7 @@ export const ConfigurationPage = (props: ConfigurationPageProps) => {
                 </div>
                 <div className={classes.configurationItem}>
                   {menu.menuItems
-                    .filter(
-                      menuItem => hasUserMenuItemPermissions(menuItem, user) && !menuItem?.hidden,
-                    )
+                    .filter(menuItem => hasUserMenuItemPermissions(menuItem, user))
                     .map((item, itemIndex) => (
                       <Link
                         className={classes.link}

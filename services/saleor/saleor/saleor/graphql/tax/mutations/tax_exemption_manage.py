@@ -10,7 +10,7 @@ from ....order.models import Order
 from ....permission.enums import CheckoutPermissions
 from ....tax import error_codes
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import ADDED_IN_38
 from ...core.doc_category import DOC_CATEGORY_TAXES
 from ...core.types import Error
 from ...core.types.taxes import TaxSourceObject
@@ -45,7 +45,7 @@ class TaxExemptionManage(BaseMutation):
             "Exempt checkout or order from charging the taxes. When tax exemption is "
             "enabled, taxes won't be charged for the checkout or order. Taxes may "
             "still be calculated in cases when product prices are entered with the "
-            "tax included and the net price needs to be known."
+            "tax included and the net price needs to be known." + ADDED_IN_38
         )
         doc_category = DOC_CATEGORY_TAXES
         error_type_class = TaxExemptionManageError
@@ -54,7 +54,7 @@ class TaxExemptionManage(BaseMutation):
     @classmethod
     def validate_input(cls, info: ResolveInfo, data):
         obj = cls.get_node_or_error(info, data["id"])
-        if not isinstance(obj, Order | Checkout):
+        if not isinstance(obj, (Order, Checkout)):
             code = error_codes.TaxExemptionManageErrorCode.NOT_FOUND.value
             message = "Invalid object ID. Only Checkout and Order ID's are accepted."
             raise ValidationError({"id": ValidationError(code=code, message=message)})
@@ -95,7 +95,14 @@ class TaxExemptionManage(BaseMutation):
 
         if isinstance(obj, Checkout):
             cls._invalidate_checkout(info, obj)
-            obj.save(update_fields=["tax_exemption", "price_expiration", "last_change"])
+            obj.save(
+                update_fields=[
+                    "tax_exemption",
+                    "price_expiration",
+                    "discount_expiration",
+                    "last_change",
+                ]
+            )
 
         if isinstance(obj, Order):
             cls.validate_order_status(obj)
@@ -104,4 +111,4 @@ class TaxExemptionManage(BaseMutation):
                 update_fields=["tax_exemption", "should_refresh_prices", "updated_at"]
             )
 
-        return TaxExemptionManage(taxable_object=SyncWebhookControlContext(node=obj))
+        return TaxExemptionManage(taxable_object=obj)

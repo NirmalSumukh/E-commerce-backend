@@ -1,5 +1,5 @@
 import { Box, PropsWithBox } from "@saleor/macaw-ui-next";
-import * as React from "react";
+import React from "react";
 
 export const Grid = ({ children, ...rest }: PropsWithBox<{ children: React.ReactNode }>) => {
   return (

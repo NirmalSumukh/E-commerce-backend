@@ -10,6 +10,7 @@ import { getGiftCardErrorMessage } from "@dashboard/giftCards/GiftCardUpdate/mes
 import useCurrentDate from "@dashboard/hooks/useCurrentDate";
 import { FormChange } from "@dashboard/hooks/useForm";
 import { Box, Checkbox, Input, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage, MessageDescriptor, useIntl } from "react-intl";
 
 import { giftCardCreateExpirySelectMessages as messages } from "./messages";
@@ -39,11 +40,11 @@ interface GiftCardCreateExpirySelectProps {
   >;
 }
 
-const GiftCardCreateExpirySelect = ({
+const GiftCardCreateExpirySelect: React.FC<GiftCardCreateExpirySelectProps> = ({
   errors,
   change,
   data: { expirySelected, expiryPeriodType, expiryPeriodAmount, expiryType, expiryDate },
-}: GiftCardCreateExpirySelectProps) => {
+}) => {
   const intl = useIntl();
   const translatedOptions = options.map(({ label, value }) => ({
     value,

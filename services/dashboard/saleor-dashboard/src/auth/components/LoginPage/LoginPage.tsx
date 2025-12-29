@@ -1,5 +1,3 @@
-import { getExternalAuthenticationMethodName } from "@dashboard/auth";
-import { LastLoginMethod } from "@dashboard/auth/hooks/useLastLoginMethod";
 import { UserContextError } from "@dashboard/auth/types";
 import { passwordResetUrl } from "@dashboard/auth/urls";
 import { ButtonWithLoader } from "@dashboard/components/ButtonWithLoader/ButtonWithLoader";
@@ -8,27 +6,25 @@ import { AvailableExternalAuthenticationsQuery } from "@dashboard/graphql";
 import { SubmitPromise } from "@dashboard/hooks/useForm";
 import { commonMessages } from "@dashboard/intl";
 import { EyeIcon } from "@saleor/macaw-ui";
-import { Box, Button, Input, Text } from "@saleor/macaw-ui-next";
-import { Fragment, useState } from "react";
+import { Box, Button, Divider, Input, Text } from "@saleor/macaw-ui-next";
+import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 
 import useStyles from "../styles";
 import LoginForm, { LoginFormData } from "./form";
-import { LastLoginIndicator } from "./LastLoginIndicator";
 import { getErrorMessage } from "./messages";
 
-interface LoginCardProps {
+export interface LoginCardProps {
   errors: UserContextError[];
   disabled: boolean;
   loading: boolean;
   externalAuthentications?: AvailableExternalAuthenticationsQuery["shop"]["availableExternalAuthentications"];
   onExternalAuthentication: (pluginId: string) => void;
   onSubmit: (event: LoginFormData) => SubmitPromise;
-  lastLoginMethod: LastLoginMethod;
 }
 
-const LoginPage = (props: LoginCardProps) => {
+const LoginPage: React.FC<LoginCardProps> = props => {
   const {
     errors,
     disabled,
@@ -36,14 +32,11 @@ const LoginPage = (props: LoginCardProps) => {
     externalAuthentications = [],
     onExternalAuthentication,
     onSubmit,
-    lastLoginMethod,
   } = props;
   const classes = useStyles(props);
   const intl = useIntl();
   const [showPassword, setShowPassword] = useState(false);
   const [optimisticLoaderAuthId, setOptimisticLoaderAuthId] = useState<null | string>(null);
-  const showLastLoginIndicatorForPassword =
-    lastLoginMethod === "password" && externalAuthentications.length > 0;
 
   return (
     <LoginForm onSubmit={onSubmit}>
@@ -97,9 +90,7 @@ const LoginPage = (props: LoginCardProps) => {
             disabled={disabled}
             endAdornment={
               <Button
-                icon={
-                  <EyeIcon onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-                }
+                icon={<EyeIcon />}
                 onMouseDown={() => setShowPassword(true)}
                 onMouseUp={() => setShowPassword(false)}
                 variant="tertiary"
@@ -126,14 +117,26 @@ const LoginPage = (props: LoginCardProps) => {
               type="submit"
               transitionState={loading ? "loading" : "default"}
               data-test-id="submit"
-              position="relative"
             >
-              {showLastLoginIndicatorForPassword && <LastLoginIndicator />}
               <FormattedMessage id="AubJ/S" defaultMessage="Sign in" description="button" />
             </ButtonWithLoader>
           </div>
+          {externalAuthentications.length > 0 && (
+            <>
+              <FormSpacer />
+              <Divider />
+              <FormSpacer />
+              <Text>
+                <FormattedMessage
+                  id="aFU0vm"
+                  defaultMessage="or continue with"
+                  description="description"
+                />
+              </Text>
+            </>
+          )}
           {externalAuthentications.map(externalAuthentication => (
-            <Fragment key={externalAuthentication.id}>
+            <React.Fragment key={externalAuthentication.id}>
               <FormSpacer />
               <ButtonWithLoader
                 width="100%"
@@ -147,15 +150,10 @@ const LoginPage = (props: LoginCardProps) => {
                 transitionState={
                   optimisticLoaderAuthId === externalAuthentication.id ? "loading" : "default"
                 }
-                position="relative"
               >
-                {getExternalAuthenticationMethodName({
-                  pluginId: externalAuthentication.id,
-                  intl,
-                }) || externalAuthentication.name}
-                {lastLoginMethod === externalAuthentication.id && <LastLoginIndicator />}
+                {externalAuthentication.name}
               </ButtonWithLoader>
-            </Fragment>
+            </React.Fragment>
           ))}
         </Box>
       )}

@@ -1,6 +1,6 @@
 import { GridTable } from "@dashboard/components/GridTable";
 import { OrderDetailsGrantRefundFragment } from "@dashboard/graphql";
-import * as React from "react";
+import React from "react";
 import { Control, FieldArrayWithId, UseFieldArrayUpdate } from "react-hook-form";
 
 import { LineToRefund, OrderTransactionRefundPageFormData } from "../../OrderTransactionRefundPage";
@@ -24,7 +24,7 @@ interface OrderTransactionRefundTableLineProps {
   onChange: (data: RefundQuantityChange, index: number) => void;
 }
 
-export const OrderTransactionRefundTableLine = ({
+export const OrderTransactionRefundTableLine: React.FC<OrderTransactionRefundTableLineProps> = ({
   control,
   field,
   index,
@@ -36,7 +36,7 @@ export const OrderTransactionRefundTableLine = ({
   onEditReasonModal,
   refundFieldsUpdate,
   onChange,
-}: OrderTransactionRefundTableLineProps) => {
+}) => {
   const handleInputOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onChange(
       {

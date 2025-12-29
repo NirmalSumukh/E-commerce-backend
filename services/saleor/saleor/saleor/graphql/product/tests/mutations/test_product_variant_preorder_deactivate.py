@@ -4,6 +4,7 @@ import graphene
 
 from .....core.exceptions import PreorderAllocationError
 from .....product.error_codes import ProductErrorCode
+from .....tests.utils import flush_post_commit_hooks
 from .....warehouse.models import Allocation
 from ....tests.utils import assert_no_permission, get_graphql_content
 
@@ -54,6 +55,7 @@ def test_product_variant_deactivate_preorder(
     )
     variant.refresh_from_db()
     content = get_graphql_content(response)
+    flush_post_commit_hooks()
     data = content["data"]["productVariantPreorderDeactivate"]["productVariant"]
 
     assert not data["preorder"]

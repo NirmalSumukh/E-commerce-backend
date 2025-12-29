@@ -27,7 +27,7 @@ export enum ProductTypeListUrlSortField {
   name = "name",
   digital = "digital",
 }
-type ProductTypeListUrlSort = Sort<ProductTypeListUrlSortField>;
+export type ProductTypeListUrlSort = Sort<ProductTypeListUrlSortField>;
 export type ProductTypeListUrlQueryParams = ActiveTab &
   BulkAction &
   Dialog<ProductTypeListUrlDialog> &
@@ -37,7 +37,7 @@ export type ProductTypeListUrlQueryParams = ActiveTab &
 export const productTypeListUrl = (params?: ProductTypeListUrlQueryParams) =>
   productTypeListPath + "?" + stringifyQs(params);
 
-interface ProductTypeAddUrlKind {
+export interface ProductTypeAddUrlKind {
   kind?: ProductTypeKindEnum;
 }
 export type ProductTypeAddUrlQueryParams = ProductTypeAddUrlKind;
@@ -46,7 +46,7 @@ export const productTypeAddUrl = (params?: ProductTypeAddUrlQueryParams) =>
   productTypeAddPath + "?" + stringifyQs(params);
 
 export const productTypePath = (id: string) => urlJoin(productTypeSection, id);
-type ProductTypeUrlDialog =
+export type ProductTypeUrlDialog =
   | "assign-attribute"
   | "unassign-attribute"
   | "unassign-product-attributes"

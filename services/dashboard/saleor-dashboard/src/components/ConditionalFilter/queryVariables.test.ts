@@ -1,24 +1,20 @@
-import {
-  AttributeEntityTypeEnum,
-  AttributeInputTypeEnum,
-  ProductTypeConfigurable,
-  ProductTypeEnum,
-} from "@dashboard/graphql";
+import { ProductTypeConfigurable, ProductTypeEnum } from "@dashboard/graphql";
 
 import { Condition, FilterContainer, FilterElement } from "./FilterElement";
 import { ConditionOptions } from "./FilterElement/ConditionOptions";
 import { ConditionSelected } from "./FilterElement/ConditionSelected";
 import { ExpressionValue } from "./FilterElement/FilterElement";
 import {
-  createAttributesQueryVariables,
+  creatAttributesQueryVariables,
+  creatDraftOrderQueryVariables,
   createCustomerQueryVariables,
-  createDraftOrderQueryVariables,
   createGiftCardQueryVariables,
   createPageQueryVariables,
   createProductQueryVariables,
   createProductTypesQueryVariables,
   createStaffMembersQueryVariables,
-  createVoucherQueryVariables,
+  creatVoucherQueryVariables,
+  mapStaticQueryPartToLegacyVariables,
 } from "./queryVariables";
 
 describe("ConditionalFilter / queryVariables / createProductQueryVariables", () => {
@@ -51,7 +47,7 @@ describe("ConditionalFilter / queryVariables / createProductQueryVariables", () 
       ),
       "AND",
       new FilterElement(
-        new ExpressionValue("attribute", "Attribute", "attribute"),
+        new ExpressionValue("bottle-size", "Bottle size", "DROPDOWN"),
         new Condition(
           ConditionOptions.fromAttributeType("DROPDOWN"),
           new ConditionSelected(
@@ -79,8 +75,6 @@ describe("ConditionalFilter / queryVariables / createProductQueryVariables", () 
           false,
         ),
         false,
-        undefined,
-        new ExpressionValue("bottle-size", "Bottle size", "DROPDOWN"),
       ),
     ];
     const expectedOutput = {
@@ -93,169 +87,15 @@ describe("ConditionalFilter / queryVariables / createProductQueryVariables", () 
     // Assert
     expect(result).toEqual(expectedOutput);
   });
-
-  it("should create variables for REFERENCE attribute (single value)", () => {
-    // Arrange
-    // Simulate a reference attribute (e.g. reference to a Page)
-    const filters: FilterContainer = [
-      new FilterElement(
-        new ExpressionValue("attribute", "Attribute", "attribute"),
-        new Condition(
-          ConditionOptions.fromAttributeType("REFERENCE"),
-          new ConditionSelected(
-            { label: "Page 1", slug: "page-1", value: "UGFnZTox" },
-            { type: "REFERENCE", value: "UGFnZTox", label: "Page 1" },
-            [{ label: "Page 1", slug: "page-1", value: "UGFnZTox" }],
-            false,
-          ),
-          false,
-        ),
-        false,
-        undefined,
-        new ExpressionValue(
-          "ref-attr", // slug
-          "Reference Attribute", // label
-          AttributeInputTypeEnum.REFERENCE,
-          AttributeEntityTypeEnum.PAGE,
-        ),
-      ),
-    ];
-    const expectedOutput = {
-      attributes: [
-        {
-          slug: "ref-attr",
-          value: {
-            reference: {
-              referencedIds: {
-                containsAny: ["UGFnZTox"], // Global ID, not label
-              },
-            },
-          },
-        },
-      ],
-    };
-
-    // Act
-    const result = createProductQueryVariables(filters);
-
-    // Assert
-    expect(result).toEqual(expectedOutput);
-  });
-
-  it("should create variables for REFERENCE attribute (multiple values)", () => {
-    // Arrange
-    const filters: FilterContainer = [
-      new FilterElement(
-        new ExpressionValue("attribute", "Attribute", "attribute"),
-        new Condition(
-          ConditionOptions.fromAttributeType("REFERENCE"),
-          new ConditionSelected(
-            [
-              { label: "Page 1", slug: "page-1", value: "UGFnZTox" },
-              { label: "Page 2", slug: "page-2", value: "UGFnZToyMg==" },
-            ],
-            { type: "REFERENCE", value: "UGFnZTox", label: "Page 1" },
-            [
-              { label: "Page 1", slug: "page-1", value: "UGFnZTox" },
-              { label: "Page 2", slug: "page-2", value: "UGFnZToyMg==" },
-            ],
-            false,
-          ),
-          false,
-        ),
-        false,
-        undefined,
-        new ExpressionValue(
-          "ref-attr", // slug
-          "Reference Attribute", // label
-          AttributeInputTypeEnum.REFERENCE,
-          AttributeEntityTypeEnum.PAGE,
-        ),
-      ),
-    ];
-    const expectedOutput = {
-      attributes: [
-        {
-          slug: "ref-attr",
-          value: {
-            reference: {
-              referencedIds: {
-                containsAny: ["UGFnZTox", "UGFnZToyMg=="], // Global IDs, not labels
-              },
-            },
-          },
-        },
-      ],
-    };
-
-    // Act
-    const result = createProductQueryVariables(filters);
-
-    // Assert
-    expect(result).toEqual(expectedOutput);
-  });
-
-  it("should create variables for PRODUCT_VARIANT reference attribute", () => {
-    // Arrange
-    const filters: FilterContainer = [
-      new FilterElement(
-        new ExpressionValue("attribute", "Attribute", "attribute"),
-        new Condition(
-          ConditionOptions.fromAttributeType("SINGLE_REFERENCE"),
-          ConditionSelected.fromConditionItemAndValue(
-            { type: "multiselect", label: "in", value: "input-2" },
-            [
-              {
-                label: "Product A: Variant A",
-                slug: "UHJvZHVjdFZhcmlhbnQ6MQ==",
-                value: "UHJvZHVjdFZhcmlhbnQ6MQ==",
-                originalSlug: "SKU-1",
-              },
-            ],
-          ),
-          false,
-        ),
-        false,
-        undefined,
-        new ExpressionValue(
-          "variant-ref",
-          "Variant Attribute",
-          AttributeInputTypeEnum.SINGLE_REFERENCE,
-          AttributeEntityTypeEnum.PRODUCT_VARIANT,
-        ),
-      ),
-    ];
-
-    const expectedOutput = {
-      attributes: [
-        {
-          slug: "variant-ref",
-          value: {
-            reference: {
-              referencedIds: {
-                containsAny: ["UHJvZHVjdFZhcmlhbnQ6MQ=="],
-              },
-            },
-          },
-        },
-      ],
-    };
-
-    // Act
-    const result = createProductQueryVariables(filters);
-
-    // Assert
-    expect(result).toEqual(expectedOutput);
-  });
 });
 
-describe("ConditionalFilter / queryVariables / createVoucherQueryVariables", () => {
+describe("ConditionalFilter / queryVariables / creatVoucherQueryVariables", () => {
   it("should return empty variables for empty filters", () => {
     // Arrange
     const filters: FilterContainer = [];
     const expectedOutput = {};
     // Act
-    const result = createVoucherQueryVariables(filters);
+    const result = creatVoucherQueryVariables(filters);
 
     // Assert
     expect(result).toEqual({
@@ -355,10 +195,10 @@ describe("ConditionalFilter / queryVariables / createVoucherQueryVariables", () 
       discountType: ["discount-1", "discount-2"],
       started: { lte: "2025-02-15T16:24", gte: "2025-01-31T16:24" },
       timesUsed: { gte: 10, lte: 10 },
-      status: ["status-1"],
+      status: "status-1",
     };
     // Act
-    const result = createVoucherQueryVariables(filters);
+    const result = creatVoucherQueryVariables(filters);
 
     // Assert
     expect(result).toEqual({
@@ -411,13 +251,13 @@ describe("ConditionalFilter / queryVariables / createPageQueryVariables", () => 
   });
 });
 
-describe("ConditionalFilter / queryVariables / createDraftOrderQueryVariables", () => {
+describe("ConditionalFilter / queryVariables / creatDraftOrderQueryVariables", () => {
   it("should return empty variables for empty filters", () => {
     // Arrange
     const filters: FilterContainer = [];
     const expectedOutput = {};
     // Act
-    const result = createDraftOrderQueryVariables(filters);
+    const result = creatDraftOrderQueryVariables(filters);
 
     // Assert
     expect(result).toEqual(expectedOutput);
@@ -461,7 +301,7 @@ describe("ConditionalFilter / queryVariables / createDraftOrderQueryVariables", 
       customer: "value1",
     };
     // Act
-    const result = createDraftOrderQueryVariables(filters);
+    const result = creatDraftOrderQueryVariables(filters);
 
     // Assert
     expect(result).toEqual(expectedOutput);
@@ -805,13 +645,13 @@ describe("ConditionalFilter / queryVariables / createStaffMembersQueryVariables"
   });
 });
 
-describe("ConditionalFilter / queryVariables / createAttributesQueryVariables", () => {
+describe("ConditionalFilter / queryVariables / creatAttributesQueryVariables", () => {
   it("should return empty variables for empty filters", () => {
     // Arrange
     const filters: FilterContainer = [];
     const expectedOutput = {};
     // Act
-    const result = createAttributesQueryVariables(filters);
+    const result = creatAttributesQueryVariables(filters);
 
     // Assert
     expect(result).toEqual(expectedOutput);
@@ -819,7 +659,7 @@ describe("ConditionalFilter / queryVariables / createAttributesQueryVariables", 
 
   it("should create variables with selected filters", () => {
     // Arrange
-    const channelFilterElement = new FilterElement(
+    const channelFilterElemen = new FilterElement(
       new ExpressionValue("channel", "Channel", "channel"),
       new Condition(
         ConditionOptions.fromStaticElementName("channel"),
@@ -849,13 +689,61 @@ describe("ConditionalFilter / queryVariables / createAttributesQueryVariables", 
       false,
     );
 
-    const filters: FilterContainer = [channelFilterElement, "AND", typeFilterElement];
+    const filters: FilterContainer = [channelFilterElemen, "AND", typeFilterElement];
     const expectedOutput = {
       channel: "default-channel",
       type: "PRODUCT_TYPE",
     };
     // Act
-    const result = createAttributesQueryVariables(filters);
+    const result = creatAttributesQueryVariables(filters);
+
+    // Assert
+    expect(result).toEqual(expectedOutput);
+  });
+});
+
+describe("ConditionalFilter / queryVariables / mapStaticQueryPartToLegacyVariables", () => {
+  it("should return queryPart if it is not an object", () => {
+    // Arrange
+    const queryPart = "queryPart";
+    const expectedOutput = "queryPart";
+
+    // Act
+    const result = mapStaticQueryPartToLegacyVariables(queryPart);
+
+    // Assert
+    expect(result).toEqual(expectedOutput);
+  });
+
+  it("should transform range input to legacy format", () => {
+    // Arrange
+    const queryPart = { range: { lte: "value" } };
+    const expectedOutput = { lte: "value" };
+
+    // Act
+    const result = mapStaticQueryPartToLegacyVariables(queryPart);
+
+    // Assert
+    expect(result).toEqual(expectedOutput);
+  });
+
+  it("should transform eq input to legacy format", () => {
+    // Arrange
+    const queryPart = { eq: "value" };
+    const expectedOutput = "value";
+    // Act
+    const result = mapStaticQueryPartToLegacyVariables(queryPart);
+
+    // Assert
+    expect(result).toEqual(expectedOutput);
+  });
+
+  it("should transform oneOf input to legacy format", () => {
+    // Arrange
+    const queryPart = { oneOf: ["value1", "value2"] };
+    const expectedOutput = ["value1", "value2"];
+    // Act
+    const result = mapStaticQueryPartToLegacyVariables(queryPart);
 
     // Assert
     expect(result).toEqual(expectedOutput);

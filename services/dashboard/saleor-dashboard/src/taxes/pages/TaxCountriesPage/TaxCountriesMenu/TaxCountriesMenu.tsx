@@ -8,7 +8,7 @@ import { Card, CardContent, Divider } from "@material-ui/core";
 import { List, ListHeader, ListItem, ListItemCell } from "@saleor/macaw-ui";
 import { Button, Skeleton, TrashBinIcon } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import { Fragment } from "react";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { useStyles } from "./styles";
@@ -20,12 +20,12 @@ interface TaxCountriesMenuProps {
   onCountryAdd: () => void;
 }
 
-const TaxCountriesMenu = ({
+export const TaxCountriesMenu: React.FC<TaxCountriesMenuProps> = ({
   configurations,
   selectedCountryId,
   onCountryDelete,
   onCountryAdd,
-}: TaxCountriesMenuProps) => {
+}) => {
   const classes = useStyles();
   const intl = useIntl();
 
@@ -54,7 +54,7 @@ const TaxCountriesMenu = ({
           </ListHeader>
           <Divider />
           {configurations?.map((config, configIndex) => (
-            <Fragment key={config.country.code}>
+            <React.Fragment key={config.country.code}>
               <ListItemLink
                 data-test-id="countries-list-rows"
                 className={clsx(classes.clickable, classes.tableRow, {
@@ -78,7 +78,7 @@ const TaxCountriesMenu = ({
                 </ListItemCell>
               </ListItemLink>
               {!isLastElement(configurations, configIndex) && <Divider />}
-            </Fragment>
+            </React.Fragment>
           )) ?? <Skeleton />}
         </List>
       )}

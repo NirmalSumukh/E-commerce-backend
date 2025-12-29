@@ -4,6 +4,7 @@ import { createCustomerQueryVariables } from "@dashboard/components/ConditionalF
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
 import { WindowTitle } from "@dashboard/components/WindowTitle";
+import { useFlag } from "@dashboard/featureFlags";
 import { useBulkRemoveCustomersMutation, useListCustomersQuery } from "@dashboard/graphql";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
 import useListSettings from "@dashboard/hooks/useListSettings";
@@ -23,23 +24,24 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import isEqual from "lodash/isEqual";
-import { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import CustomerListPage from "../../components/CustomerListPage";
 import { customerListUrl, CustomerListUrlDialog, CustomerListUrlQueryParams } from "../../urls";
-import { getFilterOpts, getFilterQueryParam, storageUtils } from "./filters";
+import { getFilterOpts, getFilterQueryParam, getFilterVariables, storageUtils } from "./filters";
 import { getSortQueryVariables } from "./sort";
 
 interface CustomerListProps {
   params: CustomerListUrlQueryParams;
 }
 
-const CustomerList = ({ params }: CustomerListProps) => {
+export const CustomerList: React.FC<CustomerListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
   const { updateListSettings, settings } = useListSettings(ListViews.CUSTOMER_LIST);
+  const { enabled: isCustomersFiltersEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
   const filter = createCustomerQueryVariables(valueProvider.value);
 
@@ -68,7 +70,15 @@ const CustomerList = ({ params }: CustomerListProps) => {
     storageUtils,
   });
   const paginationState = createPaginationState(settings.rowNumber, params);
-  const newQueryVariables = useMemo(
+  const queryVariables = React.useMemo(
+    () => ({
+      ...paginationState,
+      filter: getFilterVariables(params),
+      sort: getSortQueryVariables(params),
+    }),
+    [params, settings.rowNumber],
+  );
+  const newQueryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: {
@@ -82,7 +92,7 @@ const CustomerList = ({ params }: CustomerListProps) => {
 
   const { data, refetch } = useListCustomersQuery({
     displayLoader: true,
-    variables: newQueryVariables,
+    variables: isCustomersFiltersEnabled ? newQueryVariables : queryVariables,
   });
   const customers = mapEdgesToItems(data?.customers);
   const [changeFilters, resetFilters, handleSearchChange] = createFilterHandlers({
@@ -207,5 +217,4 @@ const CustomerList = ({ params }: CustomerListProps) => {
     </PaginatorContext.Provider>
   );
 };
-
 export default CustomerList;

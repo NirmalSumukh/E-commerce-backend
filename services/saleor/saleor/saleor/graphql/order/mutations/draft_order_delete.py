@@ -11,7 +11,7 @@ from ....payment.models import Payment, TransactionItem
 from ....permission.enums import OrderPermissions
 from ....webhook.event_types import WebhookEventAsyncType
 from ...core import ResolveInfo
-from ...core.context import SyncWebhookControlContext
+from ...core.descriptions import ADDED_IN_310
 from ...core.mutations import (
     ModelDeleteWithRestrictedChannelAccessMutation,
     ModelWithExtRefMutation,
@@ -28,7 +28,7 @@ class DraftOrderDelete(
         id = graphene.ID(required=False, description="ID of a product to delete.")
         external_reference = graphene.String(
             required=False,
-            description="External ID of a product to delete.",
+            description=f"External ID of a product to delete. {ADDED_IN_310}",
         )
 
     class Meta:
@@ -86,8 +86,3 @@ class DraftOrderDelete(
             if voucher_code := VoucherCode.objects.filter(code=code).first():
                 voucher = voucher_code.voucher
                 release_voucher_code_usage(voucher_code, voucher, None)
-
-    @classmethod
-    def success_response(cls, order):
-        """Return a success response."""
-        return cls(order=SyncWebhookControlContext(order), errors=[])

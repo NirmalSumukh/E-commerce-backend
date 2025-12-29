@@ -9,6 +9,7 @@ import useNotifier from "@dashboard/hooks/useNotifier";
 import useShop from "@dashboard/hooks/useShop";
 import { commonMessages } from "@dashboard/intl";
 import { stringifyQs } from "@dashboard/utils/urls";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { extractMutationErrors, maybe } from "../../misc";
@@ -19,13 +20,17 @@ import { getParsedTranslationInputData } from "../utils";
 export interface TranslationsCollectionsQueryParams {
   activeField: string;
 }
-interface TranslationsCollectionsProps {
+export interface TranslationsCollectionsProps {
   id: string;
   languageCode: LanguageCodeEnum;
   params: TranslationsCollectionsQueryParams;
 }
 
-const TranslationsCollections = ({ id, languageCode, params }: TranslationsCollectionsProps) => {
+const TranslationsCollections: React.FC<TranslationsCollectionsProps> = ({
+  id,
+  languageCode,
+  params,
+}) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const shop = useShop();

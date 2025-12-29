@@ -10,6 +10,7 @@ from .....product.utils.product import (
 from .....webhook.event_types import WebhookEventAsyncType
 from .....webhook.utils import get_webhooks_for_event
 from ....core import ResolveInfo
+from ....core.descriptions import ADDED_IN_317, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ....core.mutations import ModelBulkDeleteMutation
 from ....core.types import DiscountError, NonNullList
@@ -25,7 +26,7 @@ class PromotionBulkDelete(ModelBulkDeleteMutation):
         )
 
     class Meta:
-        description = "Deletes promotions."
+        description = "Deletes promotions." + ADDED_IN_317 + PREVIEW_FEATURE
         model = models.Promotion
         object_type = Promotion
         permissions = (DiscountPermissions.MANAGE_DISCOUNTS,)
@@ -41,7 +42,7 @@ class PromotionBulkDelete(ModelBulkDeleteMutation):
     @classmethod
     def bulk_action(cls, info: ResolveInfo, queryset, /):
         channel_to_products_map = cls.get_product_and_channel_map(queryset)
-        promotions = list(queryset)
+        promotions = [promotion for promotion in queryset]
         queryset.delete()
         manager = get_plugin_manager_promise(info.context).get()
         webhooks = get_webhooks_for_event(WebhookEventAsyncType.PROMOTION_DELETED)

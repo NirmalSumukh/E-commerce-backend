@@ -6,6 +6,7 @@ import {
 } from "@dashboard/attributes/utils/data";
 import { TopNav } from "@dashboard/components/AppLayout/TopNav";
 import AssignAttributeValueDialog from "@dashboard/components/AssignAttributeValueDialog";
+import { Container } from "@dashboard/components/AssignContainerDialog";
 import {
   AttributeInput,
   Attributes,
@@ -21,8 +22,6 @@ import {
   ProductErrorWithAttributesFragment,
   ProductVariantCreateDataQuery,
   SearchAttributeValuesQuery,
-  SearchCategoriesQuery,
-  SearchCollectionsQuery,
   SearchPagesQuery,
   SearchProductsQuery,
   SearchWarehousesQuery,
@@ -31,8 +30,9 @@ import { SubmitPromise } from "@dashboard/hooks/useForm";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import { ProductDetailsChannelsAvailabilityCard } from "@dashboard/products/components/ProductVariantChannels/ChannelsAvailabilityCard";
 import { productUrl } from "@dashboard/products/urls";
-import { Container, FetchMoreProps, RelayToFlat, ReorderAction } from "@dashboard/types";
+import { FetchMoreProps, RelayToFlat, ReorderAction } from "@dashboard/types";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { ProductShipping } from "../ProductShipping";
@@ -43,9 +43,8 @@ import ProductVariantCheckoutSettings from "../ProductVariantCheckoutSettings/Pr
 import ProductVariantName from "../ProductVariantName";
 import ProductVariantNavigation from "../ProductVariantNavigation";
 import { ProductVariantPrice } from "../ProductVariantPrice";
-import {
+import ProductVariantCreateForm, {
   ProductVariantCreateData,
-  ProductVariantCreateForm,
   ProductVariantCreateHandlers,
 } from "./form";
 
@@ -89,8 +88,6 @@ interface ProductVariantCreatePageProps {
   weightUnit: string;
   referencePages?: RelayToFlat<SearchPagesQuery["search"]>;
   referenceProducts?: RelayToFlat<SearchProductsQuery["search"]>;
-  referenceCategories?: RelayToFlat<SearchCategoriesQuery["search"]>;
-  referenceCollections?: RelayToFlat<SearchCollectionsQuery["search"]>;
   attributeValues: RelayToFlat<SearchAttributeValuesQuery["attribute"]["choices"]>;
   onSubmit: (data: ProductVariantCreateData) => SubmitPromise;
   onVariantClick: (variantId: string) => void;
@@ -100,22 +97,17 @@ interface ProductVariantCreatePageProps {
   onAssignReferencesClick: (attribute: AttributeInput) => void;
   fetchReferencePages?: (data: string) => void;
   fetchReferenceProducts?: (data: string) => void;
-  fetchReferenceCategories?: (data: string) => void;
-  fetchReferenceCollections?: (data: string) => void;
   fetchAttributeValues: (query: string, attributeId: string) => void;
   fetchMoreReferencePages?: FetchMoreProps;
   fetchMoreReferenceProducts?: FetchMoreProps;
-  fetchMoreReferenceCategories?: FetchMoreProps;
-  fetchMoreReferenceCollections?: FetchMoreProps;
   fetchMoreAttributeValues?: FetchMoreProps;
   onCloseDialog: () => void;
   onAttributeSelectBlur: () => void;
   fetchMoreWarehouses: () => void;
   searchWarehousesResult: QueryResult<SearchWarehousesQuery>;
-  searchWarehouses: (query: string) => void;
 }
 
-export const ProductVariantCreatePage = ({
+const ProductVariantCreatePage: React.FC<ProductVariantCreatePageProps> = ({
   productId,
   defaultVariantId,
   disabled,
@@ -126,8 +118,6 @@ export const ProductVariantCreatePage = ({
   weightUnit,
   referencePages = [],
   referenceProducts = [],
-  referenceCategories = [],
-  referenceCollections = [],
   attributeValues,
   onSubmit,
   onVariantReorder,
@@ -136,20 +126,15 @@ export const ProductVariantCreatePage = ({
   onAssignReferencesClick,
   fetchReferencePages,
   fetchReferenceProducts,
-  fetchReferenceCategories,
-  fetchReferenceCollections,
   fetchAttributeValues,
   fetchMoreReferencePages,
   fetchMoreReferenceProducts,
-  fetchMoreReferenceCategories,
-  fetchMoreReferenceCollections,
   fetchMoreAttributeValues,
   onCloseDialog,
   onAttributeSelectBlur,
   fetchMoreWarehouses,
   searchWarehousesResult,
-  searchWarehouses,
-}: ProductVariantCreatePageProps) => {
+}) => {
   const intl = useIntl();
   const navigate = useNavigator();
   const { isOpen: isManageChannelsModalOpen, toggle: toggleManageChannels } = useManageChannels();
@@ -167,7 +152,7 @@ export const ProductVariantCreatePage = ({
         data.attributes,
       ),
     );
-    handlers.selectAttributeReferenceAdditionalData(
+    handlers.selectAttributeReferenceMetadata(
       assignReferencesAttributeId,
       attributeValues.map(({ id, name }) => ({ value: id, label: name })),
     );
@@ -180,16 +165,10 @@ export const ProductVariantCreatePage = ({
       onSubmit={onSubmit}
       referencePages={referencePages}
       referenceProducts={referenceProducts}
-      referenceCategories={referenceCategories}
-      referenceCollections={referenceCollections}
       fetchReferencePages={fetchReferencePages}
       fetchMoreReferencePages={fetchMoreReferencePages}
       fetchReferenceProducts={fetchReferenceProducts}
       fetchMoreReferenceProducts={fetchMoreReferenceProducts}
-      fetchReferenceCategories={fetchReferenceCategories}
-      fetchMoreReferenceCategories={fetchMoreReferenceCategories}
-      fetchReferenceCollections={fetchReferenceCollections}
-      fetchMoreReferenceCollections={fetchMoreReferenceCollections}
       assignReferencesAttributeId={assignReferencesAttributeId}
       disabled={disabled}
     >
@@ -305,12 +284,11 @@ export const ProductVariantCreatePage = ({
                     warehouses={mapEdgesToItems(searchWarehousesResult?.data?.search) ?? []}
                     fetchMoreWarehouses={fetchMoreWarehouses}
                     hasMoreWarehouses={searchWarehousesResult?.data?.search?.pageInfo?.hasNextPage}
+                    disabled={disabled}
                     hasVariants={true}
                     onFormDataChange={change}
                     errors={errors}
                     stocks={data.stocks}
-                    loading={!product}
-                    searchWarehouses={searchWarehouses}
                     onChange={handlers.changeStock}
                     onWarehouseStockAdd={handlers.addStock}
                     onWarehouseStockDelete={handlers.deleteStock}
@@ -341,8 +319,6 @@ export const ProductVariantCreatePage = ({
                   confirmButtonState={"default"}
                   products={referenceProducts}
                   pages={referencePages}
-                  collections={referenceCollections}
-                  categories={referenceCategories}
                   attribute={data.attributes.find(({ id }) => id === assignReferencesAttributeId)}
                   hasMore={handlers.fetchMoreReferences?.hasMore}
                   open={canOpenAssignReferencesAttributeDialog}
@@ -373,3 +349,4 @@ export const ProductVariantCreatePage = ({
 };
 
 ProductVariantCreatePage.displayName = "ProductVariantCreatePage";
+export default ProductVariantCreatePage;

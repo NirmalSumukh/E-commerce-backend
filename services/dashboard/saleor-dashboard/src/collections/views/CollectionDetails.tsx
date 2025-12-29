@@ -24,6 +24,7 @@ import { arrayDiff } from "@dashboard/utils/arrays";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
 import createMetadataUpdateHandler from "@dashboard/utils/handlers/metadataUpdateHandler";
 import { getParsedDataForJsonStringField } from "@dashboard/utils/richText/misc";
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { getMutationErrors, getMutationState, maybe } from "../../misc";
@@ -42,7 +43,7 @@ interface CollectionDetailsProps {
   params: CollectionUrlQueryParams;
 }
 
-const CollectionDetails = ({ id, params }: CollectionDetailsProps) => {
+export const CollectionDetails: React.FC<CollectionDetailsProps> = ({ id, params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
@@ -281,5 +282,4 @@ const CollectionDetails = ({ id, params }: CollectionDetailsProps) => {
     </>
   );
 };
-
 export default CollectionDetails;

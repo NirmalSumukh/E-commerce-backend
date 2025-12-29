@@ -1,14 +1,14 @@
-import { FilterErrorMessages, IFilter } from "@dashboard/components/Filter/types";
+import { FilterErrorMessages, IFilter } from "@dashboard/components/Filter";
 import { FilterProps, SearchPageProps } from "@dashboard/types";
 import { Box } from "@saleor/macaw-ui-next";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 import { ExpressionFilters } from "./components/ExpressionFilters";
 import { FiltersSelect } from "./components/FiltersSelect";
 import { LegacyFiltersPresetsAlert } from "./components/LegacyFiltersPresetsAlert";
 import SearchInput from "./components/SearchInput";
 
-interface NewFilterProps extends SearchPageProps {
+export interface NewFilterProps extends SearchPageProps {
   type: "expression-filter";
   searchPlaceholder: string;
   actions?: ReactNode;
@@ -24,7 +24,9 @@ interface OldFiltersProps<TKeys extends string = string>
   errorMessages?: FilterErrorMessages<TKeys>;
 }
 
-type ListFiltersProps<TKeys extends string = string> = NewFilterProps | OldFiltersProps<TKeys>;
+export type ListFiltersProps<TKeys extends string = string> =
+  | NewFilterProps
+  | OldFiltersProps<TKeys>;
 
 export const ListFilters = <TFilterKeys extends string = string>({
   initialSearch,

@@ -3,9 +3,9 @@ import CloseIcon from "@material-ui/icons/Close";
 import { makeStyles } from "@saleor/macaw-ui";
 import { Text } from "@saleor/macaw-ui-next";
 import clsx from "clsx";
-import * as React from "react";
+import React from "react";
 
-interface ChipProps {
+export interface ChipProps {
   className?: string;
   label: React.ReactNode;
   onClose?: () => void;
@@ -32,7 +32,7 @@ const useStyles = makeStyles(
   }),
   { name: "Chip" },
 );
-const Chip = (props: ChipProps) => {
+const Chip: React.FC<ChipProps> = props => {
   const { className, label, onClose } = props;
   const classes = useStyles(props);
 

@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError
 from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import ProductErrorCode
+from ....channel import ChannelContext
 from ....core import ResolveInfo
-from ....core.context import ChannelContext
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
 from ....core.mutations import BaseMutation
 from ....core.types import ProductError
@@ -47,7 +47,7 @@ class VariantMediaUnassign(BaseMutation):
             variant_media = models.VariantMedia.objects.get(
                 media=media, variant=variant
             )
-        except models.VariantMedia.DoesNotExist as e:
+        except models.VariantMedia.DoesNotExist:
             raise ValidationError(
                 {
                     "media_id": ValidationError(
@@ -55,7 +55,7 @@ class VariantMediaUnassign(BaseMutation):
                         code=ProductErrorCode.NOT_PRODUCTS_IMAGE.value,
                     )
                 }
-            ) from e
+            )
         else:
             variant_media.delete()
 

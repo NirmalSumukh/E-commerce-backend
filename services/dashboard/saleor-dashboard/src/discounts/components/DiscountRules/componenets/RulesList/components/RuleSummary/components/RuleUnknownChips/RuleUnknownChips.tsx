@@ -1,4 +1,5 @@
 import { Chip } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 export const RuleUnknownChips = () => {

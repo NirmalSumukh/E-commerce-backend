@@ -1,6 +1,7 @@
 import EventTime from "@dashboard/components/EventTime";
 import { EventDeliveryAttemptFragment, EventDeliveryStatusEnum } from "@dashboard/graphql";
 import { Box, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { useIntl } from "react-intl";
 
 import { AppWebhooksAttemptDetails } from "./AppWebhooksAttemptDetails";
@@ -17,14 +18,14 @@ interface EventDeliveryItemProps {
 
 const MAX_ATTEMPTS = 6;
 
-export const EventDeliveryItem = ({
+export const EventDeliveryItem: React.FC<EventDeliveryItemProps> = ({
   createdAt,
   status,
   attemptsCount,
   attempts,
   hasMore,
   deliveryId,
-}: EventDeliveryItemProps) => {
+}) => {
   const intl = useIntl();
 
   return (

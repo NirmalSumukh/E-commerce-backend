@@ -1,6 +1,7 @@
 import Link from "@dashboard/components/Link";
-import { PAYMENT_APPS_DOCS_URL, PAYMENT_PLUGINS_DOCS_URL } from "@dashboard/links";
+import PreviewPill from "@dashboard/components/PreviewPill";
 import { Box, Checkbox, Text } from "@saleor/macaw-ui-next";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { messages } from "./messages";
@@ -25,6 +26,7 @@ export const MarkAsPaid = ({ hasError, isChecked, onCheckedChange, disabled }: M
       <Text>
         <FormattedMessage {...messages.markAsPaid} />
       </Text>
+      <PreviewPill />
     </Checkbox>
     <Box display="flex" flexDirection="column" paddingLeft={4}>
       <Text size={3} color="default2" paddingLeft={0.5}>
@@ -33,7 +35,11 @@ export const MarkAsPaid = ({ hasError, isChecked, onCheckedChange, disabled }: M
           id="Qb2XN5"
           values={{
             link: (
-              <Link href={PAYMENT_APPS_DOCS_URL} target="_blank" rel="noopener noreferer">
+              <Link
+                href="https://docs.saleor.io/docs/3.x/developer/payments#processing-a-payment-with-payment-app"
+                target="_blank"
+                rel="noopener noreferer"
+              >
                 <FormattedMessage defaultMessage="Transaction" id="1+ROfp" />
               </Link>
             ),
@@ -46,7 +52,11 @@ export const MarkAsPaid = ({ hasError, isChecked, onCheckedChange, disabled }: M
           id="eR2vV/"
           values={{
             link: (
-              <Link href={PAYMENT_PLUGINS_DOCS_URL} target="_blank" rel="noopener noreferer">
+              <Link
+                href="https://docs.saleor.io/docs/3.x/developer/payments#payment-plugin"
+                target="_blank"
+                rel="noopener noreferer"
+              >
                 <FormattedMessage defaultMessage="Payment" id="NmK6zy" />
               </Link>
             ),

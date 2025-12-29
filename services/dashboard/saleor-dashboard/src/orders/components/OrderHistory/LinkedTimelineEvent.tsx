@@ -3,11 +3,12 @@ import { TimelineEvent } from "@dashboard/components/Timeline";
 import { TitleElement } from "@dashboard/components/Timeline/TimelineEventHeader";
 import { OrderEventFragment, OrderEventsEnum } from "@dashboard/graphql";
 import { orderUrl } from "@dashboard/orders/urls";
+import React from "react";
 import { defineMessages, useIntl } from "react-intl";
 
 import { getEmployeeNameLink } from "./utils";
 
-const replacementCreatedMessages = defineMessages({
+export const replacementCreatedMessages = defineMessages({
   description: {
     id: "kvSYZh",
     defaultMessage: "was created for replaced products",
@@ -20,7 +21,7 @@ const replacementCreatedMessages = defineMessages({
   },
 });
 
-const discountRemovedMessages = defineMessages({
+export const discountRemovedMessages = defineMessages({
   orderDiscountRemoved: {
     id: "KXkdMH",
     defaultMessage: "Order discount was removed by ",
@@ -38,7 +39,7 @@ interface LinkedTimelineEventProps {
   hasPlainDate?: boolean;
 }
 
-const LinkedTimelineEvent = ({ event, hasPlainDate }: LinkedTimelineEventProps) => {
+const LinkedTimelineEvent: React.FC<LinkedTimelineEventProps> = ({ event, hasPlainDate }) => {
   const intl = useIntl();
   const getTitleElements = (): TitleElement[] => {
     const { type, relatedOrder, lines } = event;

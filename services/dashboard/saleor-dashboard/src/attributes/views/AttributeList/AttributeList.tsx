@@ -1,12 +1,13 @@
 import {
   getFilterOpts,
-  getFilterQueryParam,
+  getFilterVariables,
   storageUtils,
 } from "@dashboard/attributes/views/AttributeList/filters";
 import { useConditionalFilterContext } from "@dashboard/components/ConditionalFilter";
-import { createAttributesQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
+import { creatAttributesQueryVariables } from "@dashboard/components/ConditionalFilter/queryVariables";
 import DeleteFilterTabDialog from "@dashboard/components/DeleteFilterTabDialog";
 import SaveFilterTabDialog from "@dashboard/components/SaveFilterTabDialog";
+import { useFlag } from "@dashboard/featureFlags";
 import { useAttributeBulkDeleteMutation, useAttributeListQuery } from "@dashboard/graphql";
 import { useFilterPresets } from "@dashboard/hooks/useFilterPresets";
 import useListSettings from "@dashboard/hooks/useListSettings";
@@ -25,31 +26,40 @@ import createSortHandler from "@dashboard/utils/handlers/sortHandler";
 import { mapEdgesToItems } from "@dashboard/utils/maps";
 import { getSortParams } from "@dashboard/utils/sort";
 import isEqual from "lodash/isEqual";
-import { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import { useIntl } from "react-intl";
 
 import AttributeBulkDeleteDialog from "../../components/AttributeBulkDeleteDialog";
 import AttributeListPage from "../../components/AttributeListPage";
 import { attributeListUrl, AttributeListUrlDialog, AttributeListUrlQueryParams } from "../../urls";
+import { getFilterQueryParam } from "./filters";
 import { getSortQueryVariables } from "./sort";
 
 interface AttributeListProps {
   params: AttributeListUrlQueryParams;
 }
 
-const AttributeList = ({ params }: AttributeListProps) => {
+const AttributeList: React.FC<AttributeListProps> = ({ params }) => {
   const navigate = useNavigator();
   const notify = useNotifier();
   const intl = useIntl();
   const { updateListSettings, settings } = useListSettings(ListViews.ATTRIBUTE_LIST);
+  const { enabled: isAttributesFilteringEnabled } = useFlag("new_filters");
   const { valueProvider } = useConditionalFilterContext();
-  const filters = createAttributesQueryVariables(valueProvider.value);
+  const filters = creatAttributesQueryVariables(valueProvider.value);
 
   usePaginationReset(attributeListUrl, params, settings.rowNumber);
 
   const paginationState = createPaginationState(settings.rowNumber, params);
-
-  const newQueryVariables = useMemo(
+  const queryVariables = React.useMemo(
+    () => ({
+      ...paginationState,
+      filter: getFilterVariables(params),
+      sort: getSortQueryVariables(params),
+    }),
+    [params, settings.rowNumber],
+  );
+  const newQueryVariables = React.useMemo(
     () => ({
       ...paginationState,
       filter: {
@@ -61,7 +71,7 @@ const AttributeList = ({ params }: AttributeListProps) => {
     [params, settings.rowNumber, valueProvider.value],
   );
   const { data, loading, refetch } = useAttributeListQuery({
-    variables: newQueryVariables,
+    variables: isAttributesFilteringEnabled ? newQueryVariables : queryVariables,
   });
   const {
     clearRowSelection,

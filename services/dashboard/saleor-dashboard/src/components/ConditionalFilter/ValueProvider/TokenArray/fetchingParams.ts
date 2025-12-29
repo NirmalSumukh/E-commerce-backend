@@ -7,33 +7,16 @@ export interface FetchingParams {
   channel: string[];
   productType: string[];
   attribute: Record<string, string[]>;
-  attributeReference: Record<string, string[]>;
 }
 
 export interface OrderFetchingParams {
+  paymentStatus: string[];
   status: string[];
-  fulfillmentStatus: string[];
   authorizeStatus: string[];
   chargeStatus: string[];
   channels: string[];
   customer: string[];
   ids: string[];
-  metadata: string[];
-  number: string[];
-  userEmail: string[];
-  voucherCode: string[];
-  linesCount: string[];
-  checkoutId: string[];
-  linesMetadata: string[];
-  transactionsMetadata: string[];
-  transactionsPaymentType: string[];
-  transactionsCardBrand: string[];
-  fulfillmentsMetadata: string[];
-  billingPhoneNumber: string[];
-  billingCountry: string[];
-  shippingPhoneNumber: string[];
-  shippingCountry: string[];
-  fulfillmentWarehouse: string[];
 }
 
 export interface VoucherFetchingParams {
@@ -73,7 +56,7 @@ export interface AttributesFetchingParams {
   attributeType: string[];
 }
 
-type FetchingParamsKeys = keyof Omit<FetchingParams, "attribute" | "attributeReference">;
+type FetchingParamsKeys = keyof Omit<FetchingParams, "attribute">;
 type OrderParamsKeys = keyof OrderFetchingParams;
 type VoucherParamsKeys = keyof VoucherFetchingParams;
 type PageParamsKeys = keyof PageFetchingParams;
@@ -88,90 +71,61 @@ export const emptyFetchingParams: FetchingParams = {
   channel: [],
   productType: [],
   attribute: {},
-  attributeReference: {},
 };
 
-const emptyOrderFetchingParams: OrderFetchingParams = {
+export const emptyOrderFetchingParams: OrderFetchingParams = {
+  paymentStatus: [],
   status: [],
-  fulfillmentStatus: [],
   authorizeStatus: [],
   chargeStatus: [],
   channels: [],
   customer: [],
   ids: [],
-  metadata: [],
-  number: [],
-  userEmail: [],
-  voucherCode: [],
-  linesCount: [],
-  checkoutId: [],
-  linesMetadata: [],
-  transactionsMetadata: [],
-  transactionsPaymentType: [],
-  transactionsCardBrand: [],
-  fulfillmentsMetadata: [],
-  billingPhoneNumber: [],
-  billingCountry: [],
-  shippingPhoneNumber: [],
-  shippingCountry: [],
-  fulfillmentWarehouse: [],
 };
 
-const emptyVoucherFetchingParams: VoucherFetchingParams = {
+export const emptyVoucherFetchingParams: VoucherFetchingParams = {
   channel: [],
   discountType: [],
   voucherStatus: [],
 };
 
-const emptyPageFetchingParams: PageFetchingParams = {
+export const emptyPageFetchingParams: PageFetchingParams = {
   pageTypes: [],
 };
 
-const emptyGiftCardsFetchingParams: GiftCardsFetchingParams = {
+export const emptyGiftCardsFetchingParams: GiftCardsFetchingParams = {
   currency: [],
   products: [],
   tags: [],
   usedBy: [],
 };
 
-const emptyCollectionFetchingParams: CollectionFetchingParams = {
+export const emptyCollectionFetchingParams: CollectionFetchingParams = {
   channel: [],
   metadata: [],
   published: [],
 };
 
-const emptyProductTypesFetchingParams: ProductTypesFetchingParams = {
+export const emptyProductTypesFetchingParams: ProductTypesFetchingParams = {
   typeOfProduct: [],
   configurable: [],
 };
 
-const emptyStaffMembersFetchingParams: StaffMembersFetchingParams = {
+export const emptyStaffMembersFetchingParams: StaffMembersFetchingParams = {
   staffMemberStatus: [],
 };
 
-const emptyAttributesFetchingParams: AttributesFetchingParams = {
+export const emptyAttributesFetchingParams: AttributesFetchingParams = {
   channel: [],
   attributeType: [],
 };
 
 const unique = <T>(array: Iterable<T>) => Array.from(new Set(array));
 const includedInParams = (c: UrlToken) =>
-  TokenType.ATTRIBUTE_DROPDOWN === c.type ||
-  TokenType.ATTRIBUTE_MULTISELECT === c.type ||
-  TokenType.ATTRIBUTE_REFERENCE === c.type;
+  TokenType.ATTRIBUTE_DROPDOWN === c.type || TokenType.ATTRIBUTE_MULTISELECT === c.type;
 
 export const toFetchingParams = (p: FetchingParams, c: UrlToken) => {
   const key = c.name as FetchingParamsKeys;
-
-  if (c.type === TokenType.ATTRIBUTE_REFERENCE) {
-    if (!p.attributeReference[c.name]) {
-      p.attributeReference[c.name] = [];
-    }
-
-    p.attributeReference[c.name] = unique(p.attributeReference[c.name].concat(c.value));
-
-    return p;
-  }
 
   if (!c.isAttribute() && !p[key]) {
     p[key] = [];

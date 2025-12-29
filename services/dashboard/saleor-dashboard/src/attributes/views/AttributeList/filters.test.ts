@@ -3,7 +3,8 @@ import { AttributeListUrlFilters } from "@dashboard/attributes/urls";
 import { getFilterQueryParams } from "@dashboard/utils/filters";
 import { stringifyQs } from "@dashboard/utils/urls";
 import { getExistingKeys, setFilterOptsStatus } from "@test/filters";
-import { testIntlInstance } from "@test/intl";
+import { config } from "@test/intl";
+import { createIntl } from "react-intl";
 
 import { getFilterQueryParam, getFilterVariables } from "./filters";
 
@@ -24,7 +25,7 @@ describe("Filtering query params", () => {
   });
 });
 describe("Filtering URL params", () => {
-  const intl = testIntlInstance;
+  const intl = createIntl(config);
   const filters = createFilterStructure(intl, {
     filterableInStorefront: {
       active: false,

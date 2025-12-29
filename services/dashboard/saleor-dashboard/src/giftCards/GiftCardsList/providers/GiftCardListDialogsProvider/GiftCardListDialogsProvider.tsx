@@ -1,13 +1,12 @@
 import { DashboardModal } from "@dashboard/components/Modal";
 import GiftCardListPageDeleteDialog from "@dashboard/giftCards/components/GiftCardDeleteDialog/GiftCardListPageDeleteDialog";
-import { GiftCardBulkCreateDialog } from "@dashboard/giftCards/GiftCardBulkCreateDialog/GiftCardBulkCreateDialog";
+import GiftCardBulkCreateDialog from "@dashboard/giftCards/GiftCardBulkCreateDialog";
 import GiftCardCreateDialogContent from "@dashboard/giftCards/GiftCardCreateDialog";
 import GiftCardExportDialogContent from "@dashboard/giftCards/GiftCardExportDialogContent";
 import { giftCardListUrl } from "@dashboard/giftCards/urls";
 import useNavigator from "@dashboard/hooks/useNavigator";
 import createDialogActionHandlers from "@dashboard/utils/handlers/dialogActionHandlers";
-import { createContext, useContext } from "react";
-import * as React from "react";
+import React, { createContext, useContext } from "react";
 
 import { GIFT_CARD_LIST_QUERY } from "../../queries";
 import { GiftCardListActionParamsEnum, GiftCardListUrlQueryParams } from "../../types";
@@ -17,7 +16,7 @@ interface GiftCardListDialogsProviderProps {
   params: GiftCardListUrlQueryParams;
 }
 
-interface GiftCardListDialogsConsumerProps {
+export interface GiftCardListDialogsConsumerProps {
   openCreateDialog: () => void;
   openBulkCreateDialog: () => void;
   openDeleteDialog: (id?: string | React.MouseEvent) => void;
@@ -28,7 +27,9 @@ interface GiftCardListDialogsConsumerProps {
   id: string;
 }
 
-const GiftCardListDialogsContext = createContext<GiftCardListDialogsConsumerProps | null>(null);
+export const GiftCardListDialogsContext = createContext<GiftCardListDialogsConsumerProps | null>(
+  null,
+);
 
 export const useGiftCardListDialogs = () => {
   const context = useContext(GiftCardListDialogsContext);
@@ -40,7 +41,10 @@ export const useGiftCardListDialogs = () => {
   return context;
 };
 
-const GiftCardListDialogsProvider = ({ children, params }: GiftCardListDialogsProviderProps) => {
+const GiftCardListDialogsProvider: React.FC<GiftCardListDialogsProviderProps> = ({
+  children,
+  params,
+}) => {
   const navigate = useNavigator();
   const id = params?.id;
   const { CREATE, DELETE, EXPORT, BULK_CREATE } = GiftCardListActionParamsEnum;

@@ -26,7 +26,8 @@ class Migration(migrations.Migration):
             reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunSQL(
-            'DROP INDEX CONCURRENTLY "discount_sale_categories_category_id_64e132af";',
+            "DROP INDEX CONCURRENTLY "
+            '"discount_sale_categories_category_id_64e132af";',
             reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunSQL(
@@ -64,7 +65,8 @@ class Migration(migrations.Migration):
             reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunSQL(
-            'DROP INDEX CONCURRENTLY "discount_checkoutlinediscount_sale_id_b0964e58";',
+            "DROP INDEX CONCURRENTLY "
+            '"discount_checkoutlinediscount_sale_id_b0964e58";',
             reverse_sql=migrations.RunSQL.noop,
         ),
         migrations.RunSQL(

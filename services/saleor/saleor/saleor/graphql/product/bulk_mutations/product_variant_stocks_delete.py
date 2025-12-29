@@ -8,8 +8,8 @@ from ....warehouse import models as warehouse_models
 from ....warehouse.management import delete_stocks
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
+from ...channel import ChannelContext
 from ...core import ResolveInfo
-from ...core.context import ChannelContext
 from ...core.doc_category import DOC_CATEGORY_PRODUCTS
 from ...core.mutations import BaseMutation
 from ...core.types import NonNullList, StockError
@@ -39,7 +39,7 @@ class ProductVariantStocksDelete(BaseMutation):
         )
 
     class Meta:
-        description = "Deletes stocks from product variant."
+        description = "Delete stocks from product variant."
         doc_category = DOC_CATEGORY_PRODUCTS
         permissions = (ProductPermissions.MANAGE_PRODUCTS,)
         error_type_class = StockError

@@ -1,6 +1,6 @@
 // @ts-strict-ignore
-import { Extension } from "@dashboard/extensions/types";
-import { ExtensionsUrls } from "@dashboard/extensions/urls";
+import { Extension } from "@dashboard/apps/hooks/useExtensions";
+import { AppUrls } from "@dashboard/apps/urls";
 import { AppExtensionMountEnum } from "@dashboard/graphql";
 import { orderDraftListUrl, orderListUrl } from "@dashboard/orders/urls";
 import { matchPath } from "react-router";
@@ -11,7 +11,7 @@ export const mapToExtensionsItems = (extensions: Extension[], header: SidebarMen
   const items: SidebarMenuItem[] = extensions.map(({ label, id, app, url, permissions, open }) => ({
     id: `extension-${id}`,
     label,
-    url: ExtensionsUrls.resolveDashboardUrlFromAppCompleteUrl(url, app.appUrl, app.id),
+    url: AppUrls.resolveDashboardUrlFromAppCompleteUrl(url, app.appUrl, app.id),
     permissions,
     onClick: open,
     type: "item",
@@ -25,15 +25,12 @@ export const mapToExtensionsItems = (extensions: Extension[], header: SidebarMen
 };
 
 export function isMenuActive(location: string, menuItem: SidebarMenuItem) {
-  const menuUrlsToCheck = [...(menuItem.matchUrls || []), menuItem.url]
-    .filter(Boolean)
-    .map(item => item.split("?")[0]);
-
-  if (menuUrlsToCheck.length === 0) {
+  if (!menuItem.url) {
     return false;
   }
 
   const activeUrl = getPureUrl(location.split("?")[0]);
+  const menuItemUrl = menuItem.url.split("?")[0];
 
   if (isMenuItemExtension(menuItem)) {
     return false;
@@ -41,16 +38,21 @@ export function isMenuActive(location: string, menuItem: SidebarMenuItem) {
 
   if (
     activeUrl === orderDraftListUrl().split("?")[0] &&
-    menuUrlsToCheck.some(url => url === orderListUrl().split("?")[0])
+    menuItemUrl === orderListUrl().split("?")[0]
   ) {
     return false;
   }
 
-  return menuUrlsToCheck.some(menuItemUrl => {
-    return !!matchPath(activeUrl, {
-      exact: menuItemUrl === "/",
-      path: menuItemUrl,
-    });
+  // TODO: Temporary workaround, remove when extension are finished.
+  const isInstalledExtension = activeUrl.includes("/custom/") || activeUrl.includes("/apps/");
+
+  if (menuItem.id === "installed-extensions" && isInstalledExtension) {
+    return true;
+  }
+
+  return !!matchPath(activeUrl, {
+    exact: menuItemUrl === "/",
+    path: menuItemUrl,
   });
 }
 

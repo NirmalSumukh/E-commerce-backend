@@ -1,9 +1,10 @@
 import { BaseListItemProps, ListItem, makeStyles } from "@saleor/macaw-ui";
 import clsx from "clsx";
+import React from "react";
 
 import Link from "../Link";
 
-interface ListItemLinkProps extends Omit<BaseListItemProps, "onClick" | "classes"> {
+export interface ListItemLinkProps extends Omit<BaseListItemProps, "onClick" | "classes"> {
   href?: string;
   className?: string;
   linkClassName?: string;
@@ -19,7 +20,12 @@ const useStyles = makeStyles(
   { name: "ListItemLink" },
 );
 
-const ListItemLink = ({ href, children, linkClassName, ...props }: ListItemLinkProps) => {
+export const ListItemLink: React.FC<ListItemLinkProps> = ({
+  href,
+  children,
+  linkClassName,
+  ...props
+}) => {
   const classes = useStyles();
 
   if (!href) {
