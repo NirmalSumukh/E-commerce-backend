@@ -54,9 +54,8 @@ services:
   # Saleor Backend API
   # ==========================================
   saleor:
-    build:
-      context: ./services/saleor/saleor
-      dockerfile: Dockerfile
+    # Using official stable Saleor image instead of building from source
+    image: ghcr.io/saleor/saleor:3.20.106
     container_name: leemasmart-saleor
     restart: unless-stopped
     depends_on:
@@ -96,9 +95,8 @@ services:
   # Saleor Celery Worker
   # ==========================================
   saleor-worker:
-    build:
-      context: ./services/saleor/saleor
-      dockerfile: Dockerfile
+    # Using official stable Saleor image
+    image: ghcr.io/saleor/saleor:3.20.106
     container_name: leemasmart-saleor-worker
     restart: unless-stopped
     depends_on:
@@ -123,9 +121,8 @@ services:
   # Saleor Celery Beat (Scheduler)
   # ==========================================
   saleor-beat:
-    build:
-      context: ./services/saleor/saleor
-      dockerfile: Dockerfile
+    # Using official stable Saleor image
+    image: ghcr.io/saleor/saleor:3.20.106
     container_name: leemasmart-saleor-beat
     restart: unless-stopped
     depends_on:
@@ -147,12 +144,8 @@ services:
   # Saleor Dashboard
   # ==========================================
   dashboard:
-    build:
-      context: ./services/dashboard/saleor-dashboard
-      dockerfile: Dockerfile
-      args:
-        API_URL: ${API_URL:-http://localhost:8000/graphql/}
-        APP_MOUNT_URI: /dashboard/
+    # Using official stable Dashboard image (compatible with Saleor 3.20.x)
+    image: ghcr.io/saleor/saleor-dashboard:3.20.106
     container_name: leemasmart-dashboard
     restart: unless-stopped
     depends_on:
