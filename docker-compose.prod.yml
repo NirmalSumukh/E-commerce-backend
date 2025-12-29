@@ -163,6 +163,17 @@ services:
     depends_on:
       - saleor
       - dashboard
+    labels:
+      - "traefik.enable=true"
+      # Landing page router for subdomain (saleor.leemasmart.com)
+      # Note: DOMAIN should be set to saleor.leemasmart.com in .env
+      - "traefik.http.routers.gateway.rule=Host(`${DOMAIN:-saleor.leemasmart.com}`)"
+      - "traefik.http.routers.gateway.entrypoints=websecure"
+      - "traefik.http.routers.gateway.tls.certresolver=letsencrypt"
+      - "traefik.http.services.gateway.loadbalancer.server.port=80"
+      # HTTP router (for Let's Encrypt challenge and before redirect)
+      - "traefik.http.routers.gateway-http.rule=Host(`${DOMAIN:-saleor.leemasmart.com}`)"
+      - "traefik.http.routers.gateway-http.entrypoints=web"
     volumes:
       - ./docker/nginx/gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./docker/nginx/landing/index.html:/usr/share/nginx/html/index.html:ro
