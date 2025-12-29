@@ -104,9 +104,10 @@ services:
   # ==========================================
   dashboard:
     container_name: leemasmart-dashboard-prod
-    environment:
-      # API URL for the dashboard to connect to Saleor
-      API_URI: ${API_URL:-https://saleor.leemasmart.com/graphql/}
+    build:
+      args:
+        API_URL: ${API_URL:-https://saleor.leemasmart.com/graphql/}
+        APP_MOUNT_URI: /dashboard/
     labels:
       - "traefik.enable=true"
       # Dashboard router with path prefix
