@@ -186,9 +186,8 @@ services:
   # ShipRocket Saleor App
   # ==========================================
   shiprocket:
-    image: ghcr.io/nirmalsumukh/shiprocket-saleor-app:latest
     build:
-      context: /opt/shiprocket-saleor-app
+      context: ../shiprocket-saleor-app
       dockerfile: Dockerfile
     container_name: saleor-shiprocket-app
     restart: unless-stopped
