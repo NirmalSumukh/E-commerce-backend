@@ -182,10 +182,49 @@ services:
     networks:
       - leemasmart-network
 
+  # ==========================================
+  # ShipRocket Saleor App
+  # ==========================================
+  shiprocket:
+    image: ghcr.io/nirmalsumukh/shiprocket-saleor-app:latest
+    build:
+      context: /opt/shiprocket-saleor-app
+      dockerfile: Dockerfile
+    container_name: saleor-shiprocket-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - APL=file
+      - SECRET_KEY=${SECRET_KEY:-changeme}
+      - APP_IFRAME_BASE_URL=https://shiprocket.leemasmart.com
+      - APP_API_BASE_URL=https://shiprocket.leemasmart.com
+      - NEXT_PUBLIC_APP_URL=https://shiprocket.leemasmart.com
+      - SALEOR_API_URL=http://saleor:8000/graphql/
+      - SALEOR_APP_TOKEN=${SALEOR_APP_TOKEN:-}
+      - DEFAULT_CHANNEL=${DEFAULT_CHANNEL:-default-channel}
+      - SHIPROCKET_API_KEY=${SHIPROCKET_API_KEY:-}
+      - SHIPROCKET_SECRET_KEY=${SHIPROCKET_SECRET_KEY:-}
+      - SHIPROCKET_API_BASE_URL=https://checkout-api.shiprocket.com
+      - STOREFRONT_URL=https://leemasmart.com
+      - ALLOWED_ORIGINS=https://leemasmart.com,https://saleor.leemasmart.com,https://shiprocket.leemasmart.com
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
+      - "traefik.http.routers.shiprocket.entrypoints=websecure"
+      - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
+      - "traefik.http.services.shiprocket.loadbalancer.server.port=3010"
+    volumes:
+      - shiprocket-data:/app/data
+    networks:
+      - leemasmart-network
+    expose:
+      - "3010"
+
 # ==========================================
 # Production Volumes
 # ==========================================
 volumes:
   traefik-certificates:
+  shiprocket-data:
 
 
