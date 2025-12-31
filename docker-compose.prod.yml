@@ -19,7 +19,7 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=leemasmart-network"
+      - "--providers.docker.network=leemasmart-backend_leemasmart-network"
       # Entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
