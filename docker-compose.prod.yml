@@ -212,12 +212,21 @@ services:
       - "traefik.http.routers.shiprocket.entrypoints=websecure"
       - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
       - "traefik.http.services.shiprocket.loadbalancer.server.port=3010"
+      # Skip Docker health check for Traefik routing
+      - "traefik.http.services.shiprocket.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.shiprocket.loadbalancer.healthcheck.interval=10s"
     volumes:
       - shiprocket-data:/app/data
     networks:
       - leemasmart-network
     expose:
       - "3010"
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 # ==========================================
 # Production Volumes
