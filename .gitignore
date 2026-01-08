@@ -110,3 +110,6 @@ temp/
 # Build artifacts
 *.tar.gz
 *.zip
+
+# Traefik (deployed separately, not tracked in backend repo)
+traefik/

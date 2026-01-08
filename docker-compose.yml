@@ -168,11 +168,16 @@ services:
 # Networks
 # ==========================================
 networks:
+  # Internal network for database and redis communication
   leemasmart-network:
     driver: bridge
     ipam:
       config:
         - subnet: 172.20.0.0/16
+
+  # External network for Traefik routing (created separately)
+  proxy-network:
+    external: true
 
 # ==========================================
 # Volumes
