@@ -83,6 +83,9 @@ services:
       DEFAULT_CHANNEL_SLUG: ${DEFAULT_CHANNEL_SLUG:-default-channel}
       ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL: ${ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL:-false}
       EMAIL_URL: ${EMAIL_URL:-}
+      # Reverse proxy support
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      USE_X_FORWARDED_HOST: ${USE_X_FORWARDED_HOST:-False}
 
     volumes:
       - saleor-media:/app/media
