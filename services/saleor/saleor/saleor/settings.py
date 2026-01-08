@@ -489,6 +489,10 @@ ALLOWED_GRAPHQL_ORIGINS: list[str] = get_list(
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Enable USE_X_FORWARDED_HOST for reverse proxy support (e.g., Traefik, nginx)
+# When True, Django uses the X-Forwarded-Host header to determine the host
+USE_X_FORWARDED_HOST = get_bool_from_env("USE_X_FORWARDED_HOST", False)
+
 # Amazon S3 configuration
 # See https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
