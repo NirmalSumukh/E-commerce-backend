@@ -42,14 +42,6 @@ from .graphql.promise import patch_promise
 from .patch_local import patch_local
 from .plugins.openid_connect.patch import patch_authlib
 
-# Import CORS default headers
-try:
-    from corsheaders.defaults import default_headers
-    CORS_INSTALLED = True
-except ImportError:
-    CORS_INSTALLED = False
-    default_headers = []
-
 django_stubs_ext.monkeypatch()
 
 
@@ -268,7 +260,6 @@ JWT_MANAGER_PATH = os.environ.get(
 )
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "saleor.core.middleware.jwt_refresh_token_middleware",
@@ -282,7 +273,6 @@ if ENABLE_RESTRICT_WRITER_MIDDLEWARE:
 
 INSTALLED_APPS = [
     # External apps that need to go before django's
-    "corsheaders",  # CORS headers support
     "storages",
     # Django modules
     "django.contrib.contenttypes",
@@ -497,12 +487,6 @@ ALLOWED_GRAPHQL_ORIGINS: list[str] = get_list(
     os.environ.get("ALLOWED_GRAPHQL_ORIGINS", "*")
 )
 
-# CORS Configuration - Allow custom Saleor headers
-if CORS_INSTALLED:
-    CORS_ALLOW_HEADERS = list(default_headers) + [
-        'saleor-channel',
-        'saleor-event-type',
-    ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -1091,49 +1075,12 @@ patch_execution_result()
 
 
 # ============================================
-# CORS Configuration (Custom)
+# CORS Configuration
 # ============================================
-# Read CORS origins from environment variable, with fallback defaults for development
-_cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS", "")
-if _cors_origins_env:
-    CORS_ALLOWED_ORIGINS = get_list(_cors_origins_env)
-else:
-    # Default for development
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:9000",
-        "http://localhost:9001",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:9000",
-        "http://127.0.0.1:9001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-    ]
-
-CORS_ALLOW_CREDENTIALS = get_bool_from_env("CORS_ALLOW_CREDENTIALS", True)
-
-CORS_ALLOW_METHODS = [
-    "DELETE",
-    "GET",
-    "OPTIONS",
-    "PATCH",
-    "POST",
-    "PUT",
-]
-
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "saleor-channel",
-    "authorization",
-    "authorization-bearer",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]
+# Note: CORS is handled by saleor/asgi/cors_handler.py which uses ALLOWED_GRAPHQL_ORIGINS
+# The allowed headers are configured directly in cors_handler.py
+# To modify allowed origins, set ALLOWED_GRAPHQL_ORIGINS environment variable
+# or update the default at line ~496
 
 # ============================================
 # CSRF Configuration (Custom)
