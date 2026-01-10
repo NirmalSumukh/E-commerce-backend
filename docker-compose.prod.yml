@@ -24,19 +24,11 @@ services:
       - "traefik.http.routers.saleor.tls.certresolver=letsencrypt"
       - "traefik.http.services.saleor.loadbalancer.server.port=8000"
 
-      # CORS Middleware - Allow frontend to send saleor-channel header
-      - "traefik.http.middlewares.saleor-cors.headers.accesscontrolallowmethods=GET,POST,OPTIONS,PUT,DELETE"
-      - "traefik.http.middlewares.saleor-cors.headers.accesscontrolallowheaders=Content-Type,Authorization,saleor-channel,saleor-event-type,X-Requested-With"
-      - "traefik.http.middlewares.saleor-cors.headers.accesscontrolalloworiginlist=http://localhost:3000,https://leemasmart.com,https://www.leemasmart.com"
-      - "traefik.http.middlewares.saleor-cors.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.saleor-cors.headers.accesscontrolmaxage=100"
-      - "traefik.http.middlewares.saleor-cors.headers.addvaryheader=true"
-
       # Headers middleware (forwarded proto)
       - "traefik.http.middlewares.saleor-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
 
-      # Apply both middlewares
-      - "traefik.http.routers.saleor.middlewares=saleor-cors,saleor-headers"
+      # Apply headers middleware (CORS handled by nginx gateway)
+      - "traefik.http.routers.saleor.middlewares=saleor-headers"
     environment:
       DEBUG: "false"
       ENABLE_SSL: "false"
