@@ -42,6 +42,14 @@ from .graphql.promise import patch_promise
 from .patch_local import patch_local
 from .plugins.openid_connect.patch import patch_authlib
 
+# Import CORS default headers
+try:
+    from corsheaders.defaults import default_headers
+    CORS_INSTALLED = True
+except ImportError:
+    CORS_INSTALLED = False
+    default_headers = []
+
 django_stubs_ext.monkeypatch()
 
 
@@ -260,6 +268,7 @@ JWT_MANAGER_PATH = os.environ.get(
 )
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "saleor.core.middleware.jwt_refresh_token_middleware",
@@ -273,6 +282,7 @@ if ENABLE_RESTRICT_WRITER_MIDDLEWARE:
 
 INSTALLED_APPS = [
     # External apps that need to go before django's
+    "corsheaders",  # CORS headers support
     "storages",
     # Django modules
     "django.contrib.contenttypes",
@@ -486,6 +496,13 @@ ALLOWED_HOSTS = get_list(os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1"))
 ALLOWED_GRAPHQL_ORIGINS: list[str] = get_list(
     os.environ.get("ALLOWED_GRAPHQL_ORIGINS", "*")
 )
+
+# CORS Configuration - Allow custom Saleor headers
+if CORS_INSTALLED:
+    CORS_ALLOW_HEADERS = list(default_headers) + [
+        'saleor-channel',
+        'saleor-event-type',
+    ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
