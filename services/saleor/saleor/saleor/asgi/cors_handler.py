@@ -41,7 +41,7 @@ def cors_handler(application: ASGI3Application) -> ASGI3Application:
                 (
                     b"access-control-allow-headers",
                     b"Origin, Content-Type, Accept, Authorization, Source-Service-Name, "
-                    b"Authorization-Bearer",
+                    b"Authorization-Bearer, saleor-channel, saleor-event-type",
                 ),
                 (b"access-control-allow-methods", b"POST, OPTIONS"),
                 (b"access-control-max-age", b"600"),
