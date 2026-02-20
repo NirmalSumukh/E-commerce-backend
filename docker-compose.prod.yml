@@ -15,20 +15,6 @@ services:
   # ==========================================
   saleor:
     container_name: leemasmart-saleor-prod
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=proxy-network"
-      # Main API router
-      - "traefik.http.routers.saleor.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.saleor.entrypoints=websecure"
-      - "traefik.http.routers.saleor.tls.certresolver=letsencrypt"
-      - "traefik.http.services.saleor.loadbalancer.server.port=8000"
-
-      # Headers middleware (forwarded proto)
-      - "traefik.http.middlewares.saleor-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-
-      # Apply headers middleware (CORS handled by nginx gateway)
-      - "traefik.http.routers.saleor.middlewares=saleor-headers"
     environment:
       DEBUG: "false"
       ENABLE_SSL: "false"
@@ -83,14 +69,6 @@ services:
       args:
         API_URL: ${API_URL:-https://saleor.leemasmart.com/graphql/}
         APP_MOUNT_URI: /dashboard/
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=proxy-network"
-      # Dashboard router with path prefix
-      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`) && PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
     ports:
       - "9000:80"
     networks:
