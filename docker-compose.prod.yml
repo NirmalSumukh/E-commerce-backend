@@ -17,7 +17,12 @@ services:
     container_name: leemasmart-saleor-prod
     environment:
       DEBUG: "false"
-      ENABLE_SSL: "false"
+      # PUBLIC_URL must be set here (not in .env) because Docker Compose does NOT
+      # expand variable references inside the .env file itself.
+      # Setting it here ensures ${DOMAIN} is properly expanded to the actual domain.
+      PUBLIC_URL: "https://${DOMAIN:-saleor.leemasmart.com}"
+      # Required for Saleor to use X-Forwarded-Host from Nginx to reconstruct HTTPS URLs
+      USE_X_FORWARDED_HOST: "True"
     command: >
       sh -c "
         python manage.py migrate &&
