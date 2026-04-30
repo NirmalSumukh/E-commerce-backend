@@ -114,6 +114,9 @@ services:
       RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@leemasmart.com}
       EMAIL_URL: ${EMAIL_URL:-}
+      ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL: ${ENABLE_ACCOUNT_CONFIRMATION_BY_EMAIL:-false}
+      STOREFRONT_URL: ${STOREFRONT_URL:-http://localhost:3000}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:9000/dashboard/}
     volumes:
       - saleor-media:/app/media
       - saleor-static:/app/static
