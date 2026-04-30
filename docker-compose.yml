@@ -37,11 +37,10 @@ services:
     image: redis:7-alpine
     container_name: leemasmart-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-changeme-use-strong-password}
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
+    # SECURITY: Do NOT expose Redis port publicly - internal network only
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -66,8 +65,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/1
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
       RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY:-}
       DEBUG: ${DEBUG:-false}
@@ -109,8 +108,8 @@ services:
       - redis
     environment:
       DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/1
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
       RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY:-}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@leemasmart.com}
@@ -138,8 +137,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://${DB_USER:-saleor}:${DB_PASSWORD:-securepassword123}@postgres:5432/${DB_NAME:-saleor}
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-changeme-use-strong-password}@redis:6379/1
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
       RSA_PRIVATE_KEY: ${RSA_PRIVATE_KEY:-}
     command: celery -A saleor beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
