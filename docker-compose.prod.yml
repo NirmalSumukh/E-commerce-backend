@@ -46,6 +46,9 @@ services:
   # ==========================================
   saleor-worker:
     container_name: leemasmart-saleor-worker-prod
+    environment:
+      PUBLIC_URL: "https://${DOMAIN:-saleor.leemasmart.com}"
+      USE_X_FORWARDED_HOST: "True"
     deploy:
       resources:
         limits:
